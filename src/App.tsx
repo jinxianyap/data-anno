@@ -1,26 +1,31 @@
 import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import './App.scss';
+import SetupView from './views/SetupView/SetupView';
+import { CurrentStage } from './utils/enums';
+import { AppState } from './store';
+import { connect } from 'react-redux';
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+interface IProps {
+  currentStage: CurrentStage
 }
 
-export default App;
+const App: React.FC<IProps> = ({currentStage}) => {
+
+  switch (currentStage) {
+    case (CurrentStage.SETUP):
+     return <SetupView />;
+    case (CurrentStage.SEGMENTATION_CHECK):
+     return <h4>SEGCHECK</h4>;
+    default:
+     return <h4>ERROR</h4>;
+  }
+  
+}
+
+const mapStateToProps = (state: AppState) => ({
+  currentStage: state.general.currentStage
+});
+
+export default connect(
+  mapStateToProps
+)(App);
