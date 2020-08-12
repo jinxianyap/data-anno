@@ -1,0 +1,16 @@
+{
+    "documentTypes": ["MyKad", "Passport"],
+    "landmark": {
+        "MyKad": ["kPMLandmark", "securityChip", "mscLogo", "gender", "citizen", "name", "address", "facialImage", "myKadLogo", "myKadNumber"],
+        "Passport": [""]
+    },
+    "ocr": {
+        "MyKad": ["icNumber", "name", "birthDate", "street"]
+    },
+    "landmarkFlags": {
+        "quality": ["glare", "blur"]
+    },
+    "videoFlags": {
+        "quality": ["dark", "blur"]
+    }
+}

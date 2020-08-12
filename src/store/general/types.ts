@@ -1,6 +1,18 @@
 import { Action } from "../Actions";
 import { ProcessType, CurrentStage } from "../../utils/enums";
 
+
+export type IDFolder = {
+    processed: boolean;
+    source: string;
+    index: number;
+    originalID?: File;
+    croppedID?: File;
+    backID?: File;
+    selfieVideo?: File;
+    jsonData?: File;
+}
+
 export type SetupOptions = {
     user: string;
     database: string,
@@ -14,14 +26,7 @@ export type GeneralState = {
     setupOptions: SetupOptions;
     IDLibrary: IDFolder[];
     loadedIDs: boolean;
-}
-
-export type IDFolder = {
-    originalID: File;
-    croppedID?: File;
-    backID?: File;
-    selfieVideo?: File;
-    jsonData?: File
+    currentIndex: number;
 }
 
 interface SaveSetupOptions {
@@ -45,6 +50,11 @@ interface LoadFromDatabase {
     }
 }
 
+interface GetNextImage {
+    type: typeof Action.GET_NEXT_IMAGE;
+}
+
 export type GeneralActionTypes = SaveSetupOptions
     | ProgressToStage
     | LoadFromDatabase
+    | GetNextImage

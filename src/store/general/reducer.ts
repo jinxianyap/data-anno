@@ -12,7 +12,8 @@ const initialState: GeneralState = {
         processType: ProcessType.WHOLE
     },
     IDLibrary: [],
-    loadedIDs: false
+    loadedIDs: false,
+    currentIndex: 1
 }
 
 export function generalReducer(
@@ -29,7 +30,7 @@ export function generalReducer(
         case Action.PROGRESS_NEXT_STAGE: {
             return {
                 ...state,
-                currentStage: action.payload.nextStage
+                currentStage: state.loadedIDs ? action.payload.nextStage : state.currentStage
             }
         }
         case Action.LOAD_FROM_DATABASE: {
@@ -37,6 +38,12 @@ export function generalReducer(
                 ...state,
                 IDLibrary: action.payload.IDs,
                 loadedIDs: true
+            }
+        }
+        case Action.GET_NEXT_IMAGE: {
+            return {
+                ...state,
+                currentIndex: state.currentIndex + 1
             }
         }
         default:

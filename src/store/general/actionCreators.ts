@@ -28,3 +28,9 @@ export function loadFromDatabase(IDs: IDFolder[]): GeneralActionTypes {
         }
     }
 }
+
+export function getNextImage(): GeneralActionTypes {
+    return {
+        type: Action.GET_NEXT_IMAGE
+    }
+}

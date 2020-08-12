@@ -1,11 +1,11 @@
 export enum CurrentStage {
-    SETUP,
-    SEGMENTATION_CHECK,
-    SEGMENTATION_EDIT,
-    LANDMARK_EDIT,
-    OCR_EDIT,
-    FR_LIVENESS_CHECK,
-    FR_COMPARE_CHECK
+    SETUP = "Setup Stage",
+    SEGMENTATION_CHECK = "Segmentation Check",
+    SEGMENTATION_EDIT = "Segmentation Edit",
+    LANDMARK_EDIT = "Landmark",
+    OCR_EDIT = "OCR",
+    FR_LIVENESS_CHECK = "Face Liveness",
+    FR_COMPARE_CHECK = "Face Comparison"
 }
 
 export enum ProcessType {
