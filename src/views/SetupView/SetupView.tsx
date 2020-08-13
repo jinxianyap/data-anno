@@ -3,16 +3,17 @@ import './SetupView.scss'
 import { Form, Button, Container } from 'react-bootstrap';
 import DatePicker from 'react-datepicker';
 import { ProcessType, CurrentStage, UsersTemp, DatabasesTemp } from '../../utils/enums';
-import { SetupOptions, GeneralActionTypes, IDFolder } from '../../store/general/types';
+import { SetupOptions, GeneralActionTypes } from '../../store/general/types';
 import { saveSetupOptions, progressNextStage, loadFromDatabase } from '../../store/general/actionCreators';
 import { AppState } from '../../store';
 import {connect} from "react-redux";
 import { DatabaseUtil } from '../../utils/DatabaseUtil';
+import { IDState } from '../../store/id/types';
 
 interface IProps {
     saveSetupOptions: (setupOptions: SetupOptions) => GeneralActionTypes;
     progressNextStage: (nextStage: CurrentStage) => GeneralActionTypes;
-    loadFromDatabase: (IDs: IDFolder[]) => GeneralActionTypes;
+    loadFromDatabase: (IDs: IDState[]) => GeneralActionTypes;
     setupOptions: SetupOptions;
 }
 

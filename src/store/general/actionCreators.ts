@@ -1,6 +1,7 @@
-import { SetupOptions, GeneralActionTypes, IDFolder } from "./types";
+import { SetupOptions, GeneralActionTypes } from "./types";
 import { Action } from "../Actions";
 import { CurrentStage } from "../../utils/enums";
+import { IDState } from "../id/types";
 
 export function saveSetupOptions(setupOptions: SetupOptions): GeneralActionTypes {
     return {
@@ -20,7 +21,7 @@ export function progressNextStage(nextStage: CurrentStage): GeneralActionTypes {
     }
 }
 
-export function loadFromDatabase(IDs: IDFolder[]): GeneralActionTypes {
+export function loadFromDatabase(IDs: IDState[]): GeneralActionTypes {
     return {
         type: Action.LOAD_FROM_DATABASE,
         payload: {
@@ -29,8 +30,8 @@ export function loadFromDatabase(IDs: IDFolder[]): GeneralActionTypes {
     }
 }
 
-export function getNextImage(): GeneralActionTypes {
+export function getNextID(): GeneralActionTypes {
     return {
-        type: Action.GET_NEXT_IMAGE
+        type: Action.GET_NEXT_ID
     }
 }

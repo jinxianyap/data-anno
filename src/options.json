@@ -1,7 +1,8 @@
 {
     "documentTypes": ["MyKad", "Passport"],
     "landmark": {
-        "MyKad": ["kPMLandmark", "securityChip", "mscLogo", "gender", "citizen", "name", "address", "facialImage", "myKadLogo", "myKadNumber"],
+        "MyKadFront": ["kPMLandmark", "securityChip", "mscLogo", "gender", "citizen", "name", "address", "facialImage", "myKadLogo", "myKadNumber"],
+        "MyKadBack": ["coatOfArmLandmark", "klccTower", "signature"],
         "Passport": [""]
     },
     "ocr": {

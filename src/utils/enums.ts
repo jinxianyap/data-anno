@@ -8,6 +8,13 @@ export enum CurrentStage {
     FR_COMPARE_CHECK = "Face Comparison"
 }
 
+export enum IDProcess {
+    MYKAD_FRONT,
+    MYKAD_BACK,
+    PASSPORT,
+    OTHER
+}
+
 export enum ProcessType {
     WHOLE,
     SEGMENTATION,

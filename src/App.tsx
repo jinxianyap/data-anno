@@ -9,6 +9,7 @@ import TopBar from './views/Common/TopBar/TopBar';
 import BottomBar from './views/Common/BottomBar/BottomBar';
 import ControlPanel from './views/Common/ControlPanel/ControlPanel';
 import { Container, Row, Col } from 'react-bootstrap';
+import SegEdit from './views/SegEdit/SegEdit';
 
 interface IProps {
   currentStage: CurrentStage
@@ -22,6 +23,8 @@ const App: React.FC<IProps> = ({currentStage}) => {
        return <SetupView />;
       case (CurrentStage.SEGMENTATION_CHECK):
        return <SegCheck />;
+      case (CurrentStage.SEGMENTATION_EDIT):
+        return <SegEdit />;
       default:
        return <h4>ERROR</h4>;
     }
@@ -34,11 +37,11 @@ const App: React.FC<IProps> = ({currentStage}) => {
       <div className="app-wrapper">
         <TopBar />
           <Container className="content-container">
-            <Row style={{height: "100%"}}>
-              <Col xs={9}>
+            <Row style={{height: "100%", width: "100%", margin: 0}}>
+              <Col md={7} lg={9}>
                 {paintContent()}
               </Col>
-              <Col>
+              <Col style={{padding: 0}}>
                 <ControlPanel />
               </Col>
             </Row>

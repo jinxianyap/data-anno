@@ -13,7 +13,7 @@ const initialState: GeneralState = {
     },
     IDLibrary: [],
     loadedIDs: false,
-    currentIndex: 1
+    currentIndex: 0
 }
 
 export function generalReducer(
@@ -40,7 +40,7 @@ export function generalReducer(
                 loadedIDs: true
             }
         }
-        case Action.GET_NEXT_IMAGE: {
+        case Action.GET_NEXT_ID: {
             return {
                 ...state,
                 currentIndex: state.currentIndex + 1

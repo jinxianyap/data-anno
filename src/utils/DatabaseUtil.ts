@@ -1,18 +1,54 @@
-import { IDFolder } from "../store/general/types";
-
+import { IDState } from '../store/id/types';
 export class DatabaseUtil {
 
-    public static loadIntoIDFolder(files: File[]): IDFolder {
+    public static loadIntoIDFolder(files: File[]): IDState {
         return {
-            originalID: files[0],
-            croppedID: files[1],
-            backID: files[2],
+            originalID: {
+                image: files[0],
+                passesCrop: false,
+                imageProps: {
+                    width: 0,
+                    height: 0,
+                    offsetX: 0,
+                    offsetY: 0
+                },
+                segEdit: {
+                    IDBoxes: []
+                }
+            },
+            croppedID: {
+                image: files[1],
+                passesCrop: false,
+                imageProps: {
+                    width: 0,
+                    height: 0,
+                    offsetX: 0,
+                    offsetY: 0
+                },
+                segEdit: {
+                    IDBoxes: []
+                }
+            },
+            backID: {
+                image: files[2],
+                passesCrop: false,
+                imageProps: {
+                    width: 0,
+                    height: 0,
+                    offsetX: 0,
+                    offsetY: 0
+                },
+                segEdit: {
+                    IDBoxes: []
+                }
+            },
             selfieVideo: files[3],
             jsonData: files[4],
             processed: false,
             // for testing need to fix!!!
-            index: 1,
+            index: 0, // kinda redundant
             source: 'sessionId/0001',
+            documentType: ''
         }
     }
 
