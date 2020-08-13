@@ -15,6 +15,7 @@ import { saveSegCheck, loadImageState } from '../../../store/image/actionCreator
 interface IProps {
     currentStage: CurrentStage;
     currentID: IDState;
+    currentImage: ImageState;
 
     progressNextStage: (nextStage: CurrentStage) => GeneralActionTypes;
     getNextID: () => GeneralActionTypes;
@@ -94,7 +95,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
     }
 
-    handleSubmit = (e: any) => {
+    segCheckDone = (e: any) => {
         e.preventDefault();
         this.props.saveDocumentType(this.state.docType);
         this.props.saveSegCheck(this.state.passesCrop);
@@ -106,10 +107,16 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
     }
 
+    segEditDone = () => {
+        // e.preventDefault();
+
+        this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+    }
+
     // Seg Check Components
     segCheck = () => {
         return (
-            <Form onSubmit={this.handleSubmit}>
+            <Form onSubmit={this.segCheckDone}>
                 <Form.Group controlId="docType">
                     <Form.Label>Document Type</Form.Label>
                     <Form.Control as="select" value={this.state.docType} onChange={(e: any) => this.setState({docType: e.target.value})}>
@@ -145,7 +152,12 @@ class ControlPanel extends React.Component<IProps, IState> {
             });
         }
         return (
-            <h5>Please draw bounding boxes around any number of IDs in the image.</h5>
+            <div>
+                <h5>Please draw bounding boxes around any number of IDs in the image.</h5>
+                <Button disabled={this.props.currentImage.segEdit.IDBoxes.length === 0} onClick={this.segEditDone}>
+                    Next
+                </Button>
+            </div>
         );
     }   
 
@@ -182,7 +194,8 @@ const mapDispatchToProps = {
 const mapStateToProps = (state: AppState) => {
     return {
         currentStage: state.general.currentStage,
-        currentID: state.general.IDLibrary[state.general.currentIndex]
+        currentID: state.general.IDLibrary[state.general.currentIndex],
+        currentImage: state.image
     }
 };
 

@@ -11,6 +11,7 @@ import { IDBox, ImageActionTypes } from "../../../store/image/types";
 import { AppState } from "../../../store";
 // import SubmitButtonContainer from "../containers/SubmitButtonContainer";
 import './LabelView.scss';
+import { ImageUtil } from "../../../utils/ImageUtil";
 
 // convert JSON key-value pairs of boxes to Array
 // const preprocess = boxes => {
@@ -21,9 +22,10 @@ import './LabelView.scss';
 // };
 
 interface IProps {
+    imageFile: File,
     imageProps: any,
     committedBoxes: IDBox[],
-    addIDBox: (box: IDBox) => ImageActionTypes
+    addIDBox: (box: IDBox, croppedID: File) => ImageActionTypes
 }
 
 interface IState {
@@ -154,7 +156,7 @@ class LabelView extends React.Component<IProps, IState> {
             id: this.state.currentBoxId,
             position: boxPosition
         }
-        this.props.addIDBox(box);
+        this.props.addIDBox(box, ImageUtil.cropImage(this.props.imageFile, boxPosition));
       }
       this.refreshDrawing();
     }
@@ -239,8 +241,14 @@ const mapStateToProps = (state: AppState, ownProps: any) => ({
 //     canRedo: state.turktool.committedBoxes.future.length > 0,
 //     taskId: ownProps.taskId
 //   };
+    // Seg Edit
+    imageFile: state.image.image,
     imageProps: state.image.imageProps,
     committedBoxes: state.image.segEdit.IDBoxes,
+
+    // Landmark
+    // internalIDProcessed: state.image.segEdit.internalIDProcessed,
+    // landmarks: state.image.landmark,
 });
 
 const mapDispatchToProps = {

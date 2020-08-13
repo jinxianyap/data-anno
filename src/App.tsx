@@ -10,6 +10,7 @@ import BottomBar from './views/Common/BottomBar/BottomBar';
 import ControlPanel from './views/Common/ControlPanel/ControlPanel';
 import { Container, Row, Col } from 'react-bootstrap';
 import SegEdit from './views/SegEdit/SegEdit';
+import Landmark from './views/Landmark/Landmark';
 
 interface IProps {
   currentStage: CurrentStage
@@ -25,6 +26,8 @@ const App: React.FC<IProps> = ({currentStage}) => {
        return <SegCheck />;
       case (CurrentStage.SEGMENTATION_EDIT):
         return <SegEdit />;
+      case (CurrentStage.LANDMARK_EDIT):
+        return <Landmark />;
       default:
        return <h4>ERROR</h4>;
     }

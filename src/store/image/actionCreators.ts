@@ -28,11 +28,12 @@ export function setImageProps(props: any): ImageActionTypes {
     }
 }
 
-export function addIDBox(box: IDBox): ImageActionTypes {
+export function addIDBox(box: IDBox, croppedID: File): ImageActionTypes {
     return {
         type: Action.ADD_ID_BOX,
         payload: {
-            IDBox: box
+            IDBox: box,
+            croppedID: croppedID
         }
     }
 }

@@ -13,8 +13,11 @@ export class DatabaseUtil {
                     offsetY: 0
                 },
                 segEdit: {
-                    IDBoxes: []
-                }
+                    IDBoxes: [],
+                    internalIDProcessed: [],
+                    croppedIDs: []
+                },
+                landmark: []
             },
             croppedID: {
                 image: files[1],
@@ -26,8 +29,11 @@ export class DatabaseUtil {
                     offsetY: 0
                 },
                 segEdit: {
-                    IDBoxes: []
-                }
+                    IDBoxes: [],
+                    internalIDProcessed: [],
+                    croppedIDs: []
+                },
+                landmark: []
             },
             backID: {
                 image: files[2],
@@ -39,8 +45,11 @@ export class DatabaseUtil {
                     offsetY: 0
                 },
                 segEdit: {
-                    IDBoxes: []
-                }
+                    IDBoxes: [],
+                    internalIDProcessed: [],
+                    croppedIDs: []
+                },
+                landmark: []
             },
             selfieVideo: files[3],
             jsonData: files[4],

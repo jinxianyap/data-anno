@@ -15,7 +15,12 @@ export type ImageState = {
 
     segEdit: {
         IDBoxes: IDBox[],
+        internalIDProcessed: boolean[],
+        croppedIDs: File[]
     }
+
+    // Landmarks
+    landmark: LandmarkData[][]
 }
 
 export type IDBox = {
@@ -26,6 +31,17 @@ export type IDBox = {
         width: number,
         height: number
     }
+}
+
+export type LandmarkData = {
+    name: string,
+    position: {
+        left: number,
+        top: number,
+        width: number,
+        height: number
+    },
+    flags: string[]
 }
 
 interface LoadImageState {
@@ -55,7 +71,8 @@ interface SetImageProps {
 interface AddIDBox {
     type: typeof Action.ADD_ID_BOX;
     payload: {
-        IDBox: IDBox
+        IDBox: IDBox,
+        croppedID: File
     }
 }
 interface DeleteIDBox {

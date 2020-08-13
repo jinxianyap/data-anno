@@ -15,7 +15,7 @@ interface IState {
     // ID: IDFolder;
 }
 
-class SegEdit extends React.Component<IProps, IState> {
+class Landmark extends React.Component<IProps, IState> {
 
     constructor(props: IProps) {
         super(props);
@@ -40,13 +40,13 @@ class SegEdit extends React.Component<IProps, IState> {
         return (
             <Container style={{height: "100%"}}>
                 <Row style={{height: "100%"}}>
-                    <Col xs={3}>
+                    <Col xs={2}>
                     </Col>
-                    <Col xs={6}>
+                    <Col xs={8}>
                         {/* <div id="segEditID" className="pairDisplay"></div> */}
                         <LabelView />
                     </Col>
-                    <Col xs={3}>
+                    <Col xs={2}>
                     </Col>
                 </Row>
             </Container>
@@ -64,4 +64,4 @@ const mapStateToProps = (state: AppState) => ({
 export default connect(
     mapStateToProps,
     mapDispatchToProps
-)(SegEdit);
+)(Landmark);

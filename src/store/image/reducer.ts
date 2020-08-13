@@ -12,7 +12,10 @@ const initialState: ImageState = {
     },
     segEdit: {
         IDBoxes: [],
-    }
+        internalIDProcessed: [],
+        croppedIDs: []
+    },
+    landmark: []
 }
 
 export function imageReducer(
@@ -43,30 +46,41 @@ export function imageReducer(
             }
         }
         case Action.ADD_ID_BOX: {
-            let newList = state.segEdit.IDBoxes;
-            newList.push(action.payload.IDBox);
-            console.log(newList);
+            let newIDList = state.segEdit.IDBoxes;
+            newIDList.push(action.payload.IDBox);
+            let newProcessedList = state.segEdit.internalIDProcessed;
+            newProcessedList.push(false);
+            let newCroppedList = state.segEdit.croppedIDs;
+            newCroppedList.push(action.payload.croppedID);
             return {
                 ...state,
                 segEdit: {
-                    IDBoxes: newList
+                    IDBoxes: newIDList,
+                    internalIDProcessed: newProcessedList,
+                    croppedIDs: newCroppedList
                 }
             }
         }
         case Action.DELETE_ID_BOX: {
             let id = action.payload.id;
             let boxes = state.segEdit.IDBoxes;
+            let internalIDs = state.segEdit.internalIDProcessed;
+            let croppedIDs = state.segEdit.croppedIDs;
 
             for (var i = 0; i < boxes.length; i++) {
                 if (boxes[i].id === id) {
                     boxes.splice(i, 1);
+                    internalIDs.splice(i, 1);
+                    croppedIDs.splice(i, 1);
                 }
             }
 
             return {
                 ...state,
                 segEdit: {
-                    IDBoxes: boxes
+                    IDBoxes: boxes,
+                    internalIDProcessed: internalIDs,
+                    croppedIDs: croppedIDs
                 }
             }
         }
