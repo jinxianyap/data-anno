@@ -3,7 +3,6 @@ import React from 'react';
 import { connect } from 'react-redux'; 
 import { ImageActionTypes, IDBox, ImageState } from '../../../store/image/types';
 import { addIDBox } from '../../../store/image/actionCreators';
-// import bg from '../../../assets/0001_0.jpg';
 import { AppState } from '../../../store';
 
 interface IProps {
@@ -50,7 +49,6 @@ class SegWidget extends React.Component<IProps, IState> {
         // need to handle preloaded boxes
         this.state = {
             source: '',
-            // source: image,
             naturalWidth: 0,
             naturalHeight: 0,
             width: 0,
@@ -104,8 +102,6 @@ class SegWidget extends React.Component<IProps, IState> {
                 height: height,
                 ratio: ratio,
             }, this.initializeMap);
-
-            console.log(this.state);
         }
         image.src = URL.createObjectURL(this.props.image.image);
     }
@@ -144,7 +140,6 @@ class SegWidget extends React.Component<IProps, IState> {
 
     handleMapClick = (e: any) => {
         console.log(e.latlng);
-        // check if clicked circle?
         let map: L.Map = this.state.map!;
 
         for (var i = 0; i < this.state.currentBox.circles.length; i++) {
@@ -326,7 +321,7 @@ class SegWidget extends React.Component<IProps, IState> {
 
     render() {
         return (
-            <div id="leaflet-map" style={{cursor: "crosshair", height: "95%", width: "100%"}}></div>
+            <div id="leaflet-map" style={{cursor: "crosshair", height: "calc(100% - 16px)", width: "100%"}}></div>
         )
     }
 }

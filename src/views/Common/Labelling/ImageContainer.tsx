@@ -6,16 +6,22 @@ import { ImageState, ImageActionTypes } from "../../../store/image/types";
 
 interface IProps {
     currentImageState: ImageState,
+    index: number,
     setImageProps: (props: any) => ImageActionTypes
 }
 
 
 class ImageContainer extends React.Component<IProps> {
 
+    image: File | undefined = undefined;
     height = 0;
     width = 0;
     imagePropsSet = false;
     el: any = undefined;
+
+  componentWillMount() {
+    this.image = this.props.currentImageState.segEdit.croppedIDs[this.props.index];
+  }
 
    /**
    * Add event listener
@@ -54,6 +60,12 @@ class ImageContainer extends React.Component<IProps> {
       height: h
     } = el.getBoundingClientRect();
 
+    console.log({
+      x: Math.abs(docLeft) + elLeft,
+      y: Math.abs(docTop) + elTop,
+      h,
+      w
+    });
     return {
       x: Math.abs(docLeft) + elLeft,
       y: Math.abs(docTop) + elTop,
@@ -99,26 +111,26 @@ class ImageContainer extends React.Component<IProps> {
   }
 
   render() {
-    //   console.log(URL.createObjectURL(this.props.currentImageState.image));
     return (
         <div>
             <img
                 id="LabelViewImg"
                 className="unselectable"
-                src={URL.createObjectURL(this.props.currentImageState.image)}
+                src={URL.createObjectURL(this.image!)}
                 alt=""
                 onLoad={this.onImgLoad}
                 ref={el => {this.el = el}}
             />
-            <h5>Number of ID boxes: {this.props.currentImageState.segEdit.IDBoxes.length}</h5>
+            <h5>Number of ID boxes: {this.props.currentImageState.landmark[this.props.index]}</h5>
         </div>
 
     );
   }
 }
-const mapStateToProps = (state: AppState) => {
+const mapStateToProps = (state: AppState, ownProps: any) => {
   return {
-    currentImageState: state.image
+    currentImageState: state.image,
+    index: ownProps.index
   };
 };
 

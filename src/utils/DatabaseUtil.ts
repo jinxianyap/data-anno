@@ -6,49 +6,34 @@ export class DatabaseUtil {
             originalID: {
                 image: files[0],
                 passesCrop: false,
-                imageProps: {
-                    width: 0,
-                    height: 0,
-                    offsetX: 0,
-                    offsetY: 0
-                },
                 segEdit: {
                     IDBoxes: [],
                     internalIDProcessed: [],
                     croppedIDs: []
                 },
+                imageProps: [],
                 landmark: []
             },
             croppedID: {
                 image: files[1],
                 passesCrop: false,
-                imageProps: {
-                    width: 0,
-                    height: 0,
-                    offsetX: 0,
-                    offsetY: 0
-                },
                 segEdit: {
                     IDBoxes: [],
                     internalIDProcessed: [],
                     croppedIDs: []
                 },
+                imageProps: [],
                 landmark: []
             },
             backID: {
                 image: files[2],
                 passesCrop: false,
-                imageProps: {
-                    width: 0,
-                    height: 0,
-                    offsetX: 0,
-                    offsetY: 0
-                },
                 segEdit: {
                     IDBoxes: [],
                     internalIDProcessed: [],
                     croppedIDs: []
                 },
+                imageProps: [],
                 landmark: []
             },
             selfieVideo: files[3],

@@ -5,47 +5,55 @@ export type ImageState = {
     // Seg Check
     passesCrop: boolean;
 
-    // Image Properties
-    imageProps: {
-        width: number,
-        height: number,
-        offsetX: number,
-        offsetY: number
-    }
-
     segEdit: {
         IDBoxes: IDBox[],
         internalIDProcessed: boolean[],
-        croppedIDs: File[]
+        croppedIDs: File[],
     }
 
-    // Landmarks
-    landmark: LandmarkData[][]
+    imageProps: ImageProps[];
+
+    // Landmarks for each internal id if more than 1
+    landmark: LandmarkData[][];
+    currentLandmark?: string;
 }
 
 export type IDBox = {
     id: number;
-    position: {
-        x1: number,
-        x2: number,
-        x3: number,
-        x4: number,
-        y1: number,
-        y2: number,
-        y3: number,
-        y4: number
-    }
+    position: Position;
 }
 
 export type LandmarkData = {
+    type: 'landmark',
     name: string,
-    position: {
-        left: number,
-        top: number,
-        width: number,
-        height: number
-    },
+    position: Position,
     flags: string[]
+}
+
+export type OCRData = {
+    type: 'OCR',
+    name: string,
+    position: Position
+}
+
+export type LandmarkOCRData = LandmarkData | OCRData;
+
+export type ImageProps = {
+    width: number,
+    height: number,
+    offsetX: number,
+    offsetY: number
+}
+
+export type Position = {
+    x1: number,
+    x2: number,
+    x3: number,
+    x4: number,
+    y1: number,
+    y2: number,
+    y3: number,
+    y4: number
 }
 
 interface LoadImageState {
@@ -65,10 +73,7 @@ interface SaveSegCheck {
 interface SetImageProps {
     type: typeof Action.SET_IMAGE_PROPS;
     payload: {
-        width: number,
-        height: number,
-        offsetX: number,
-        offsetY: number
+        props: ImageProps
     }
 }
 

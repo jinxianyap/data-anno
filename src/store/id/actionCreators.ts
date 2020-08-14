@@ -14,7 +14,7 @@ export function saveDocumentType(documentType: string): IDActionTypes {
     return {
         type: Action.SAVE_DOCUMENT_TYPE,
         payload: {
-            documentType
+            documentType: documentType
         }
     }
 }

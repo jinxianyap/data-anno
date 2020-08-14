@@ -43,10 +43,16 @@ export function calculateRectPosition(imgProps: any, rawBoxCoords: any) {
       height: bottom - top
     });
     return {
-      left: left - imgProps.offsetX,
-      top: top - imgProps.offsetY,
-      width: right - left,
-      height: bottom - top
+      x1: left - imgProps.offsetX,
+      y1: top - imgProps.offsetY,
+      x2: right - imgProps.offsetX,
+      y2: top - imgProps.offsetY,
+      x4: left- imgProps.offsetX,
+      y3: top + top - imgProps.offsetY - bottom,
+      x3: right - imgProps.offsetX,
+      y4: top + top - imgProps.offsetY - bottom
+      // width: right - left,
+      // height: bottom - top
     };
   }
   

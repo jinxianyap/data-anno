@@ -1,6 +1,6 @@
 import React from "react";
 import BoundingBox from "./BoundingBox";
-import { IDBox } from "../../../store/image/types";
+import { LandmarkOCRData } from "../../../store/image/types";
 
 /**
  * Presentational component:
@@ -9,7 +9,7 @@ import { IDBox } from "../../../store/image/types";
  */
 
 interface IProps {
-    boxes: IDBox[],
+    boxes: LandmarkOCRData[],
     isDrawing: boolean
 }
 
@@ -18,8 +18,8 @@ const BoundingBoxes: React.FC<IProps> = ({boxes, isDrawing}) => {
 
     // make BoundingBox component for each box that needs to
     // be rendered
-    const boxesToRender = boxes.map((box: IDBox, index: any) => {
-      return <BoundingBox key={box.id} isDrawing={isDrawing} box={box} />;
+    const boxesToRender = boxes.map((box: LandmarkOCRData, index: any) => {
+      return <BoundingBox key={box.name} isDrawing={isDrawing} box={box} />;
     });
 
     return (

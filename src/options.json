@@ -3,7 +3,7 @@
     "landmark": {
         "MyKadFront": ["kPMLandmark", "securityChip", "mscLogo", "gender", "citizen", "name", "address", "facialImage", "myKadLogo", "myKadNumber"],
         "MyKadBack": ["coatOfArmLandmark", "klccTower", "signature"],
-        "Passport": [""]
+        "Passport": ["passportNumber"]
     },
     "ocr": {
         "MyKad": ["icNumber", "name", "birthDate", "street"]

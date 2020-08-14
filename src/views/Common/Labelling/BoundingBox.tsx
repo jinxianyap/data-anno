@@ -1,10 +1,10 @@
 import React from "react";
-import { IDBox } from "../../../store/image/types";
+import { LandmarkOCRData } from "../../../store/image/types";
 import DeleteBoxButton from "./DeleteBoxButton";
 
 interface IProps {
     isDrawing: boolean
-    box: IDBox
+    box: LandmarkOCRData
 }
 
 interface IState {
@@ -48,7 +48,7 @@ export default class BoundingBox extends React.Component<IProps, IState> {
       >
         {this.state.mouseOver && (
           <DeleteBoxButton
-            boxId={this.props.box.id}
+            boxId={this.props.box.name}
             isDrawing={this.props.isDrawing}
           />
         )}

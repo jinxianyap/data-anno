@@ -7,11 +7,14 @@ import ImageContainer from "../Labelling/ImageContainer";
 import Crosshair from "../Labelling/Crosshair";
 // import InfoPanel from "../components/InfoPanel";
 import { calculateRectPosition, isRectangleTooSmall } from "../../../utils/DrawingUtil";
-import { IDBox, ImageActionTypes } from "../../../store/image/types";
+import { IDBox, ImageActionTypes, ImageState, LandmarkData } from "../../../store/image/types";
 import { AppState } from "../../../store";
 // import SubmitButtonContainer from "../containers/SubmitButtonContainer";
 import './LabelView.scss';
 import { ImageUtil } from "../../../utils/ImageUtil";
+import options from '../../../options.json';
+import { IDState } from "../../../store/id/types";
+import { IDProcess } from "../../../utils/enums";
 
 // convert JSON key-value pairs of boxes to Array
 // const preprocess = boxes => {
@@ -22,9 +25,9 @@ import { ImageUtil } from "../../../utils/ImageUtil";
 // };
 
 interface IProps {
-    imageFile: File,
-    imageProps: any,
-    committedBoxes: IDBox[],
+    ID: IDState;
+    image: ImageState;
+    currentLandmark: string;
     addIDBox: (box: IDBox, croppedID: File) => ImageActionTypes
 }
 
@@ -41,6 +44,10 @@ interface IState {
 }
 
 class LabelView extends React.Component<IProps, IState> {
+
+    index: number = 0;
+    landmarks: any = undefined;
+
     constructor(props: IProps) {
       super(props);
       this.state = {
@@ -54,6 +61,15 @@ class LabelView extends React.Component<IProps, IState> {
         // imageUrl: null,
         showCrosshair: true
       };
+    }
+
+    componentWillMount() {
+      for (var i = 0; i < this.props.image.segEdit.internalIDProcessed.length; i++) {
+        if (!this.props.image.segEdit.internalIDProcessed) {
+          this.index = i;
+          break;
+        }
+      }
     }
   
     /**
@@ -146,7 +162,7 @@ class LabelView extends React.Component<IProps, IState> {
       // console.log(this.props.imageProps);
       // console.log("up");
       const boxPosition = calculateRectPosition(
-        this.props.imageProps,
+        this.props.image.imageProps[this.index],
         this.getCurrentBox()
       );
       if (this.state.isDrawing && !isRectangleTooSmall(boxPosition)) {
@@ -174,22 +190,25 @@ class LabelView extends React.Component<IProps, IState> {
     isCrosshairReady = () => {
       return this.state.currX &&
         this.state.currY &&
-        this.props.imageProps.height &&
-        this.props.imageProps.width;
+        this.props.image.imageProps[this.index].height &&
+        this.props.image.imageProps[this.index].width;
     }
   
     render() {
-      var boxesToRender = this.props.committedBoxes.slice(0);
+      let boxesToRender: LandmarkData[] = this.props.image.landmark[this.index];
+      console.log(boxesToRender);
   
-    //   if (this.state.startX != null) {
-    //     boxesToRender.push({
-    //       id: this.state.currentBoxId,
-    //       position: calculateRectPosition(
-    //         this.props.imageProps,
-    //         this.getCurrentBox()
-    //       )
-    //     });
-    //   }
+      if (this.state.startX != null) {
+        boxesToRender.push({
+          name: this.props.currentLandmark,
+          type: 'landmark',
+          position: calculateRectPosition(
+            this.props.image.imageProps[this.index],
+            this.getCurrentBox()
+          ),
+          flags: []
+        });
+      }
   
       return (
         <div
@@ -204,17 +223,17 @@ class LabelView extends React.Component<IProps, IState> {
                 <Crosshair
                   x={this.state.currX!}
                   y={this.state.currY!}
-                  imageProps={this.props.imageProps}
+                  imageProps={this.props.image.imageProps[this.index]}
                 />
               }
-              {boxesToRender.length > 0 && (
+              {/* {boxesToRender.length > 0 && (
                 <BoundingBoxes
                 //   className="BoundingBoxes unselectable"
                   boxes={boxesToRender}
                   isDrawing={this.state.isDrawing}
                 />
-              )}
-              <ImageContainer />
+              )} */}
+              <ImageContainer index={this.index} />
             </div>
             {/* {this.props.showSidePanel &&
               <div id="SidePanel"> */}
@@ -239,14 +258,11 @@ const mapStateToProps = (state: AppState, ownProps: any) => ({
 //     canRedo: state.turktool.committedBoxes.future.length > 0,
 //     taskId: ownProps.taskId
 //   };
-    // Seg Edit
-    imageFile: state.image.image,
-    imageProps: state.image.imageProps,
-    committedBoxes: state.image.segEdit.IDBoxes,
+    ID: state.id,
+    image: state.image,
 
-    // Landmark
-    // internalIDProcessed: state.image.segEdit.internalIDProcessed,
-    // landmarks: state.image.landmark,
+    // Landmark Stage
+    currentLandmark: state.image.currentLandmark!
 });
 
 const mapDispatchToProps = {

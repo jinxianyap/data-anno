@@ -4,18 +4,13 @@ import { Action } from "../Actions";
 const initialState: ImageState = {
     image: new File([], ''),
     passesCrop: false,
-    imageProps: {
-        height: 0,
-        width: 0,
-        offsetX: 0,
-        offsetY: 0
-    },
     segEdit: {
         IDBoxes: [],
         internalIDProcessed: [],
         croppedIDs: []
     },
-    landmark: []
+    imageProps: [],
+    landmark: [],
 }
 
 export function imageReducer(
@@ -35,14 +30,11 @@ export function imageReducer(
             }
         }
         case Action.SET_IMAGE_PROPS: {
+            let props = state.imageProps;
+            props.push(action.payload.props);
             return {
                 ...state,
-                imageProps: {
-                    width: action.payload.width,
-                    height: action.payload.height,
-                    offsetX: action.payload.offsetX,
-                    offsetY: action.payload.offsetY
-                }
+                imageProps: props
             }
         }
         case Action.ADD_ID_BOX: {

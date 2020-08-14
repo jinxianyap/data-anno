@@ -1,5 +1,5 @@
 import { Action } from "../Actions";
-import { ImageState, ImageActionTypes, IDBox } from "./types";
+import { ImageState, ImageActionTypes, IDBox, ImageProps } from "./types";
 
 export function loadImageState(currentImage: ImageState): ImageActionTypes {
     return {
@@ -19,11 +19,11 @@ export function saveSegCheck(passesCrop: boolean): ImageActionTypes {
     }
 }
 
-export function setImageProps(props: any): ImageActionTypes {
+export function setImageProps(props: ImageProps): ImageActionTypes {
     return {
         type: Action.SET_IMAGE_PROPS,
         payload: {
-            ...props
+            props: props
         }
     }
 }

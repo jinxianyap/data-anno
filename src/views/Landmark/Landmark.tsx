@@ -43,7 +43,6 @@ class Landmark extends React.Component<IProps, IState> {
                     <Col xs={2}>
                     </Col>
                     <Col xs={8}>
-                        {/* <div id="segEditID" className="pairDisplay"></div> */}
                         <LabelView />
                     </Col>
                     <Col xs={2}>
