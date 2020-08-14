@@ -11,7 +11,7 @@ import ControlPanel from './views/Common/ControlPanel/ControlPanel';
 import { Container, Row, Col } from 'react-bootstrap';
 import SegEdit from './views/SegEdit/SegEdit';
 import Landmark from './views/Landmark/Landmark';
-
+import SegWidget from './views/Common/SegWidget/SegWidget';
 interface IProps {
   currentStage: CurrentStage
 }
@@ -33,26 +33,23 @@ const App: React.FC<IProps> = ({currentStage}) => {
     }
   }
 
-  if (currentStage === CurrentStage.SETUP) {
-    return <SetupView />;
-  } else {
-    return (
-      <div className="app-wrapper">
-        <TopBar />
-          <Container className="content-container">
-            <Row style={{height: "100%", width: "100%", margin: 0}}>
-              <Col md={7} lg={9}>
-                {paintContent()}
-              </Col>
-              <Col style={{padding: 0}}>
-                <ControlPanel />
-              </Col>
-            </Row>
-          </Container> 
-        <BottomBar />
-      </div>
-    );
-  }
+  return (
+    <div className="app-wrapper">
+      <TopBar />
+        <Container className="content-container">
+          <Row style={{height: "100%", width: "100%", margin: 0}}>
+            <Col md={7} lg={9}>
+              {paintContent()}
+              {/* <SegWidget /> */}
+            </Col>
+            <Col style={{padding: 0}}>
+              {currentStage === CurrentStage.SETUP ? <div/> : <ControlPanel />}
+            </Col>
+          </Row>
+        </Container> 
+        {currentStage === CurrentStage.SETUP ? <div/> : <BottomBar />}
+    </div>
+  );
 }
 
 const mapStateToProps = (state: AppState) => ({

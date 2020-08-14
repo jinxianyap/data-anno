@@ -25,7 +25,7 @@ const mapStateToProps = (state: AppState) => {
     let index = state.general.currentIndex;
     let ID = state.general.IDLibrary[index];
     return {
-        currentIDSource: ID.source,
+        currentIDSource: ID ? ID.source : '',
         database: state.general.setupOptions.database
     };
 }

@@ -150,13 +150,11 @@ class LabelView extends React.Component<IProps, IState> {
         this.getCurrentBox()
       );
       if (this.state.isDrawing && !isRectangleTooSmall(boxPosition)) {
-        // drawing has ended, and coord is not null,
-        // so this rectangle can be committed permanently
-        let box: IDBox = {
-            id: this.state.currentBoxId,
-            position: boxPosition
-        }
-        this.props.addIDBox(box, ImageUtil.cropImage(this.props.imageFile, boxPosition));
+        // let box: IDBox = {
+        //     id: this.state.currentBoxId,
+        //     position: boxPosition
+        // }
+        // this.props.addIDBox(box, ImageUtil.cropImage(this.props.imageFile, boxPosition));
       }
       this.refreshDrawing();
     }
@@ -183,15 +181,15 @@ class LabelView extends React.Component<IProps, IState> {
     render() {
       var boxesToRender = this.props.committedBoxes.slice(0);
   
-      if (this.state.startX != null) {
-        boxesToRender.push({
-          id: this.state.currentBoxId,
-          position: calculateRectPosition(
-            this.props.imageProps,
-            this.getCurrentBox()
-          )
-        });
-      }
+    //   if (this.state.startX != null) {
+    //     boxesToRender.push({
+    //       id: this.state.currentBoxId,
+    //       position: calculateRectPosition(
+    //         this.props.imageProps,
+    //         this.getCurrentBox()
+    //       )
+    //     });
+    //   }
   
       return (
         <div

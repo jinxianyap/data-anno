@@ -28,7 +28,7 @@ interface IProps {
 }
 
 interface IState {
-    ownStage: CurrentStage;
+    // ownStage: CurrentStage;
 
     // Seg Check
     documentTypes: string[];
@@ -43,7 +43,7 @@ class ControlPanel extends React.Component<IProps, IState> {
     constructor(props: IProps) {
         super(props);
         this.state = {
-            ownStage: CurrentStage.SEGMENTATION_CHECK,
+            // ownStage: CurrentStage.SEGMENTATION_CHECK,
             documentTypes: [],
             docType: '',
             passesCrop: false,
@@ -53,24 +53,9 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     componentDidMount() {
-        // this.props.getNextID();
-        switch (this.props.currentStage) {
-            case (CurrentStage.SEGMENTATION_CHECK): {
-                this.props.loadNextID(this.props.currentID);
-                this.loadDocumentTypes();
-                break;
-            }
-            case (CurrentStage.SEGMENTATION_EDIT): {
-                let process = this.props.currentID.processStage;
-                console.log(process);
-                if (process === IDProcess.MYKAD_BACK) {
-                    this.props.loadImageState(this.props.currentID.backID!);
-                } else {
-                    this.props.loadImageState(this.props.currentID.originalID!);
-                    console.log(this.props.currentID.originalID);
-                }
-                break;
-            }
+        if (this.props.currentStage === CurrentStage.SEGMENTATION_CHECK) {
+            this.props.loadNextID(this.props.currentID);
+            this.loadDocumentTypes();
         }
     }
 
@@ -103,14 +88,24 @@ class ControlPanel extends React.Component<IProps, IState> {
         if (this.state.passesCrop) {
             this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
         } else {
+            this.loadSegEditImage();;
             this.props.progressNextStage(CurrentStage.SEGMENTATION_EDIT);
         }
     }
 
     segEditDone = () => {
         // e.preventDefault();
-
         this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+    }
+
+    loadSegEditImage = () => {
+        let process = this.props.currentID.processStage;
+        if (process === IDProcess.MYKAD_BACK) {
+            this.props.loadImageState(this.props.currentID.backID!);
+        } else {
+            this.props.loadImageState(this.props.currentID.originalID!);
+            // console.log(this.props.currentID.originalID);
+        }
     }
 
     // Seg Check Components
@@ -140,17 +135,7 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     segEdit = () => {
-        if (this.state.ownStage !== this.props.currentStage) {
-            this.setState({ownStage: CurrentStage.SEGMENTATION_EDIT}, () => {
-                let process = this.props.currentID.processStage;
-                if (process === IDProcess.MYKAD_BACK) {
-                    this.props.loadImageState(this.props.currentID.backID!);
-                } else {
-                    this.props.loadImageState(this.props.currentID.originalID!);
-                    console.log(this.props.currentID.originalID);
-                }
-            });
-        }
+
         return (
             <div>
                 <h5>Please draw bounding boxes around any number of IDs in the image.</h5>
@@ -159,9 +144,10 @@ class ControlPanel extends React.Component<IProps, IState> {
                 </Button>
             </div>
         );
-    }   
+    }
 
     render() {
+
         const controlFunctions = () => {
             switch (this.props.currentStage) {
                 case (CurrentStage.SEGMENTATION_CHECK): {

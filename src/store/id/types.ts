@@ -15,7 +15,7 @@ export type IDState = {
     selfieVideo?: File;
     jsonData?: File;
 
-    generatedCrops?: ImageState[];
+    // generatedCrops?: ImageState[];
 };
 
 interface SaveDocumentType {

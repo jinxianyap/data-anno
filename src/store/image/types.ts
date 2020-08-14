@@ -26,10 +26,14 @@ export type ImageState = {
 export type IDBox = {
     id: number;
     position: {
-        left: number,
-        top: number,
-        width: number,
-        height: number
+        x1: number,
+        x2: number,
+        x3: number,
+        x4: number,
+        y1: number,
+        y2: number,
+        y3: number,
+        y4: number
     }
 }
 

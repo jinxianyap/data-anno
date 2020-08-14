@@ -5,6 +5,7 @@ import { AppState } from '../../store';
 import { Container, Row, Col } from 'react-bootstrap';
 // import { ImageUtil } from '../../utils/ImageUtil';
 import LabelView from '../Common/LabelView/LabelView';
+import SegWidget from '../Common/SegWidget/SegWidget';
 
 // only show image and drawn boxes
 interface IProps {
@@ -29,24 +30,21 @@ class SegEdit extends React.Component<IProps, IState> {
     }
 
     componentWillMount() {
-
     }
 
     componentDidMount() {
-        // ImageUtil.loadImage("segEditID", this.props.currentImage.image!);        
     }
 
     render() {
         return (
             <Container style={{height: "100%"}}>
                 <Row style={{height: "100%"}}>
-                    <Col xs={3}>
+                    <Col xs={1}>
                     </Col>
-                    <Col xs={6}>
-                        {/* <div id="segEditID" className="pairDisplay"></div> */}
-                        <LabelView />
+                    <Col xs={10}>
+                        <SegWidget />
                     </Col>
-                    <Col xs={3}>
+                    <Col xs={1}>
                     </Col>
                 </Row>
             </Container>

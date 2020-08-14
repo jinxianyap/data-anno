@@ -42,7 +42,7 @@ export default class BoundingBox extends React.Component<IProps, IState> {
     return (
       <div
         className="BoundingBox"
-        style={this.props.box.position}
+        // style={this.props.box.position}
         onMouseOver={this.mouseOverHandler}
         onMouseLeave={this.mouseLeaveHandler}
       >
