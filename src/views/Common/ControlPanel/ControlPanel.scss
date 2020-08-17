@@ -3,4 +3,10 @@
     width: 100%;
     background-color: darken(#dbdbdb, 25);
     padding: 2rem;
+
+    .btn-group-vertical {
+        input {
+            display: none;
+        }
+    }
 }

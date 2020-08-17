@@ -1,5 +1,6 @@
 import { Action } from "../Actions";
-import { ImageState, ImageActionTypes, IDBox, ImageProps } from "./types";
+import { ImageState, ImageActionTypes, IDBox, ImageProps, Position, LandmarkData } from "./types";
+import { id } from "date-fns/locale";
 
 export function loadImageState(currentImage: ImageState): ImageActionTypes {
     return {
@@ -43,6 +44,25 @@ export function deleteIDBox(id: number): ImageActionTypes {
         type: Action.DELETE_ID_BOX,
         payload: {
             id: id
+        }
+    }
+}
+
+export function setCurrentLandmark(landmark: string): ImageActionTypes {
+    return {
+        type: Action.SET_CURRENT_LANDMARK,
+        payload: {
+            landmark: landmark
+        }
+    }
+}
+
+export function addLandmarkData(index: number, landmark: LandmarkData): ImageActionTypes {
+    return {
+        type: Action.ADD_LANDMARK_DATA,
+        payload: {
+            index: index,
+            landmark: landmark
         }
     }
 }

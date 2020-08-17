@@ -22,11 +22,11 @@ interface IState {
     ratio: number,
 
     stage: number,
-    currentBox: Box,
-    boxes: Box[]
+    currentBox: SegBox,
+    boxes: SegBox[]
 }
 
-type Box = {
+type SegBox = {
     id: number,
     position: {
         x1?: number,
@@ -42,7 +42,7 @@ type Box = {
     lines: L.Polyline[]
 }
 
-class SegWidget extends React.Component<IProps, IState> {
+class SegLabeller extends React.Component<IProps, IState> {
 
     constructor(props: IProps) {
         super(props);
@@ -66,14 +66,18 @@ class SegWidget extends React.Component<IProps, IState> {
     }
 
     componentWillMount() {
-        console.log('mount');
-        console.log(this.props.image);
+        // console.log('mount');
+        // console.log(this.props.image);
     }
 
     componentDidMount() {
         if (this.props.image.image.size !== 0 && this.props.image.image.name !== '') {
             this.loadImageData();
         }
+    }
+
+    componentDidUpdate() {
+        // console.log(this.state.currentBox);
     }
 
     loadImageData = () => {
@@ -108,12 +112,11 @@ class SegWidget extends React.Component<IProps, IState> {
 
     initializeMap = () => {
         let st = this.state;
-        console.log(st);
         let top: [number, number] = [0, 0];
         let mapBounds: [number, number][] = [[0, 0], [1000, 1000]];
         let imageBounds: [number, number][] = [[0, 0], [st.height, st.width]];
 
-        let map = L.map('leaflet-map', {
+        let map = L.map('segLabeller', {
             center: top,
             crs: L.CRS.Simple,
             zoom: 8,
@@ -122,29 +125,83 @@ class SegWidget extends React.Component<IProps, IState> {
             maxBoundsViscosity: 1.0
         });
 
-        this.setState({map: map});
-
         let layer = new L.TileLayer('', {
             tileSize: L.point(st.height, st.width),
             noWrap: true
         });
 
-        console.log(st.source);
         let overlay = L.imageOverlay(st.source, imageBounds);
 
         overlay.addTo(map);
         map.addLayer(layer);
         map.fitBounds(imageBounds);
         map.on('click', this.handleMapClick);
+
+        this.setState({map: map}, this.renderCommittedBoxes);
+    }
+
+    renderCommittedBoxes = () => {
+        let boxes = this.props.committedBoxes;
+        let map = this.state.map!;
+        boxes.forEach((box) => {
+            let x1 = box.position.x1 / this.state.ratio;
+            let x2 = box.position.x2 / this.state.ratio;
+            let x3 = box.position.x3 / this.state.ratio;
+            let x4 = box.position.x4 / this.state.ratio;
+            let y1 = box.position.y1 / this.state.ratio;
+            let y2 = box.position.y2 / this.state.ratio;
+            let y3 = box.position.y3 / this.state.ratio;
+            let y4 = box.position.y4 / this.state.ratio;
+            let circles: L.Circle[] = [
+                L.circle([y1,x1], {
+                    color: 'red',
+                    fillColor: '#f03',
+                    fillOpacity: 0.5,
+                    radius: 10
+                }).addTo(map),
+                L.circle([y2, x2], {
+                    color: 'red',
+                    fillColor: '#f03',
+                    fillOpacity: 0.5,
+                    radius: 10
+                }).addTo(map),
+                L.circle([y3, x3], {
+                    color: 'red',
+                    fillColor: '#f03',
+                    fillOpacity: 0.5,
+                    radius: 10
+                }).addTo(map),
+                L.circle([y4, x4], {
+                    color: 'red',
+                    fillColor: '#f03',
+                    fillOpacity: 0.5,
+                    radius: 10
+                }).addTo(map),
+            ];
+
+            let lines: L.Polyline[] = [
+                this.drawLine([y1, x1], [y2, x2]),
+                this.drawLine([y2, x2], [y3, x3]),
+                this.drawLine([y4, x4], [y3, x3]),
+                this.drawLine([y4, x4], [y1, x1])
+            ];
+
+            let segBox: SegBox = {
+                id: box.id,
+                position: box.position,
+                circles: circles,
+                lines: lines
+            }
+
+            this.state.boxes.push(segBox);
+        });
     }
 
     handleMapClick = (e: any) => {
-        console.log(e.latlng);
         let map: L.Map = this.state.map!;
 
         for (var i = 0; i < this.state.currentBox.circles.length; i++) {
             if (this.state.currentBox.circles[i].getBounds().contains(e.latlng)) {
-                console.log('clicked circle');
                 this.handleCircleClick(e, i);
                 return;
             }
@@ -180,13 +237,13 @@ class SegWidget extends React.Component<IProps, IState> {
                 position: (st.stage === 1
                     ? {
                         ...this.state.currentBox.position,
-                        x2: e.latlng.lng,
-                        y2: e.latlng.lat
+                        x2: e.latlng.lng * this.state.ratio,
+                        y2: e.latlng.lat * this.state.ratio
                     }
                     : {
                         ...this.state.currentBox.position,
-                        x3: e.latlng.lng,
-                        y3: e.latlng.lat
+                        x3: e.latlng.lng * this.state.ratio,
+                        y3: e.latlng.lat * this.state.ratio
                     }
                 ),
                 circles: newCircles,
@@ -221,8 +278,8 @@ class SegWidget extends React.Component<IProps, IState> {
                 ...currentBox,
                 position: {
                     ...this.state.currentBox.position,
-                    x4: e.latlng.lng,
-                    y4: e.latlng.lat
+                    x4: e.latlng.lng * this.state.ratio,
+                    y4: e.latlng.lat * this.state.ratio
                 },
                 circles: newCircles,
                 lines: newLines
@@ -242,8 +299,8 @@ class SegWidget extends React.Component<IProps, IState> {
             let newBox = {
                 id: this.state.boxes.length,
                 position: {
-                    x1: circle.getLatLng().lng,
-                    y1: circle.getLatLng().lat
+                    x1: circle.getLatLng().lng * this.state.ratio,
+                    y1: circle.getLatLng().lat * this.state.ratio
                 },
                 circles: [circle],
                 lines: []
@@ -321,7 +378,7 @@ class SegWidget extends React.Component<IProps, IState> {
 
     render() {
         return (
-            <div id="leaflet-map" style={{cursor: "crosshair", height: "calc(100% - 16px)", width: "100%"}}></div>
+            <div id="segLabeller" style={{cursor: "crosshair", height: "calc(100% - 16px)", width: "100%"}}></div>
         )
     }
 }
@@ -339,4 +396,4 @@ const mapDispatchToProps = {
 export default connect(
     mapStateToProps, 
     mapDispatchToProps
-)(SegWidget);
+)(SegLabeller);

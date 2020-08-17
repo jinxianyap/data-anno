@@ -5,6 +5,8 @@ import { AppState } from '../../store';
 import { Container, Row, Col } from 'react-bootstrap';
 // import { ImageUtil } from '../../utils/ImageUtil';
 import LabelView from '../Common/LabelView/LabelView';
+import LandmarkLabeller from '../Common/LandmarkLabeller/LandmarkLabeller';
+import './Landmark.scss';
 
 // only show image and drawn boxes
 interface IProps {
@@ -43,7 +45,8 @@ class Landmark extends React.Component<IProps, IState> {
                     <Col xs={2}>
                     </Col>
                     <Col xs={8}>
-                        <LabelView />
+                        {/* <LabelView /> */}
+                        <LandmarkLabeller />
                     </Col>
                     <Col xs={2}>
                     </Col>

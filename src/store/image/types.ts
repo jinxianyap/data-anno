@@ -24,6 +24,7 @@ export type IDBox = {
 }
 
 export type LandmarkData = {
+    id: number,
     type: 'landmark',
     name: string,
     position: Position,
@@ -31,6 +32,7 @@ export type LandmarkData = {
 }
 
 export type OCRData = {
+    id: number,
     type: 'OCR',
     name: string,
     position: Position
@@ -91,8 +93,25 @@ interface DeleteIDBox {
     }
 }
 
+interface SetCurrentLandmark {
+    type: typeof Action.SET_CURRENT_LANDMARK;
+    payload: {
+        landmark: string
+    }
+}
+
+interface AddLandmarkData {
+    type: typeof Action.ADD_LANDMARK_DATA;
+    payload: {
+        index: number,
+        landmark: LandmarkData
+    }
+}
+
 export type ImageActionTypes = LoadImageState
     | SaveSegCheck
     | AddIDBox
     | DeleteIDBox
     | SetImageProps
+    | SetCurrentLandmark
+    | AddLandmarkData

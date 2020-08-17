@@ -19,7 +19,7 @@ const BoundingBoxes: React.FC<IProps> = ({boxes, isDrawing}) => {
     // make BoundingBox component for each box that needs to
     // be rendered
     const boxesToRender = boxes.map((box: LandmarkOCRData, index: any) => {
-      return <BoundingBox key={box.name} isDrawing={isDrawing} box={box} />;
+      return <BoundingBox key={box.id} isDrawing={isDrawing} box={box} />;
     });
 
     return (

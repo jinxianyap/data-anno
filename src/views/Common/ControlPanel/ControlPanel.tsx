@@ -2,7 +2,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { CurrentStage, IDProcess } from '../../../utils/enums';
 import { AppState } from '../../../store';
-import { Form, Button, ButtonGroup, Modal } from 'react-bootstrap';
+import { Form, Button, ButtonGroup, ToggleButton, Modal } from 'react-bootstrap';
 import options from '../../../options.json';
 import './ControlPanel.scss';
 import { GeneralActionTypes } from '../../../store/general/types';
@@ -10,7 +10,8 @@ import { IDActionTypes, IDState } from '../../../store/id/types';
 import { ImageActionTypes, ImageState, IDBox } from '../../../store/image/types';
 import { progressNextStage, getNextID } from '../../../store/general/actionCreators';
 import { loadNextID, saveDocumentType } from '../../../store/id/actionCreators';
-import { saveSegCheck, loadImageState, addIDBox } from '../../../store/image/actionCreators';
+import { saveSegCheck, loadImageState, addIDBox, setCurrentLandmark } from '../../../store/image/actionCreators';
+import AddTypeModal from '../AddTypeModal/AddTypeModal';
 
 interface IProps {
     currentStage: CurrentStage;
@@ -24,44 +25,55 @@ interface IProps {
 
     loadNextID: (ID: IDState) => IDActionTypes;
     saveDocumentType: (documentType: string) => IDActionTypes;
-
     saveSegCheck: (passesCrop: boolean) => ImageActionTypes;
+
     addIDBox: (box: IDBox, croppedID: File) => ImageActionTypes;
+
+    setCurrentLandmark: (landmark: string) => ImageActionTypes;
 }
 
 interface IState {
     // ownStage: CurrentStage;
 
     // Seg Check
+    showAddDocTypeModal: boolean;
     documentTypes: string[];
     docType: string;
     passesCrop: boolean;
     cropDirty: boolean;
     validation: boolean;
 
+    // Landmark
+    showAddLandmarkModal: boolean;
     landmarks: string[];
+    selectedLandmark: string;
 }
 
 class ControlPanel extends React.Component<IProps, IState> {
+
+    docTypeRef: any = undefined;
 
     constructor(props: IProps) {
         super(props);
         this.state = {
             // ownStage: CurrentStage.SEGMENTATION_CHECK,
+            showAddDocTypeModal: false,
             documentTypes: [],
             docType: '',
             passesCrop: false,
             cropDirty: false,
             validation: false,
 
-            landmarks: []
+            showAddLandmarkModal: false,
+            landmarks: [],
+            selectedLandmark: ''
         }
     }
 
     componentDidUpdate() {
         switch (this.props.currentStage) {
             case (CurrentStage.LANDMARK_EDIT): {
-                this.loadLandmarkNames();
+                this.loadLandmarkNames(false);
             }
         }
     }
@@ -117,7 +129,7 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     loadLandmarkImage = () => {
-        // if seg check passes right away, need to call api to pull new cropped image, IDBox data and store inside seg edit
+        // only if seg check passes right away: need to call api to pull new cropped image, IDBox data and store inside seg edit
         this.props.loadImageState(this.props.currentID.originalID!);
         let box: IDBox = {
             id: 0,
@@ -142,8 +154,8 @@ class ControlPanel extends React.Component<IProps, IState> {
         });
     }
 
-    loadLandmarkNames = () => {
-        if (this.state.landmarks.length !== 0) return;
+    loadLandmarkNames = (reload: boolean) => {
+        if (this.state.landmarks.length !== 0 && !reload) return;
         switch (this.props.currentID.processStage) {
             case (IDProcess.MYKAD_FRONT): {
                 this.setState({landmarks: options.landmark.MyKadFront});
@@ -165,47 +177,21 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     // Seg Check Components
     segCheck = () => {
-
-        // let showModal = false;
-
-        const addDocType = () => {
-            // showModal = true;
+        const addDocType = (doc: string) => {
+            options.documentTypes.push(doc);
+            this.setState({showAddDocTypeModal: false}, this.loadDocumentTypes);
         }
-
         return (
             <Form onSubmit={this.submitSegCheck}>
                 <Form.Group controlId="docType">
                     <Form.Label>Document Type</Form.Label>
-                    <Button onClick={addDocType} style={{padding: "0 0.5rem", margin: "0.5rem 1rem"}}>+</Button>
+                    <Button onClick={() => {console.log('click'); this.setState({showAddDocTypeModal: true})}} style={{padding: "0 0.5rem", margin: "0.5rem 1rem"}}>+</Button>
                     <Form.Control as="select" value={this.state.docType} onChange={(e: any) => this.setState({docType: e.target.value})}>
                         {Object.entries(this.state.documentTypes).map(([key, value]) => <option value={value}>{value}</option>)}
                     </Form.Control>
                 </Form.Group>
 
-                {/* { showModal ?
-                <Modal
-                    size="lg"
-                    aria-labelledby="contained-modal-title-vcenter"
-                    centered
-                    >
-                    <Modal.Header closeButton>
-                        <Modal.Title id="contained-modal-title-vcenter">
-                        Modal heading
-                        </Modal.Title>
-                    </Modal.Header>
-                    <Modal.Body>
-                        <h4>Centered Modal</h4>
-                        <p>
-                        Cras mattis consectetur purus sit amet fermentum. Cras justo odio,
-                        dapibus ac facilisis in, egestas eget quam. Morbi leo risus, porta ac
-                        consectetur ac, vestibulum at eros.
-                        </p>
-                    </Modal.Body>
-                    <Modal.Footer>
-                        <Button onClick={() => {showModal = false;}}>Close</Button>
-                    </Modal.Footer>
-                    </Modal> : <div />
-                } */}
+                <AddTypeModal showModal={this.state.showAddDocTypeModal} item='documentTypes' add={addDocType} closeModal={() => this.setState({showAddDocTypeModal: false})}/>
 
                 <Form.Group controlId="passesCrop">
                     <Form.Label>Cropping</Form.Label>
@@ -223,6 +209,10 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     segEdit = () => {
+        const backStage = () => {
+            this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+        }
+
 
         return (
             <div>
@@ -230,26 +220,82 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <Button disabled={this.props.currentImage.segEdit.IDBoxes.length === 0} onClick={this.segEditDone}>
                     Next
                 </Button>
+                <Button variant="secondary" onClick={backStage}>Back</Button>
             </div>
         );
     }
 
     landmarkEdit = () => {
-        console.log(this.state.landmarks);
         if (this.state.landmarks.length === 0) {
             return <p>No associated landmarks</p>;
         }
 
+        const setLandmark = (item: string) => {
+            this.setState({selectedLandmark: item}, () => {this.props.setCurrentLandmark(item)});
+        }
+
+        const addLandmark = (landmark: string) => {
+
+            // switch (this.state.docType) {
+            //     case 'MyKad': {
+            //         if (this.props.currentID.processStage === IDProcess.MYKAD_FRONT) {
+            //             options.landmark.MyKadFront.push(landmark);
+            //         } else {
+            //             options.landmark.MyKadBack.push(landmark);
+            //         }
+            //         break;
+            //     }
+            //     case 'Passport': {
+            //         options.landmark.Passport.push(landmark);
+            //         break;
+            //     }
+            //     default: {
+            //         options.landmark[this.state.docType] = [];
+            //         options.landmark[this.state.docType.push(landmark);
+            //     }
+            // }
+
+            // options.landmark['documentTypes'].push(landmark);
+            // console.log(options.landmark);
+            // this.setState({showAddLandmarkModal: false}, () => this.loadLandmarkNames(true));
+
+            // api call to post changes
+        }
+
+        const backStage = () => {
+            if (this.state.passesCrop) {
+                this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+            } else {
+                this.props.progressNextStage(CurrentStage.SEGMENTATION_EDIT);
+            }
+        }
+
         return (
-            <ButtonGroup vertical style={{width: "100%"}}>
-                {
-                    this.state.landmarks.map((each) => {
-                        return (
-                            <Button>{each}</Button>
-                        );
-                    })
-                }
-            </ButtonGroup>
+            <div>
+                <ButtonGroup vertical style={{width: "100%"}}>
+                    {
+                        this.state.landmarks.map((each, idx) => {
+                            return (
+                                <ToggleButton 
+                                    key={idx}
+                                    type="radio"
+                                    value={each}
+                                    checked={each === this.props.currentImage.currentLandmark}
+                                    onClick={() => setLandmark(each)}>{each}
+                                </ToggleButton>
+                            );
+                        })
+                    }
+                    <ToggleButton
+                        key={this.state.landmarks.length}
+                        type="radio"
+                        value="0"
+                        variant="secondary"
+                        onClick={() => this.setState({showAddLandmarkModal: true})}>+</ToggleButton>
+                </ButtonGroup>
+                <AddTypeModal showModal={this.state.showAddLandmarkModal} item='landmarks' add={addLandmark} closeModal={() => this.setState({showAddLandmarkModal: false})}/>
+                <Button variant="secondary" onClick={backStage}>Back</Button>
+            </div>
         );
     }
 
@@ -288,7 +334,8 @@ const mapDispatchToProps = {
     saveDocumentType,
     saveSegCheck,
     addIDBox,
-    loadImageState
+    loadImageState,
+    setCurrentLandmark
 };
 
 const mapStateToProps = (state: AppState) => {

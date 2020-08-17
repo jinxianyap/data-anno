@@ -1,4 +1,4 @@
-import { ImageState, ImageActionTypes } from "./types";
+import { ImageState, ImageActionTypes, LandmarkData } from "./types";
 import { Action } from "../Actions";
 
 const initialState: ImageState = {
@@ -26,7 +26,8 @@ export function imageReducer(
         case Action.SAVE_SEG_CHECK: {
             return {
                 ...state,
-                passesCrop: action.payload.passesCrop
+                passesCrop: action.payload.passesCrop,
+                landmark: action.payload.passesCrop ? [[]] : [],
             }
         }
         case Action.SET_IMAGE_PROPS: {
@@ -44,12 +45,15 @@ export function imageReducer(
             newProcessedList.push(false);
             let newCroppedList = state.segEdit.croppedIDs;
             newCroppedList.push(action.payload.croppedID);
+            let landmark = state.landmark;
+            landmark.push([]);
             return {
                 ...state,
+                landmark: landmark,
                 segEdit: {
                     IDBoxes: newIDList,
                     internalIDProcessed: newProcessedList,
-                    croppedIDs: newCroppedList
+                    croppedIDs: newCroppedList,
                 }
             }
         }
@@ -74,6 +78,32 @@ export function imageReducer(
                     internalIDProcessed: internalIDs,
                     croppedIDs: croppedIDs
                 }
+            }
+        }
+
+        case Action.SET_CURRENT_LANDMARK: {
+            return {
+                ...state,
+                currentLandmark: action.payload.landmark
+            }
+        }
+
+        case Action.ADD_LANDMARK_DATA: {
+            let allLandmarks = state.landmark;
+            let landmarks = allLandmarks[action.payload.index];
+
+            for (var i = 0; i < landmarks.length; i++) {
+                if (landmarks[i].name === action.payload.landmark.name) {
+                    landmarks.splice(i, 1);
+                }
+            } 
+
+            landmarks.push(action.payload.landmark);
+            allLandmarks[action.payload.index] = landmarks;
+
+            return {
+                ...state,
+                landmark: allLandmarks
             }
         }
     }

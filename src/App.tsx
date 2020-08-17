@@ -11,7 +11,7 @@ import ControlPanel from './views/Common/ControlPanel/ControlPanel';
 import { Container, Row, Col } from 'react-bootstrap';
 import SegEdit from './views/SegEdit/SegEdit';
 import Landmark from './views/Landmark/Landmark';
-import SegWidget from './views/Common/SegWidget/SegWidget';
+import SegLabeller from './views/Common/SegLabeller/SegLabeller';
 interface IProps {
   currentStage: CurrentStage
 }
@@ -40,7 +40,6 @@ const App: React.FC<IProps> = ({currentStage}) => {
           <Row style={{height: "100%", width: "100%", margin: 0}}>
             <Col md={7} lg={9}>
               {paintContent()}
-              {/* <SegWidget /> */}
             </Col>
             <Col style={{padding: 0}}>
               {currentStage === CurrentStage.SETUP ? <div/> : <ControlPanel />}

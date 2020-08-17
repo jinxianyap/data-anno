@@ -36,12 +36,12 @@ export function calculateRectPosition(imgProps: any, rawBoxCoords: any) {
     right = Math.min(width + imgProps.offsetX, right);
     bottom = Math.min(height + imgProps.offsetY, bottom);
   
-    console.log({
-      left: left - imgProps.offsetX,
-      top: top - imgProps.offsetY,
-      width: right - left,
-      height: bottom - top
-    });
+    // console.log({
+    //   left: left - imgProps.offsetX,
+    //   top: top - imgProps.offsetY,
+    //   width: right - left,
+    //   height: bottom - top
+    // });
     return {
       x1: left - imgProps.offsetX,
       y1: top - imgProps.offsetY,
@@ -51,6 +51,8 @@ export function calculateRectPosition(imgProps: any, rawBoxCoords: any) {
       y3: top + top - imgProps.offsetY - bottom,
       x3: right - imgProps.offsetX,
       y4: top + top - imgProps.offsetY - bottom
+      // left: left - imgProps.offsetX,
+      // top: top - imgProps.offsetY,
       // width: right - left,
       // height: bottom - top
     };

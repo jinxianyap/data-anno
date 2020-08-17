@@ -1,13 +1,13 @@
 import { connect } from "react-redux";
 // import { ActionCreators as UndoActionCreators } from "redux-undo";
-import { addIDBox } from "../../../store/image/actionCreators";
+import { addIDBox, addLandmarkData } from "../../../store/image/actionCreators";
 import React from "react";
 import BoundingBoxes from "../Labelling/BoundingBoxes";
 import ImageContainer from "../Labelling/ImageContainer";
 import Crosshair from "../Labelling/Crosshair";
 // import InfoPanel from "../components/InfoPanel";
 import { calculateRectPosition, isRectangleTooSmall } from "../../../utils/DrawingUtil";
-import { IDBox, ImageActionTypes, ImageState, LandmarkData } from "../../../store/image/types";
+import { IDBox, ImageActionTypes, ImageState, LandmarkData, Position } from "../../../store/image/types";
 import { AppState } from "../../../store";
 // import SubmitButtonContainer from "../containers/SubmitButtonContainer";
 import './LabelView.scss';
@@ -15,20 +15,15 @@ import { ImageUtil } from "../../../utils/ImageUtil";
 import options from '../../../options.json';
 import { IDState } from "../../../store/id/types";
 import { IDProcess } from "../../../utils/enums";
+import BoundingBox from "../Labelling/BoundingBox";
 
-// convert JSON key-value pairs of boxes to Array
-// const preprocess = boxes => {
-//   return Object.keys(boxes).reduce((result, key) => {
-//     result.push(boxes[key]);
-//     return result;
-//   }, []);
-// };
 
 interface IProps {
     ID: IDState;
     image: ImageState;
     currentLandmark: string;
-    addIDBox: (box: IDBox, croppedID: File) => ImageActionTypes
+    addIDBox: (box: IDBox, croppedID: File) => ImageActionTypes;
+    addLandmarkData: (index: number, landmark: LandmarkData) => ImageActionTypes;
 }
 
 interface IState {
@@ -139,6 +134,10 @@ class LabelView extends React.Component<IProps, IState> {
       // console.log("down");
       // only start drawing if the mouse was pressed
       // down inside the image that we want labelled
+      if (!this.props.currentLandmark) {
+        return;
+      }
+
       console.log(event.target.className);
       if (
         event.target.className !== "line" &&
@@ -154,6 +153,9 @@ class LabelView extends React.Component<IProps, IState> {
     mouseMoveHandler = (event: any) => {
       // console.log("move");
       // only update the state if is drawing
+      if (!this.props.currentLandmark) {
+        return;
+      }
       event.persist();
       this.updateCursorPosition(event);
     }
@@ -161,16 +163,22 @@ class LabelView extends React.Component<IProps, IState> {
     mouseUpHandler = (event: any) => {
       // console.log(this.props.imageProps);
       // console.log("up");
+      if (!this.props.currentLandmark) {
+        return;
+      }
       const boxPosition = calculateRectPosition(
         this.props.image.imageProps[this.index],
         this.getCurrentBox()
       );
       if (this.state.isDrawing && !isRectangleTooSmall(boxPosition)) {
-        // let box: IDBox = {
-        //     id: this.state.currentBoxId,
-        //     position: boxPosition
-        // }
-        // this.props.addIDBox(box, ImageUtil.cropImage(this.props.imageFile, boxPosition));
+        let landmark: LandmarkData = {
+          type: 'landmark',
+          id: this.state.currentBoxId,
+          name: this.props.currentLandmark,
+          position: boxPosition,
+          flags: []
+        }
+        this.props.addLandmarkData(this.index, landmark);
       }
       this.refreshDrawing();
     }
@@ -188,18 +196,20 @@ class LabelView extends React.Component<IProps, IState> {
     }
   
     isCrosshairReady = () => {
-      return this.state.currX &&
+      return this.props.currentLandmark &&
+        this.state.currX &&
         this.state.currY &&
         this.props.image.imageProps[this.index].height &&
         this.props.image.imageProps[this.index].width;
     }
   
     render() {
-      let boxesToRender: LandmarkData[] = this.props.image.landmark[this.index];
-      console.log(boxesToRender);
+      let committedBoxes: LandmarkData[] = this.props.image.landmark[this.index];
+      let boxesToRender: LandmarkData[] = [];
   
       if (this.state.startX != null) {
         boxesToRender.push({
+          id: this.state.currentBoxId,
           name: this.props.currentLandmark,
           type: 'landmark',
           position: calculateRectPosition(
@@ -226,13 +236,20 @@ class LabelView extends React.Component<IProps, IState> {
                   imageProps={this.props.image.imageProps[this.index]}
                 />
               }
-              {/* {boxesToRender.length > 0 && (
+              {committedBoxes.length > 0 && (
+                <BoundingBoxes
+                //   className="BoundingBoxes unselectable"
+                  boxes={committedBoxes}
+                  isDrawing={this.state.isDrawing}
+                />
+              )}
+              {boxesToRender.length > 0 && (
                 <BoundingBoxes
                 //   className="BoundingBoxes unselectable"
                   boxes={boxesToRender}
                   isDrawing={this.state.isDrawing}
                 />
-              )} */}
+              )}
               <ImageContainer index={this.index} />
             </div>
             {/* {this.props.showSidePanel &&
@@ -266,7 +283,8 @@ const mapStateToProps = (state: AppState, ownProps: any) => ({
 });
 
 const mapDispatchToProps = {
-    addIDBox
+    addIDBox,
+    addLandmarkData
 }
 
 export default connect(

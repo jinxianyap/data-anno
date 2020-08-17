@@ -105,7 +105,7 @@ class ImageContainer extends React.Component<IProps> {
             width: this.width,
             offsetX: offsetX,
             offsetY: offsetY
-        }
+      }
       this.props.setImageProps(props);
       this.imagePropsSet = true;
   }

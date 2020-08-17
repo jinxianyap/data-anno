@@ -4,8 +4,7 @@ import { ImageState } from '../../store/image/types';
 import { AppState } from '../../store';
 import { Container, Row, Col } from 'react-bootstrap';
 // import { ImageUtil } from '../../utils/ImageUtil';
-import LabelView from '../Common/LabelView/LabelView';
-import SegWidget from '../Common/SegWidget/SegWidget';
+import SegLabeller from '../Common/SegLabeller/SegLabeller';
 
 // only show image and drawn boxes
 interface IProps {
@@ -42,7 +41,7 @@ class SegEdit extends React.Component<IProps, IState> {
                     <Col xs={1}>
                     </Col>
                     <Col xs={10}>
-                        <SegWidget />
+                        <SegLabeller />
                     </Col>
                     <Col xs={1}>
                     </Col>
