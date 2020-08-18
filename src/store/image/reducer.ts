@@ -106,6 +106,44 @@ export function imageReducer(
                 landmark: allLandmarks
             }
         }
+
+        case Action.DELETE_LANDMARK_DATA: {
+            let allLandmarks = state.landmark;
+            let landmarks = allLandmarks[action.payload.index];
+
+            for (var i = 0; i < landmarks.length; i++) {
+                if (landmarks[i].name === action.payload.landmark) {
+                    landmarks.splice(i, 1);
+                }
+            } 
+
+            allLandmarks[action.payload.index] = landmarks;
+
+            return {
+                ...state,
+                landmark: allLandmarks
+            }
+        }
+
+        case Action.UPDATE_LANDMARK_FLAGS: {
+            let allLandmarks = state.landmark;
+            let landmarks = allLandmarks[action.payload.index];
+
+            for (var i = 0; i < landmarks.length; i++) {
+                if (landmarks[i].name === action.payload.name) {
+                    let newLandmark = landmarks[i];
+                    newLandmark.flags = action.payload.flags;
+                    landmarks[i] = newLandmark;
+                }
+            }
+
+            allLandmarks[action.payload.index] = landmarks;
+
+            return {
+                ...state,
+                landmark: allLandmarks
+            }
+        }
     }
     return state
 }

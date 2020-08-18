@@ -2,7 +2,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { CurrentStage, IDProcess } from '../../../utils/enums';
 import { AppState } from '../../../store';
-import { Form, Button, ButtonGroup, ToggleButton, Modal } from 'react-bootstrap';
+import { Form, Button, ButtonGroup, ToggleButton, ToggleButtonGroup, Card, Accordion } from 'react-bootstrap';
 import options from '../../../options.json';
 import './ControlPanel.scss';
 import { GeneralActionTypes } from '../../../store/general/types';
@@ -10,7 +10,7 @@ import { IDActionTypes, IDState } from '../../../store/id/types';
 import { ImageActionTypes, ImageState, IDBox } from '../../../store/image/types';
 import { progressNextStage, getNextID } from '../../../store/general/actionCreators';
 import { loadNextID, saveDocumentType } from '../../../store/id/actionCreators';
-import { saveSegCheck, loadImageState, addIDBox, setCurrentLandmark } from '../../../store/image/actionCreators';
+import { saveSegCheck, loadImageState, addIDBox, setCurrentLandmark, updateLandmarkFlags } from '../../../store/image/actionCreators';
 import AddTypeModal from '../AddTypeModal/AddTypeModal';
 
 interface IProps {
@@ -30,6 +30,7 @@ interface IProps {
     addIDBox: (box: IDBox, croppedID: File) => ImageActionTypes;
 
     setCurrentLandmark: (landmark: string) => ImageActionTypes;
+    updateLandmarkFlags: (index: number, name: string, flags: string[]) => ImageActionTypes;
 }
 
 interface IState {
@@ -45,7 +46,11 @@ interface IState {
 
     // Landmark
     showAddLandmarkModal: boolean;
-    landmarks: string[];
+    landmarks: {
+        name: string,
+        flags: string[]
+    }[];
+    landmarkFlags: string[];
     selectedLandmark: string;
 }
 
@@ -66,14 +71,15 @@ class ControlPanel extends React.Component<IProps, IState> {
 
             showAddLandmarkModal: false,
             landmarks: [],
-            selectedLandmark: ''
+            landmarkFlags: [],
+            selectedLandmark: '',
         }
     }
 
     componentDidUpdate() {
         switch (this.props.currentStage) {
             case (CurrentStage.LANDMARK_EDIT): {
-                this.loadLandmarkNames(false);
+                this.loadLandmarkData(false);
             }
         }
     }
@@ -97,25 +103,6 @@ class ControlPanel extends React.Component<IProps, IState> {
         if (this.state.cropDirty && this.state.docType !== '') {
             this.setState({validation: true});
         }
-    }
-
-    submitSegCheck = (e: any) => {
-        e.preventDefault();
-        this.props.saveDocumentType(this.state.docType);
-        this.props.saveSegCheck(this.state.passesCrop);
-
-        if (this.state.passesCrop) {
-            this.loadLandmarkImage();
-            this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
-        } else {
-            this.loadSegEditImage();
-            this.props.progressNextStage(CurrentStage.SEGMENTATION_EDIT);
-        }
-    }
-
-    segEditDone = () => {
-        // e.preventDefault();
-        this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
     }
 
     loadSegEditImage = () => {
@@ -154,23 +141,55 @@ class ControlPanel extends React.Component<IProps, IState> {
         });
     }
 
-    loadLandmarkNames = (reload: boolean) => {
+    loadLandmarkData = (reload: boolean) => {
         if (this.state.landmarks.length !== 0 && !reload) return;
         switch (this.props.currentID.processStage) {
             case (IDProcess.MYKAD_FRONT): {
-                this.setState({landmarks: options.landmark.MyKadFront});
+                options.landmark.MyKadFront.forEach((each) => {
+                    this.state.landmarks.push({
+                        name: each,
+                        flags: []
+                    });
+                });
+                this.setState({
+                    landmarkFlags: options.flags.landmark.quality
+                });
                 break;
             }
             case (IDProcess.MYKAD_BACK): {
-                this.setState({landmarks: options.landmark.MyKadBack});
+                options.landmark.MyKadBack.forEach((each) => {
+                    this.state.landmarks.push({
+                        name: each,
+                        flags: []
+                    });
+                });
+                this.setState({
+                    landmarkFlags: options.flags.landmark.quality
+                });
                 break;
             }
             case (IDProcess.PASSPORT): {
-                this.setState({landmarks: options.landmark.Passport});
+                options.landmark.Passport.forEach((each) => {
+                    this.state.landmarks.push({
+                        name: each,
+                        flags: []
+                    });
+                });
+                this.setState({
+                    landmarkFlags: options.flags.landmark.quality
+                });
                 break;
             }
             default: {
-                this.setState({landmarks: options.landmark.Passport});
+                options.landmark.Passport.forEach((each) => {
+                    this.state.landmarks.push({
+                        name: each,
+                        flags: []
+                    });
+                });
+                this.setState({
+                    landmarkFlags: options.flags.landmark.quality
+                });
             }
         }
     }
@@ -181,8 +200,23 @@ class ControlPanel extends React.Component<IProps, IState> {
             options.documentTypes.push(doc);
             this.setState({showAddDocTypeModal: false}, this.loadDocumentTypes);
         }
+
+        const submitSegCheck = (e: any) => {
+            e.preventDefault();
+            this.props.saveDocumentType(this.state.docType);
+            this.props.saveSegCheck(this.state.passesCrop);
+
+            if (this.state.passesCrop) {
+                this.loadLandmarkImage();
+                this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+            } else {
+                this.loadSegEditImage();
+                this.props.progressNextStage(CurrentStage.SEGMENTATION_EDIT);
+            }
+        }
+
         return (
-            <Form onSubmit={this.submitSegCheck}>
+            <Form onSubmit={submitSegCheck}>
                 <Form.Group controlId="docType">
                     <Form.Label>Document Type</Form.Label>
                     <Button onClick={() => {console.log('click'); this.setState({showAddDocTypeModal: true})}} style={{padding: "0 0.5rem", margin: "0.5rem 1rem"}}>+</Button>
@@ -213,14 +247,13 @@ class ControlPanel extends React.Component<IProps, IState> {
             this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
         }
 
-
         return (
             <div>
                 <h5>Please draw bounding boxes around any number of IDs in the image.</h5>
-                <Button disabled={this.props.currentImage.segEdit.IDBoxes.length === 0} onClick={this.segEditDone}>
+                <Button variant="secondary" onClick={backStage}>Back</Button>
+                <Button disabled={this.props.currentImage.segEdit.IDBoxes.length === 0} onClick={() => this.props.progressNextStage(CurrentStage.LANDMARK_EDIT)}>
                     Next
                 </Button>
-                <Button variant="secondary" onClick={backStage}>Back</Button>
             </div>
         );
     }
@@ -231,7 +264,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
 
         const setLandmark = (item: string) => {
-            this.setState({selectedLandmark: item}, () => {this.props.setCurrentLandmark(item)});
+            this.setState({selectedLandmark: item}, () => this.props.setCurrentLandmark(item));
         }
 
         const addLandmark = (landmark: string) => {
@@ -270,31 +303,81 @@ class ControlPanel extends React.Component<IProps, IState> {
             }
         }
 
-        return (
-            <div>
-                <ButtonGroup vertical style={{width: "100%"}}>
+        const getLandmarkFlags = (flags: string[]) => {
+            const setFlag = (flag: string) => {
+                for (var i = 0; i < this.state.landmarks.length; i++) {
+                    if (this.state.landmarks[i].name === this.state.selectedLandmark) {
+                        let landmarks = this.state.landmarks;
+                        let landmark = landmarks[i];
+                        if (!landmark.flags.includes(flag)) {
+                            landmark.flags.push(flag);
+                            landmarks[i] = landmark;
+                            this.setState({landmarks: landmarks});
+                        }
+                    }
+                }
+            }
+
+            return (
+                <ToggleButtonGroup type="checkbox">
                     {
-                        this.state.landmarks.map((each, idx) => {
+                        this.state.landmarkFlags.map((each, idx) => {
                             return (
-                                <ToggleButton 
-                                    key={idx}
-                                    type="radio"
-                                    value={each}
-                                    checked={each === this.props.currentImage.currentLandmark}
-                                    onClick={() => setLandmark(each)}>{each}
-                                </ToggleButton>
+                                    <ToggleButton
+                                        value={each}
+                                        checked={flags.includes(each)}
+                                        onClick={() => setFlag(each)}>
+                                        {each}
+                                    </ToggleButton>
                             );
                         })
                     }
-                    <ToggleButton
-                        key={this.state.landmarks.length}
-                        type="radio"
+                </ToggleButtonGroup>
+            );            
+        }
+
+        const submitLandmark = (e: any) => {
+            e.preventDefault();
+            let index = 0;
+            for (var i = 0; i < this.props.currentImage.segEdit.internalIDProcessed.length; i++) {
+                if (!this.props.currentImage.segEdit.internalIDProcessed) {
+                  index = i;
+                  break;
+                }
+            }
+
+            this.state.landmarks.forEach((each) => {
+                this.props.updateLandmarkFlags(index, each.name, each.flags);
+            }, this.props.progressNextStage(CurrentStage.OCR_EDIT));
+        }
+
+        return (
+                <div>
+                    <Accordion>
+                        {
+                            this.state.landmarks.map((each, idx) => {
+                                return (
+                                    <Card>
+                                        <Accordion.Toggle as={Card.Header} eventKey={idx.toString()} onClick={() => setLandmark(each.name)}>
+                                            {each.name}
+                                        </Accordion.Toggle>
+                                        <Accordion.Collapse eventKey={idx.toString()}>
+                                        <Card.Body>
+                                            {getLandmarkFlags(each.flags)}
+                                        </Card.Body>
+                                        </Accordion.Collapse>
+                                    </Card>
+                                );
+                            })
+                        }
+                </Accordion>
+                <Button
+                        style={{width: "100%"}}
                         value="0"
-                        variant="secondary"
-                        onClick={() => this.setState({showAddLandmarkModal: true})}>+</ToggleButton>
-                </ButtonGroup>
+                        onClick={() => this.setState({showAddLandmarkModal: true})}>+</Button>
                 <AddTypeModal showModal={this.state.showAddLandmarkModal} item='landmarks' add={addLandmark} closeModal={() => this.setState({showAddLandmarkModal: false})}/>
                 <Button variant="secondary" onClick={backStage}>Back</Button>
+                <Button onClick={submitLandmark}>Done</Button>
             </div>
         );
     }
@@ -335,7 +418,8 @@ const mapDispatchToProps = {
     saveSegCheck,
     addIDBox,
     loadImageState,
-    setCurrentLandmark
+    setCurrentLandmark,
+    updateLandmarkFlags
 };
 
 const mapStateToProps = (state: AppState) => {

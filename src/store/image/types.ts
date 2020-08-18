@@ -108,6 +108,23 @@ interface AddLandmarkData {
     }
 }
 
+interface DeleteLandmarkData {
+    type: typeof Action.DELETE_LANDMARK_DATA;
+    payload: {
+        index: number,
+        landmark: string
+    }
+}
+
+interface UpdateLandmarkFlags {
+    type: typeof Action.UPDATE_LANDMARK_FLAGS;
+    payload: {
+        index: number,
+        name: string,
+        flags: string[]
+    }
+}
+
 export type ImageActionTypes = LoadImageState
     | SaveSegCheck
     | AddIDBox
@@ -115,3 +132,5 @@ export type ImageActionTypes = LoadImageState
     | SetImageProps
     | SetCurrentLandmark
     | AddLandmarkData
+    | DeleteLandmarkData
+    | UpdateLandmarkFlags

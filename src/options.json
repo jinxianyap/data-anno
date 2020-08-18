@@ -8,10 +8,13 @@
     "ocr": {
         "MyKad": ["icNumber", "name", "birthDate", "street"]
     },
-    "landmarkFlags": {
-        "quality": ["glare", "blur"]
-    },
-    "videoFlags": {
-        "quality": ["dark", "blur"]
+    "flags": {
+        "landmark": {
+            "quality": ["glare", "blur"]
+        },
+        "video": {
+            "quality": ["dark", "blur"]
+        }
     }
 }
+

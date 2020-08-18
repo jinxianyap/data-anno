@@ -11,14 +11,16 @@ import ControlPanel from './views/Common/ControlPanel/ControlPanel';
 import { Container, Row, Col } from 'react-bootstrap';
 import SegEdit from './views/SegEdit/SegEdit';
 import Landmark from './views/Landmark/Landmark';
-import SegLabeller from './views/Common/SegLabeller/SegLabeller';
+
 interface IProps {
+  state: AppState,
   currentStage: CurrentStage
 }
 
-const App: React.FC<IProps> = ({currentStage}) => {
+const App: React.FC<IProps> = ({state, currentStage}) => {
 
   const paintContent = () => {
+    console.log(state);
     switch (currentStage) {
       case (CurrentStage.SETUP):
        return <SetupView />;
@@ -52,6 +54,7 @@ const App: React.FC<IProps> = ({currentStage}) => {
 }
 
 const mapStateToProps = (state: AppState) => ({
+  state: state,
   currentStage: state.general.currentStage
 });
 

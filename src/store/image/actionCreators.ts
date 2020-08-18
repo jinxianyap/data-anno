@@ -66,3 +66,24 @@ export function addLandmarkData(index: number, landmark: LandmarkData): ImageAct
         }
     }
 }
+
+export function deleteLandmarkData(index: number, landmark: string): ImageActionTypes {
+    return {
+        type: Action.DELETE_LANDMARK_DATA,
+        payload: {
+            index: index,
+            landmark: landmark
+        }
+    }
+}
+
+export function updateLandmarkFlags(index: number, name: string, flags: string[]): ImageActionTypes {
+    return {
+        type: Action.UPDATE_LANDMARK_FLAGS,
+        payload: {
+            index: index,
+            name: name,
+            flags: flags
+        }
+    }
+}

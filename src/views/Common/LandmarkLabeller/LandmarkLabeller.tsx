@@ -1,16 +1,17 @@
-import L, { marker } from 'leaflet';
+import L from 'leaflet';
 import React from 'react';
 import { connect } from 'react-redux'; 
-import { ImageActionTypes, IDBox, ImageState, LandmarkData } from '../../../store/image/types';
-import { addIDBox } from '../../../store/image/actionCreators';
+import { ImageActionTypes, ImageState, LandmarkData } from '../../../store/image/types';
+import { addLandmarkData, deleteLandmarkData } from '../../../store/image/actionCreators';
 import { AppState } from '../../../store';
 import trash from '../../../assets/trash.png';
-import { th } from 'date-fns/locale';
 
 interface IProps {
     currentImageState: ImageState,
     currentLandmark: string,
-    committedLandmarks: LandmarkData[][]
+    committedLandmarks: LandmarkData[][],
+    addLandmarkData: (index: number, landmark: LandmarkData) => ImageActionTypes,
+    deleteLandmarkData: (index: number, landmark: string) => ImageActionTypes
 }
 
 interface IState {
@@ -30,6 +31,7 @@ interface IState {
 }
 
 type Box = {
+    id: number,
     name: string,
     position: {
         x1?: number,
@@ -64,6 +66,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             ratio: 0,
             isDrawing: false,
             currentBox: {
+                id: 0,
                 name: '',
                 position: {},
             },
@@ -137,15 +140,12 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             maxBoundsViscosity: 1.0
         });
 
-        this.setState({map: map});
-
         let layer = new L.TileLayer('', {
             tileSize: L.point(st.height, st.width),
             noWrap: true
         });
 
         let overlay = L.imageOverlay(st.source, imageBounds);
-
 
         map.addLayer(layer);
         overlay.addTo(map);
@@ -154,6 +154,42 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         map.on('mousemove', this.handleMouseMove);
         map.on('mouseup', this.handleMouseUp);
         map.on('mouseout', this.handleMouseOut);
+
+        this.setState({map: map}, this.renderCommittedLandmarks);
+    }
+
+    renderCommittedLandmarks = () => {
+        let map = this.state.map!;
+        let landmarks = this.props.committedLandmarks[this.index];
+        landmarks.forEach((landmark: LandmarkData) => {
+            let createdBox = this.createRectangle(
+                landmark.position.y1 / this.state.ratio,
+                landmark.position.x1 / this.state.ratio,
+                landmark.position.y3 / this.state.ratio,
+                landmark.position.x3 / this.state.ratio,
+                landmark.name);
+            let box: Box = {
+                id: landmark.id,
+                name: landmark.name,
+                position: {
+                    x1: landmark.position.x1,
+                    x2: landmark.position.x2,
+                    x3: landmark.position.x3,
+                    x4: landmark.position.x4,
+                    y1: landmark.position.y1,
+                    y2: landmark.position.y2,
+                    y3: landmark.position.y3,
+                    y4: landmark.position.y4,
+                },
+                rectangle: createdBox.rectangle,
+                descriptor: createdBox.descriptor,
+                wrapper: createdBox.wrapper,
+                delete: createdBox.delete,
+                deleteIcon: createdBox.deleteIcon,
+            };
+            this.state.boxes.push(box);
+            this.state.drawnLandmarks.push(box.name);
+        })
     }
 
     handleMouseDown = (e: any) => {
@@ -165,12 +201,13 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         this.setState({
             isDrawing: true,
             currentBox: {
+                id: this.state.drawnLandmarks.length,
                 name: this.props.currentLandmark,
                 position: {
-                    x1: e.latlng.lng,
-                    y1: e.latlng.lat,
-                    y2: e.latlng.lat,
-                    x4: e.latlng.lat
+                    x1: e.latlng.lng * this.state.ratio,
+                    y1: e.latlng.lat * this.state.ratio,
+                    y2: e.latlng.lat * this.state.ratio,
+                    x4: e.latlng.lat * this.state.ratio
                 }
             }
         });
@@ -181,7 +218,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         if (this.state.drawnLandmarks.includes(this.props.currentLandmark)) return;
 
         var position = this.state.currentBox.position;
-        var bounds: [number, number][] = [[position.y1!, position.x1!], [e.latlng.lat, e.latlng.lng]];
+        var bounds: [number, number][] = [[position.y1! / this.state.ratio, position.x1! / this.state.ratio], [e.latlng.lat, e.latlng.lng]];
 
         if (this.state.currentBox.rectangle) {
             this.state.currentBox.rectangle!.remove();
@@ -191,13 +228,14 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         this.setState({
             isDrawing: true,
             currentBox: {
+                id: this.state.drawnLandmarks.length,
                 name: this.props.currentLandmark,
                 position: {
                     ...this.state.currentBox.position,
-                    x2: e.latlng.lng,
-                    x3: e.latlng.lng,
-                    y3: e.latlng.lat,
-                    y4: e.latlng.lat
+                    x2: e.latlng.lng * this.state.ratio,
+                    x3: e.latlng.lng * this.state.ratio,
+                    y3: e.latlng.lat * this.state.ratio,
+                    y4: e.latlng.lat * this.state.ratio
                 },
                 rectangle: rectangle,
             }
@@ -209,6 +247,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             this.setState({
                 isDrawing: false,
                 currentBox: {
+                    id: this.state.drawnLandmarks.length,
                     name: this.props.currentLandmark,
                     position: {}
                 }
@@ -224,8 +263,29 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             this.state.currentBox.rectangle!.remove();
         }
 
-        let position = this.state.currentBox.position;
-        let boxBounds: [number, number][] = [[position.y1!, position.x1!], [e.latlng.lat, e.latlng.lng]];
+        let currentPos = this.state.currentBox.position;
+        let newBox = this.createRectangle(currentPos.y1! / this.state.ratio, currentPos.x1! / this.state.ratio, e.latlng.lat, e.latlng.lng);
+        let boxes = this.state.boxes;
+        boxes.push(newBox);
+        let drawnLandmarks = this.state.drawnLandmarks;
+        drawnLandmarks.push(this.props.currentLandmark);
+
+        this.setState({
+            isDrawing: false,
+            currentBox: {
+                id: this.state.drawnLandmarks.length,
+                name: '',
+                position: {}
+            },
+            boxes: boxes,
+            drawnLandmarks: drawnLandmarks
+        }, () => this.submitLandmarkData(newBox));
+    }
+
+    createRectangle = (lat1: number, lng1: number, lat2: number, lng2: number, landmark?: string) => {
+        let currentLandmark = landmark === undefined ? this.props.currentLandmark : landmark;
+
+        let boxBounds: [number, number][] = [[lat1, lng1], [lat2, lng2]];
         let wrapperBounds: [number, number][] = [[boxBounds[0][0] + 10, boxBounds[0][1] - 10], [boxBounds[1][0] - 10, boxBounds[1][1] + 10]];
         let deleteBounds: [number, number][] = [[boxBounds[0][0], boxBounds[1][1]], [boxBounds[0][0] - 20, boxBounds[1][1] + 20]];
 
@@ -238,7 +298,10 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         })});
         let deleteMarker = L.rectangle(deleteBounds, {color: "red", weight: 1, interactive: true});
 
-        let text = L.divIcon({iconSize: [0, 0], html: '<p>' + this.props.currentLandmark + '</p>', className: 'overlay-text'});
+        let text = L.divIcon({
+            iconSize: [0, 0],
+            html: '<p>' + currentLandmark + '</p>',
+            className: 'overlay-text'});
         let textMarker = L.marker(boxBounds[0], {icon: text}).addTo(this.state.map!);
 
         rectangle.on('mouseover', (e: any) => {
@@ -267,14 +330,15 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             this.deleteRectangle(e);
         })
 
-        let newBox = {
-            name: this.props.currentLandmark,
+        return {
+            id: this.state.drawnLandmarks.length,
+            name: currentLandmark,
             position: {
                 ...this.state.currentBox.position,
-                x2: e.latlng.lng,
-                x3: e.latlng.lng,
-                y3: e.latlng.lat,
-                y4: e.latlng.lat
+                x2: lng2 * this.state.ratio,
+                x3: lng2 * this.state.ratio,
+                y3: lat2 * this.state.ratio,
+                y4: lat2 * this.state.ratio
             },
             rectangle: rectangle,
             descriptor: textMarker,
@@ -282,20 +346,26 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             delete: deleteMarker,
             deleteIcon: deleteIcon,
         }
-        let boxes = this.state.boxes;
-        boxes.push(newBox);
-        let drawnLandmarks = this.state.drawnLandmarks;
-        drawnLandmarks.push(this.props.currentLandmark);
+    }
 
-        this.setState({
-            isDrawing: false,
-            currentBox: {
-                name: '',
-                position: {}
+    submitLandmarkData = (landmark: Box) => {
+        let landmarkData: LandmarkData = {
+            id: landmark.id,
+            type: 'landmark',
+            name: landmark.name,
+            position: {
+                x1: landmark.position.x1!,
+                x2: landmark.position.x2!,
+                x3: landmark.position.x3!,
+                x4: landmark.position.x4!,
+                y1: landmark.position.y1!,
+                y2: landmark.position.y2!,
+                y3: landmark.position.y3!,
+                y4: landmark.position.y4!,
             },
-            boxes: boxes,
-            drawnLandmarks: drawnLandmarks
-        });
+            flags: []
+        };
+        this.props.addLandmarkData(this.index, landmarkData);
     }
 
     withinRectangleBounds = (e: any) => {
@@ -319,17 +389,18 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
     deleteRectangle = (e: any) => {
         let boxIndex = this.withinRectangleBounds(e)!;
+        let name = this.state.boxes[boxIndex].name;
         this.state.boxes[boxIndex].rectangle!.remove();
         this.state.boxes[boxIndex].descriptor!.remove();
         this.state.boxes[boxIndex].wrapper!.remove();
         this.state.boxes[boxIndex].delete!.remove();
         this.state.boxes[boxIndex].deleteIcon!.remove();
-        let index = this.state.drawnLandmarks.indexOf(this.state.boxes[boxIndex].name);
+        let index = this.state.drawnLandmarks.indexOf(name);
         let drawn = this.state.drawnLandmarks;
         drawn.splice(index, 1);
         let boxes = this.state.boxes;
         boxes.splice(boxIndex, 1);
-        this.setState({boxes: boxes, drawnLandmarks: drawn, isDrawing: false});
+        this.setState({boxes: boxes, drawnLandmarks: drawn, isDrawing: false}, () => this.props.deleteLandmarkData(this.index, name));
     }
 
     render() {
@@ -347,7 +418,8 @@ const mapStateToProps = (state: AppState, ownProps: any) => {
 }};
     
 const mapDispatchToProps = {
-    addIDBox
+    addLandmarkData,
+    deleteLandmarkData
 }
     
 export default connect(
