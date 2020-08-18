@@ -1,6 +1,5 @@
 import { Action } from "../Actions";
-import { ImageState, ImageActionTypes, IDBox, ImageProps, Position, LandmarkData } from "./types";
-import { id } from "date-fns/locale";
+import { ImageState, ImageActionTypes, IDBox, ImageProps, LandmarkData } from "./types";
 
 export function loadImageState(currentImage: ImageState): ImageActionTypes {
     return {

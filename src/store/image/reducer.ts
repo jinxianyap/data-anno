@@ -1,4 +1,4 @@
-import { ImageState, ImageActionTypes, LandmarkData } from "./types";
+import { ImageState, ImageActionTypes } from "./types";
 import { Action } from "../Actions";
 
 const initialState: ImageState = {
@@ -92,9 +92,9 @@ export function imageReducer(
             let allLandmarks = state.landmark;
             let landmarks = allLandmarks[action.payload.index];
 
-            for (var i = 0; i < landmarks.length; i++) {
-                if (landmarks[i].name === action.payload.landmark.name) {
-                    landmarks.splice(i, 1);
+            for (var j = 0; j < landmarks.length; j++) {
+                if (landmarks[j].name === action.payload.landmark.name) {
+                    landmarks.splice(j, 1);
                 }
             } 
 
@@ -111,9 +111,9 @@ export function imageReducer(
             let allLandmarks = state.landmark;
             let landmarks = allLandmarks[action.payload.index];
 
-            for (var i = 0; i < landmarks.length; i++) {
-                if (landmarks[i].name === action.payload.landmark) {
-                    landmarks.splice(i, 1);
+            for (var k = 0; k < landmarks.length; k++) {
+                if (landmarks[k].name === action.payload.landmark) {
+                    landmarks.splice(k, 1);
                 }
             } 
 
@@ -129,11 +129,11 @@ export function imageReducer(
             let allLandmarks = state.landmark;
             let landmarks = allLandmarks[action.payload.index];
 
-            for (var i = 0; i < landmarks.length; i++) {
-                if (landmarks[i].name === action.payload.name) {
-                    let newLandmark = landmarks[i];
+            for (var c = 0; c < landmarks.length; c++) {
+                if (landmarks[c].name === action.payload.name) {
+                    let newLandmark = landmarks[c];
                     newLandmark.flags = action.payload.flags;
-                    landmarks[i] = newLandmark;
+                    landmarks[c] = newLandmark;
                 }
             }
 

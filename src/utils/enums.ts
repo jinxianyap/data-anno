@@ -3,7 +3,8 @@ export enum CurrentStage {
     SEGMENTATION_CHECK = "Segmentation Check",
     SEGMENTATION_EDIT = "Segmentation Edit",
     LANDMARK_EDIT = "Landmark",
-    OCR_EDIT = "OCR",
+    OCR_DETAILS = "OCR Details",
+    OCR_EDIT = "OCR Edit",
     FR_LIVENESS_CHECK = "Face Liveness",
     FR_COMPARE_CHECK = "Face Comparison"
 }

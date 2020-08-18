@@ -5,8 +5,11 @@ import { ImageActionTypes, ImageState, LandmarkData } from '../../../store/image
 import { addLandmarkData, deleteLandmarkData } from '../../../store/image/actionCreators';
 import { AppState } from '../../../store';
 import trash from '../../../assets/trash.png';
+import { CurrentStage } from '../../../utils/enums';
 
 interface IProps {
+    currentStage: CurrentStage;
+
     currentImageState: ImageState,
     currentLandmark: string,
     committedLandmarks: LandmarkData[][],
@@ -155,41 +158,45 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         map.on('mouseup', this.handleMouseUp);
         map.on('mouseout', this.handleMouseOut);
 
-        this.setState({map: map}, this.renderCommittedLandmarks);
+        this.setState({map: map}, this.renderCommittedBoxes);
     }
 
-    renderCommittedLandmarks = () => {
-        let map = this.state.map!;
-        let landmarks = this.props.committedLandmarks[this.index];
-        landmarks.forEach((landmark: LandmarkData) => {
-            let createdBox = this.createRectangle(
-                landmark.position.y1 / this.state.ratio,
-                landmark.position.x1 / this.state.ratio,
-                landmark.position.y3 / this.state.ratio,
-                landmark.position.x3 / this.state.ratio,
-                landmark.name);
-            let box: Box = {
-                id: landmark.id,
-                name: landmark.name,
-                position: {
-                    x1: landmark.position.x1,
-                    x2: landmark.position.x2,
-                    x3: landmark.position.x3,
-                    x4: landmark.position.x4,
-                    y1: landmark.position.y1,
-                    y2: landmark.position.y2,
-                    y3: landmark.position.y3,
-                    y4: landmark.position.y4,
-                },
-                rectangle: createdBox.rectangle,
-                descriptor: createdBox.descriptor,
-                wrapper: createdBox.wrapper,
-                delete: createdBox.delete,
-                deleteIcon: createdBox.deleteIcon,
-            };
-            this.state.boxes.push(box);
-            this.state.drawnLandmarks.push(box.name);
-        })
+    renderCommittedBoxes = () => {
+        // let map = this.state.map!;
+        if (this.props.currentStage === CurrentStage.LANDMARK_EDIT) {
+            let landmarks = this.props.committedLandmarks[this.index];
+            landmarks.forEach((landmark: LandmarkData) => {
+                let createdBox = this.createRectangle(
+                    landmark.position.y1 / this.state.ratio,
+                    landmark.position.x1 / this.state.ratio,
+                    landmark.position.y3 / this.state.ratio,
+                    landmark.position.x3 / this.state.ratio,
+                    landmark.name);
+                let box: Box = {
+                    id: landmark.id,
+                    name: landmark.name,
+                    position: {
+                        x1: landmark.position.x1,
+                        x2: landmark.position.x2,
+                        x3: landmark.position.x3,
+                        x4: landmark.position.x4,
+                        y1: landmark.position.y1,
+                        y2: landmark.position.y2,
+                        y3: landmark.position.y3,
+                        y4: landmark.position.y4,
+                    },
+                    rectangle: createdBox.rectangle,
+                    descriptor: createdBox.descriptor,
+                    wrapper: createdBox.wrapper,
+                    delete: createdBox.delete,
+                    deleteIcon: createdBox.deleteIcon,
+                };
+                this.state.boxes.push(box);
+                this.state.drawnLandmarks.push(box.name);
+            });
+        } else if (this.props.currentStage === CurrentStage.OCR_EDIT) {
+            
+        }
     }
 
     handleMouseDown = (e: any) => {
@@ -412,6 +419,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
 const mapStateToProps = (state: AppState, ownProps: any) => {
     return {
+        currentStage: state.general.currentStage,
         currentImageState: state.image,
         currentLandmark: state.image.currentLandmark!,
         committedLandmarks: state.image.landmark

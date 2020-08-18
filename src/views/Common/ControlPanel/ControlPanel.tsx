@@ -13,6 +13,8 @@ import { loadNextID, saveDocumentType } from '../../../store/id/actionCreators';
 import { saveSegCheck, loadImageState, addIDBox, setCurrentLandmark, updateLandmarkFlags } from '../../../store/image/actionCreators';
 import AddTypeModal from '../AddTypeModal/AddTypeModal';
 
+var fs = require('browserify-fs');
+
 interface IProps {
     currentStage: CurrentStage;
     indexedID: IDState;
@@ -46,11 +48,22 @@ interface IState {
 
     // Landmark
     showAddLandmarkModal: boolean;
+    landmarksLoaded: boolean;
     landmarks: {
+        docType: string,
+        landmarks: {
+            name: string,
+            flags: string[]
+        }[]
+    }[];
+    currentLandmarks: {
         name: string,
         flags: string[]
     }[];
-    landmarkFlags: string[];
+    landmarkFlags: {
+        category: string,
+        flags: string[],
+    }[];
     selectedLandmark: string;
 }
 
@@ -70,7 +83,9 @@ class ControlPanel extends React.Component<IProps, IState> {
             validation: false,
 
             showAddLandmarkModal: false,
+            landmarksLoaded: false,
             landmarks: [],
+            currentLandmarks: [],
             landmarkFlags: [],
             selectedLandmark: '',
         }
@@ -79,7 +94,9 @@ class ControlPanel extends React.Component<IProps, IState> {
     componentDidUpdate() {
         switch (this.props.currentStage) {
             case (CurrentStage.LANDMARK_EDIT): {
-                this.loadLandmarkData(false);
+                if (!this.state.landmarksLoaded) {
+                    this.loadLandmarkData();
+                }
             }
         }
     }
@@ -134,71 +151,75 @@ class ControlPanel extends React.Component<IProps, IState> {
         this.props.addIDBox(box, this.props.currentID.originalID!.image);
     }
 
-    loadDocumentTypes = () => {
+    loadDocumentTypes = (doc?: string) => {
         this.setState({
             documentTypes: options.documentTypes,
-            docType: options.documentTypes[0]
+            docType: doc ? doc : options.documentTypes[0]
         });
     }
 
-    loadLandmarkData = (reload: boolean) => {
-        if (this.state.landmarks.length !== 0 && !reload) return;
-        switch (this.props.currentID.processStage) {
-            case (IDProcess.MYKAD_FRONT): {
-                options.landmark.MyKadFront.forEach((each) => {
-                    this.state.landmarks.push({
-                        name: each,
-                        flags: []
-                    });
-                });
-                this.setState({
-                    landmarkFlags: options.flags.landmark.quality
-                });
-                break;
-            }
-            case (IDProcess.MYKAD_BACK): {
-                options.landmark.MyKadBack.forEach((each) => {
-                    this.state.landmarks.push({
-                        name: each,
-                        flags: []
-                    });
-                });
-                this.setState({
-                    landmarkFlags: options.flags.landmark.quality
-                });
-                break;
-            }
-            case (IDProcess.PASSPORT): {
-                options.landmark.Passport.forEach((each) => {
-                    this.state.landmarks.push({
-                        name: each,
-                        flags: []
-                    });
-                });
-                this.setState({
-                    landmarkFlags: options.flags.landmark.quality
-                });
-                break;
-            }
-            default: {
-                options.landmark.Passport.forEach((each) => {
-                    this.state.landmarks.push({
-                        name: each,
-                        flags: []
-                    });
-                });
-                this.setState({
-                    landmarkFlags: options.flags.landmark.quality
-                });
-            }
+    loadLandmarkData = () => {
+        // if (this.state.landmarks.length !== 0 && !reload) return;
+
+        let criterion = '';
+        if (this.state.docType === "MyKad") {
+            criterion = (this.props.currentID.processStage === IDProcess.MYKAD_FRONT) ? 'MyKadFront' : 'MyKadBack';
+        } else {
+            criterion = this.state.docType;
         }
+
+        let docLandmarks: {docType: string, landmarks: {name: string, flags: string[]}[]}[] = [];
+        let currentLandmarks: {name: string, flags: string[]}[] = [];
+        let flags: {category: string, flags: string[]}[] = [];
+
+        console.log(options);
+        options.landmark.keys.forEach((each, idx) => {
+            let landmarks: {name: string, flags: string[]}[] = [];
+            options.landmark.values[idx].forEach((each) => {
+                landmarks.push({
+                    name: each,
+                    flags: []
+                });
+            });
+            docLandmarks.push({
+                docType: each,
+                landmarks: landmarks
+            });
+
+            if (criterion === each) {
+                currentLandmarks = landmarks;
+            }
+        });
+
+        options.flags.landmark.keys.forEach((each, idx) => {
+            flags.push({
+                category: each,
+                flags: options.flags.landmark.values[idx]
+            });
+        })
+
+        this.setState({landmarks: docLandmarks, currentLandmarks: currentLandmarks, landmarkFlags: flags, landmarksLoaded: true});
     }
 
     // Seg Check Components
     segCheck = () => {
         const addDocType = (doc: string) => {
             options.documentTypes.push(doc);
-            this.setState({showAddDocTypeModal: false}, this.loadDocumentTypes);
+            options.landmark.keys.push(doc);
+            options.landmark.values.push([]);
+            options.ocr.keys.push(doc);
+            options.ocr.values.push([]);
+            fs.writeFile('../../../options.json', JSON.stringify(options));
+            this.setState({showAddDocTypeModal: false}, () => this.loadDocumentTypes(doc));
+        }
+
+        const setDocType = (e: any) => {
+            if (this.state.landmarks.length === 0) {
+                this.setState({docType: e.target.value});
+            } else {
+                let landmarks = this.state.landmarks.find((each) => (each.docType === e.target.value))!.landmarks;
+                this.setState({docType: e.target.value, currentLandmarks: landmarks});
+            }
         }
 
         const submitSegCheck = (e: any) => {
@@ -220,8 +241,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <Form.Group controlId="docType">
                     <Form.Label>Document Type</Form.Label>
                     <Button onClick={() => {console.log('click'); this.setState({showAddDocTypeModal: true})}} style={{padding: "0 0.5rem", margin: "0.5rem 1rem"}}>+</Button>
-                    <Form.Control as="select" value={this.state.docType} onChange={(e: any) => this.setState({docType: e.target.value})}>
-                        {Object.entries(this.state.documentTypes).map(([key, value]) => <option value={value}>{value}</option>)}
+                    <Form.Control as="select" value={this.state.docType} onChange={(e: any) => setDocType(e)}>
+                        {Object.entries(this.state.documentTypes).map(([key, value]) => <option key={key} value={value}>{value}</option>)}
                     </Form.Control>
                 </Form.Group>
 
@@ -259,40 +280,22 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     landmarkEdit = () => {
-        if (this.state.landmarks.length === 0) {
-            return <p>No associated landmarks</p>;
-        }
 
         const setLandmark = (item: string) => {
             this.setState({selectedLandmark: item}, () => this.props.setCurrentLandmark(item));
         }
 
         const addLandmark = (landmark: string) => {
-
-            // switch (this.state.docType) {
-            //     case 'MyKad': {
-            //         if (this.props.currentID.processStage === IDProcess.MYKAD_FRONT) {
-            //             options.landmark.MyKadFront.push(landmark);
-            //         } else {
-            //             options.landmark.MyKadBack.push(landmark);
-            //         }
-            //         break;
-            //     }
-            //     case 'Passport': {
-            //         options.landmark.Passport.push(landmark);
-            //         break;
-            //     }
-            //     default: {
-            //         options.landmark[this.state.docType] = [];
-            //         options.landmark[this.state.docType.push(landmark);
-            //     }
-            // }
-
-            // options.landmark['documentTypes'].push(landmark);
-            // console.log(options.landmark);
-            // this.setState({showAddLandmarkModal: false}, () => this.loadLandmarkNames(true));
-
-            // api call to post changes
+            let index = 0;
+            options.landmark.keys.forEach((each, idx) => {
+                if (each === this.state.docType) {
+                    index = idx;
+                }
+            })
+            options.landmark.values[index].push(landmark);
+            console.log(options);
+            fs.writeFile('../../../options.json', JSON.stringify(options));
+            this.setState({showAddLandmarkModal: false}, this.loadLandmarkData);
         }
 
         const backStage = () => {
@@ -305,34 +308,46 @@ class ControlPanel extends React.Component<IProps, IState> {
 
         const getLandmarkFlags = (flags: string[]) => {
             const setFlag = (flag: string) => {
-                for (var i = 0; i < this.state.landmarks.length; i++) {
-                    if (this.state.landmarks[i].name === this.state.selectedLandmark) {
-                        let landmarks = this.state.landmarks;
+                for (var i = 0; i < this.state.currentLandmarks.length; i++) {
+                    if (this.state.currentLandmarks[i].name === this.state.selectedLandmark) {
+                        let landmarks = this.state.currentLandmarks;
                         let landmark = landmarks[i];
                         if (!landmark.flags.includes(flag)) {
                             landmark.flags.push(flag);
                             landmarks[i] = landmark;
-                            this.setState({landmarks: landmarks});
+                            this.setState({currentLandmarks: landmarks});
                         }
                     }
                 }
             }
 
             return (
-                <ToggleButtonGroup type="checkbox">
+                <div>
                     {
                         this.state.landmarkFlags.map((each, idx) => {
                             return (
-                                    <ToggleButton
-                                        value={each}
-                                        checked={flags.includes(each)}
-                                        onClick={() => setFlag(each)}>
-                                        {each}
-                                    </ToggleButton>
+                                    <div>
+                                        <p>{each.category}</p>
+                                        <ToggleButtonGroup type="checkbox">
+                                            {each.flags.map((each, idx) => {
+                                                return (
+                                                    <ToggleButton
+                                                        className="labelling-flags"
+                                                        key={idx}
+                                                        value={each}
+                                                        variant="secondary"
+                                                        checked={flags.includes(each)}
+                                                        onClick={() => setFlag(each)}>
+                                                        {each}
+                                                    </ToggleButton>
+                                                );
+                                            })}
+                                        </ToggleButtonGroup>
+                                    </div>
                             );
                         })
                     }
-                </ToggleButtonGroup>
+                </div>
             );            
         }
 
@@ -346,18 +361,18 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
             }
 
-            this.state.landmarks.forEach((each) => {
+            this.state.currentLandmarks.forEach((each) => {
                 this.props.updateLandmarkFlags(index, each.name, each.flags);
-            }, this.props.progressNextStage(CurrentStage.OCR_EDIT));
+            }, this.props.progressNextStage(CurrentStage.OCR_DETAILS));
         }
 
         return (
                 <div>
                     <Accordion>
                         {
-                            this.state.landmarks.map((each, idx) => {
+                            this.state.currentLandmarks.map((each, idx) => {
                                 return (
-                                    <Card>
+                                    <Card key={idx}>
                                         <Accordion.Toggle as={Card.Header} eventKey={idx.toString()} onClick={() => setLandmark(each.name)}>
                                             {each.name}
                                         </Accordion.Toggle>

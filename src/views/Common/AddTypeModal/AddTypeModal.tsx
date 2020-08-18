@@ -1,7 +1,5 @@
 import React from 'react';
-import { AppState } from '../../../store';
 import { Modal, Form, Button } from 'react-bootstrap';
-import { connect } from 'net';
 
 interface IProps {
     showModal: boolean,

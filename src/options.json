@@ -1,19 +1,34 @@
 {
     "documentTypes": ["MyKad", "Passport"],
     "landmark": {
-        "MyKadFront": ["kPMLandmark", "securityChip", "mscLogo", "gender", "citizen", "name", "address", "facialImage", "myKadLogo", "myKadNumber"],
-        "MyKadBack": ["coatOfArmLandmark", "klccTower", "signature"],
-        "Passport": ["passportNumber"]
+        "keys": ["MyKadFront", "MyKadBack", "Passport", "Other"],
+        "values": [
+            ["kPMLandmark", "securityChip", "mscLogo", "gender", "citizen", "name", "address", "facialImage", "myKadLogo", "myKadNumber"],
+            ["coatOfArmLandmark", "klccTower", "signature"],
+            ["passportNumber", "name"],
+            ["IDNumber", "name"]
+        ]
     },
     "ocr": {
-        "MyKad": ["icNumber", "name", "birthDate", "street"]
+        "keys": ["MyKad", "Passport", "Other"],
+        "values": [
+            ["icNumber", "name", "birthDate", "street"],
+            ["passportNumber"],
+            ["IDNumber"]
+        ]
     },
     "flags": {
         "landmark": {
-            "quality": ["glare", "blur"]
+            "keys": ["quality"],
+            "values": [
+                ["glare", "blur"]
+            ]
         },
         "video": {
-            "quality": ["dark", "blur"]
+            "keys": ["quality"],
+            "values": [
+                ["dark", "blur"]
+            ]
         }
     }
 }

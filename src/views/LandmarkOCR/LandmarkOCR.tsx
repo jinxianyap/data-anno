@@ -4,9 +4,8 @@ import { ImageState } from '../../store/image/types';
 import { AppState } from '../../store';
 import { Container, Row, Col } from 'react-bootstrap';
 // import { ImageUtil } from '../../utils/ImageUtil';
-import LabelView from '../Common/LabelView/LabelView';
 import LandmarkLabeller from '../Common/LandmarkLabeller/LandmarkLabeller';
-import './Landmark.scss';
+import './LandmarkOCR.scss';
 
 // only show image and drawn boxes
 interface IProps {

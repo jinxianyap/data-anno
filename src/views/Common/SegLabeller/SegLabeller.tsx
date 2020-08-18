@@ -198,8 +198,6 @@ class SegLabeller extends React.Component<IProps, IState> {
     }
 
     handleMapClick = (e: any) => {
-        let map: L.Map = this.state.map!;
-
         for (var i = 0; i < this.state.currentBox.circles.length; i++) {
             if (this.state.currentBox.circles[i].getBounds().contains(e.latlng)) {
                 this.handleCircleClick(e, i);
@@ -295,7 +293,7 @@ class SegLabeller extends React.Component<IProps, IState> {
 
             this.handleSubmit();
         } else {
-            let boxes = this.state.boxes;
+            // let boxes = this.state.boxes;
             let newBox = {
                 id: this.state.boxes.length,
                 position: {

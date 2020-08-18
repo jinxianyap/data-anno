@@ -50,7 +50,7 @@ class SetupView extends React.Component<IProps, IState> {
         if (this.state.user === '' || this.state.database === '') {
             this.setState({incomplete: true});
         } else {
-            console.log('submitted');
+            // console.log('submitted');
             let st = this.state;
             let setup: SetupOptions = {
                 user: st.user,
@@ -60,7 +60,7 @@ class SetupView extends React.Component<IProps, IState> {
                 processType: st.processType
             }
             this.props.saveSetupOptions(setup);
-            console.log(setup);
+            // console.log(setup);
             //temp to simulate loading fileobjects from database
             let folders = [];
             let IDFolder = DatabaseUtil.loadIntoIDFolder(st.files);
@@ -77,7 +77,7 @@ class SetupView extends React.Component<IProps, IState> {
         let files = this.state.files;
         files.push(e.target.files[0]);
         this.setState({files: files});
-        console.log(this.state.files);
+        // console.log(this.state.files);
     }
 
     render() {
@@ -87,14 +87,14 @@ class SetupView extends React.Component<IProps, IState> {
                 <Form.Group controlId="setupUser">
                     <Form.Label>User</Form.Label>
                     <Form.Control as="select" value={this.state.user} onChange={(e: any) => this.setState({user: e.target.value})} >
-                        {Object.entries(UsersTemp).map(([key, value]) => <option value={value}>{key}</option>)}
+                        {Object.entries(UsersTemp).map(([key, value]) => <option key={value} value={value}>{key}</option>)}
                     </Form.Control>
                 </Form.Group>
 
                 <Form.Group controlId="database">
                     <Form.Label>Database</Form.Label>
                     <Form.Control as="select" value={this.state.database} onChange={(e: any) => this.setState({database: e.target.value})}>
-                        {Object.entries(DatabasesTemp).map(([key, value]) => <option value={value}>{key}</option>)}
+                        {Object.entries(DatabasesTemp).map(([key, value]) => <option key={value} value={value}>{key}</option>)}
                     </Form.Control>
                 </Form.Group>
     
@@ -111,10 +111,10 @@ class SetupView extends React.Component<IProps, IState> {
                 <Form.Group controlId="process">
                     <Form.Label>Process</Form.Label>
                     <Form.Control as="select" defaultValue={this.state.processType} onChange={(e: any) => this.setState({processType: e.target.value})}>
-                        <option value={ProcessType.WHOLE}>Full</option>
-                        <option value={ProcessType.SEGMENTATION}>Up to Segmentation</option>
-                        <option value={ProcessType.LANDMARK}>Up to Landmark</option>
-                        <option value={ProcessType.OCR}>Up To OCR</option>
+                        <option key="full" value={ProcessType.WHOLE}>Full</option>
+                        <option key="seg" value={ProcessType.SEGMENTATION}>Up to Segmentation</option>
+                        <option key="landmark" value={ProcessType.LANDMARK}>Up to Landmark</option>
+                        <option key="ocr" value={ProcessType.OCR}>Up To OCR</option>
                     </Form.Control>
                 </Form.Group>
 
