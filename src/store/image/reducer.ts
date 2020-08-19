@@ -11,7 +11,8 @@ const initialState: ImageState = {
     },
     imageProps: [],
     landmark: [],
-    ocr: []
+    ocr: [],
+    faceCompareMatch: []
 }
 
 export function imageReducer(
@@ -207,6 +208,15 @@ export function imageReducer(
             return {
                 ...state,
                 ocr: allOCR
+            }
+        }
+
+        case Action.SET_FACE_COMPARE_MATCH: {
+            let matches = state.faceCompareMatch;
+            matches[action.payload.index] = action.payload.match;
+            return {
+                ...state,
+                faceCompareMatch: matches
             }
         }
     }

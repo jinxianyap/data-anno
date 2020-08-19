@@ -118,3 +118,13 @@ export function updateOCRData(index: number, id: number, name: string, value: st
         }
     }
 }
+
+export function setFaceCompareMatch(index: number, match: boolean): ImageActionTypes {
+    return {
+        type: Action.SET_FACE_COMPARE_MATCH,
+        payload: {
+            index: index,
+            match: match
+        }
+    }
+}

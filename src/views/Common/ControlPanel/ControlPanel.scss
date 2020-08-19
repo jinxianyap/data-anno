@@ -4,6 +4,14 @@
     background-color: darken(#dbdbdb, 25);
     padding: 2rem;
 
+    .internalIDIndex {
+        width: 100%;
+        p {
+            width: 100%;
+            text-align: center;
+        }
+    }
+
     .btn-group-vertical {
         input {
             display: none;

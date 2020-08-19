@@ -129,7 +129,7 @@ class SetupView extends React.Component<IProps, IState> {
                     onChange={(e: any) => this.handleUpload(e)}
                     id="validationFormik107"
                     />
-                {/* <Form.File
+                <Form.File
                     className="position-relative"
                     required
                     name="file"
@@ -160,7 +160,7 @@ class SetupView extends React.Component<IProps, IState> {
                     label="JSON"
                     onChange={(e: any) => this.handleUpload(e)}
                     id="validationFormik107"
-                    /> */}
+                    />
                 </Form.Group>
 
                 { this.state.incomplete

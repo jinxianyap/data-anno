@@ -93,7 +93,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
     componentDidMount() {
         for (var i = 0; i < this.props.currentImageState.segEdit.internalIDProcessed.length; i++) {
-            if (!this.props.currentImageState.segEdit.internalIDProcessed) {
+            if (!this.props.currentImageState.segEdit.internalIDProcessed[i]) {
               this.index = i;
               break;
             }

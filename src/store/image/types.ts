@@ -20,6 +20,9 @@ export type ImageState = {
     // OCR
     ocr: OCRData[][];
     currentWord?: OCRWord,
+
+    // FR Compare (for each cropped internal ID)
+    faceCompareMatch: boolean[]
 }
 
 export type IDBox = {
@@ -162,6 +165,14 @@ interface UpdateOCRData {
     }
 }
 
+interface SetFaceCompareMatch {
+    type: typeof Action.SET_FACE_COMPARE_MATCH;
+    payload: {
+        index: number,
+        match: boolean
+    }
+}
+
 export type ImageActionTypes = LoadImageState
     | SaveSegCheck
     | AddIDBox
@@ -174,3 +185,4 @@ export type ImageActionTypes = LoadImageState
     | AddOCRData
     | UpdateOCRData
     | SetCurrentWord
+    | SetFaceCompareMatch

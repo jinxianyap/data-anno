@@ -13,7 +13,8 @@ export class DatabaseUtil {
                 },
                 imageProps: [],
                 landmark: [],
-                ocr: []
+                ocr: [],
+                faceCompareMatch: []
             },
             croppedID: {
                 image: files[1],
@@ -25,7 +26,8 @@ export class DatabaseUtil {
                 },
                 imageProps: [],
                 landmark: [],
-                ocr: []
+                ocr: [],
+                faceCompareMatch: []
             },
             backID: {
                 image: files[2],
@@ -37,7 +39,8 @@ export class DatabaseUtil {
                 },
                 imageProps: [],
                 landmark: [],
-                ocr: []
+                ocr: [],
+                faceCompareMatch: []
             },
             selfieVideo: files[3],
             jsonData: files[4],

@@ -32,6 +32,13 @@ export function IDReducer(
                 processStage: stage
             }
         }
+        case Action.UPDATE_VIDEO_DATA: {
+            return {
+                ...state,
+                videoLiveness: action.payload.liveness,
+                videoFlags: action.payload.flags
+            }
+        }
         default:
             return state;
     }

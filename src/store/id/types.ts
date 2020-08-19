@@ -15,7 +15,9 @@ export type IDState = {
     selfieVideo?: File;
     jsonData?: File;
 
-    // generatedCrops?: ImageState[];
+    // FR Liveness
+    videoLiveness?: boolean;
+    videoFlags?: string[];
 };
 
 interface SaveDocumentType {
@@ -32,5 +34,14 @@ interface LoadNextID {
     }
 }
 
+interface UpdateVideoData {
+    type: typeof Action.UPDATE_VIDEO_DATA;
+    payload: {
+        liveness: boolean,
+        flags: string[]
+    }
+}
+
 export type IDActionTypes = SaveDocumentType
-    | LoadNextID;
+    | LoadNextID
+    | UpdateVideoData

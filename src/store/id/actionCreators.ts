@@ -18,3 +18,13 @@ export function saveDocumentType(documentType: string): IDActionTypes {
         }
     }
 }
+
+export function updateVideoData(liveness: boolean, flags: string[]): IDActionTypes {
+    return {
+        type: Action.UPDATE_VIDEO_DATA,
+        payload: {
+            liveness: liveness,
+            flags: flags
+        }
+    }
+}

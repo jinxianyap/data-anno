@@ -9,8 +9,8 @@ import { GeneralActionTypes } from '../../../store/general/types';
 import { IDActionTypes, IDState } from '../../../store/id/types';
 import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord } from '../../../store/image/types';
 import { progressNextStage, getNextID } from '../../../store/general/actionCreators';
-import { loadNextID, saveDocumentType } from '../../../store/id/actionCreators';
-import { saveSegCheck, loadImageState, addIDBox, setCurrentSymbol, setCurrentWord, updateLandmarkFlags, addOCRData } from '../../../store/image/actionCreators';
+import { loadNextID, saveDocumentType, updateVideoData } from '../../../store/id/actionCreators';
+import { saveSegCheck, loadImageState, addIDBox, setCurrentSymbol, setCurrentWord, updateLandmarkFlags, addOCRData, setFaceCompareMatch } from '../../../store/image/actionCreators';
 import AddTypeModal from '../AddTypeModal/AddTypeModal';
 
 var fs = require('browserify-fs');
@@ -36,6 +36,9 @@ interface IProps {
 
     setCurrentWord: (word: OCRWord) => ImageActionTypes;
     addOCRData: (index: number, ocr: OCRData) => ImageActionTypes;
+
+    updateVideoData: (liveness: boolean, flags: string[]) => IDActionTypes;
+    setFaceCompareMatch: (index: number, match: boolean) => ImageActionTypes;
 }
 
 interface IState {
@@ -46,7 +49,7 @@ interface IState {
     docType: string;
     passesCrop: boolean;
     cropDirty: boolean;
-    validation: boolean;
+    segCheckValidation: boolean;
 
     // Landmark
     showAddLandmarkModal: boolean;
@@ -82,6 +85,18 @@ interface IState {
         name: string,
         value?: string
     }[];
+
+    // Liveness
+    videoFlagsLoaded: boolean;
+    videoFlags: {
+        category: string,
+        flags: string[]
+    }[];
+    selectedVideoFlags: string[];
+    passesLiveness?: boolean;
+    livenessValidation: boolean;
+
+    faceCompareMatch?: boolean;
 }
 
 class ControlPanel extends React.Component<IProps, IState> {
@@ -99,7 +114,7 @@ class ControlPanel extends React.Component<IProps, IState> {
             docType: '',
             passesCrop: false,
             cropDirty: false,
-            validation: false,
+            segCheckValidation: false,
 
             showAddLandmarkModal: false,
             landmarksLoaded: false,
@@ -111,7 +126,12 @@ class ControlPanel extends React.Component<IProps, IState> {
             showAddOCRModal: false,
             OCRLoaded: false,
             OCR: [],
-            currentOCR: []
+            currentOCR: [],
+
+            videoFlagsLoaded: false,
+            videoFlags: [],
+            selectedVideoFlags: [],
+            livenessValidation: false,
         }
     }
 
@@ -126,23 +146,13 @@ class ControlPanel extends React.Component<IProps, IState> {
             case (CurrentStage.OCR_DETAILS): {
                 if (!this.state.OCRLoaded) {
                     this.loadOCRDetails();
-                }
-                // let currentOCR = this.state.currentOCR;
-                // if (currentOCR.length > 0 && currentOCR[0].value === undefined) {
-                //     currentOCR.forEach((each) => {
-                //         let ocrs = this.props.currentImage.ocr[this.index]
-                //                         .find((ocr) => each.name === ocr.name);
-        
-                //         if (ocrs !== undefined) {
-                //             each.value = ocrs.labels.map((label) => label.value)
-                //                         .join(' ');
-                //         } else {
-                //             each.value = '';
-                //         }
-                //     });
-                //     console.log(currentOCR);
-                //     this.setState({currentOCR: currentOCR});
-                // }
+                };
+                break;
+            }
+            case (CurrentStage.FR_LIVENESS_CHECK): {
+                if (!this.state.videoFlagsLoaded) {
+                    this.loadVideoFlags();
+                };
                 break;
             }
         }
@@ -157,7 +167,7 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     getInternalIndex() {
         for (var i = 0; i < this.props.currentImage.segEdit.internalIDProcessed.length; i++) {
-            if (!this.props.currentImage.segEdit.internalIDProcessed) {
+            if (!this.props.currentImage.segEdit.internalIDProcessed[i]) {
               this.index = i;
               break;
             }
@@ -174,7 +184,7 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     validate = () => {
         if (this.state.cropDirty && this.state.docType !== '') {
-            this.setState({validation: true});
+            this.setState({segCheckValidation: true});
         }
     }
 
@@ -278,6 +288,15 @@ class ControlPanel extends React.Component<IProps, IState> {
         this.setState({OCR: docOCR, currentOCR: currentOCR, OCRLoaded: true});
     }
 
+    loadVideoFlags = () => {
+        let vidFlags: {category: string, flags: string[]}[] = [];
+        options.flags.video.keys.forEach((each, idx) => {
+            let flags = options.flags.video.values[idx];
+            vidFlags.push({category: each, flags: flags});
+        });
+        this.setState({videoFlags: vidFlags, videoFlagsLoaded: true});
+    }
+
     // Seg Check Components
     segCheck = () => {
         const addDocType = (doc: string) => {
@@ -333,7 +352,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     </ButtonGroup>
                 </Form.Group>
 
-                <Button type="submit" disabled={!this.state.validation}>
+                <Button type="submit" disabled={!this.state.segCheckValidation}>
                     Next
                 </Button>
             </Form>
@@ -357,6 +376,8 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     landmarkEdit = () => {
+        this.getInternalIndex();
+
         const setLandmark = (item: string) => {
             this.setState({selectedLandmark: item}, () => this.props.setCurrentSymbol(item));
         }
@@ -429,8 +450,6 @@ class ControlPanel extends React.Component<IProps, IState> {
 
         const submitLandmark = (e: any) => {
             e.preventDefault();
-            this.getInternalIndex();
-
             this.state.currentLandmarks.forEach((each) => {
                 this.props.updateLandmarkFlags(this.index, each.name, each.flags);
             }, this.props.progressNextStage(CurrentStage.OCR_DETAILS));
@@ -589,6 +608,108 @@ class ControlPanel extends React.Component<IProps, IState> {
         </div>);
     }
 
+    frLivenessCheck = () => {
+        const setFlag = (flag: string) => {
+            let selected = this.state.selectedVideoFlags;
+            if (!selected.includes(flag)) {
+                selected.push(flag);
+            } else {
+                selected.splice(selected.findIndex((each) => each === flag), 1);
+            }
+            this.setState({selectedVideoFlags: selected});
+        }
+    
+        const validate = () => {
+            if (this.state.passesLiveness) {
+                this.setState({livenessValidation: true});
+            }
+        }
+
+        const submitLiveness = () => {
+            this.props.updateVideoData(this.state.passesLiveness!, this.state.selectedVideoFlags);
+            this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
+        }
+
+        return (
+            <div>
+                <Card>
+                    <Card.Title>Liveness</Card.Title>
+                    <Card.Body>
+                        <ButtonGroup aria-label="passesLivenessButtons" style={{display: "block", width: "100%"}}>
+                            <Button variant="secondary" onClick={() => this.setState({passesLiveness: false}, validate)} value="true">Fail</Button>
+                            <Button variant="secondary" onClick={() => this.setState({passesLiveness: true}, validate)} value="false">Pass</Button>
+                        </ButtonGroup>
+                    </Card.Body>
+                </Card>
+
+                    <Card>
+                        <Card.Title>Flags</Card.Title>
+                        <Card.Body>
+                            {
+                                this.state.videoFlags.map((each, idx) => {
+                                    return (
+                                        <div key={idx}>
+                                            <p>{each.category}</p>
+                                            <ToggleButtonGroup type="checkbox">
+                                            {
+                                                each.flags.map((flag, i) => {
+                                                    return (
+                                                        <ToggleButton
+                                                            className="video-flags"
+                                                            key={i}
+                                                            value={flag}
+                                                            variant="secondary"
+                                                            checked={this.state.selectedVideoFlags.includes(flag)}
+                                                            onClick={() => setFlag(flag)}>
+                                                            {flag}
+                                                        </ToggleButton>
+                                                    );
+                                                })
+                                            }
+                                            </ToggleButtonGroup>
+                                        </div>
+                                    );
+                                })
+                            }
+                        </Card.Body>
+                    </Card>
+                    <Button variant="secondary" onClick={() => this.props.progressNextStage(CurrentStage.OCR_EDIT)}>
+                        Back
+                    </Button>
+                    <Button onClick={submitLiveness} disabled={!this.state.livenessValidation}>
+                        Done
+                    </Button>
+            </div>
+        )
+    }
+
+    frCompareCheck = () => {
+        const submitFaceCompareResults = () => {
+            this.props.setFaceCompareMatch(this.index, this.state.faceCompareMatch!);
+            console.log(this.props);
+        }
+
+        return (
+            <div>
+                <Card>
+                    <Card.Title>Match</Card.Title>
+                    <Card.Body>
+                        <ButtonGroup aria-label="passessFRMatchButtons" style={{display: "block", width: "100%"}}>
+                            <Button variant="secondary" onClick={() => this.setState({faceCompareMatch: false})} value="true">Fail</Button>
+                            <Button variant="secondary" onClick={() => this.setState({faceCompareMatch: true})} value="false">Pass</Button>
+                        </ButtonGroup>
+                    </Card.Body>
+                </Card>
+                <Button variant="secondary" onClick={() => this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK)}>
+                    Back
+                </Button>
+                <Button onClick={submitFaceCompareResults} disabled={this.state.faceCompareMatch === undefined}>
+                    Done
+                </Button>
+            </div>
+        );
+    }
+
     render() {
 
         const controlFunctions = () => {
@@ -608,14 +729,36 @@ class ControlPanel extends React.Component<IProps, IState> {
                 case (CurrentStage.OCR_EDIT): {
                     return this.ocrEdit();
                 }
+                case (CurrentStage.FR_LIVENESS_CHECK): {
+                    return this.frLivenessCheck();
+                }
+                case (CurrentStage.FR_COMPARE_CHECK): {
+                    return this.frCompareCheck();
+                }
                 default: {
                     return <div />;
                 }
             }
         }
 
+        const showIndex = () => {
+            switch (this.props.currentStage) {
+                case (CurrentStage.LANDMARK_EDIT):
+                case (CurrentStage.OCR_DETAILS):
+                case (CurrentStage.OCR_EDIT):
+                case (CurrentStage.FR_COMPARE_CHECK): {
+                    return (
+                        <div className="internalIDIndex">
+                            <p>{(this.index + 1).toString() + " of " + this.props.currentImage.segEdit.croppedIDs.length.toString()}</p>
+                        </div>
+                    );
+                }
+            }
+        }
+
         return (
             <div id="controlPanel">
+                {showIndex()}
                 {controlFunctions()}
             </div>
         );
@@ -634,7 +777,9 @@ const mapDispatchToProps = {
     setCurrentSymbol,
     setCurrentWord,
     updateLandmarkFlags,
-    addOCRData
+    addOCRData,
+    updateVideoData,
+    setFaceCompareMatch
 };
 
 const mapStateToProps = (state: AppState) => {
