@@ -177,7 +177,7 @@ export function imageReducer(
         case Action.SET_CURRENT_VALUE: {
             return {
                 ...state,
-                currentValue: action.payload.value
+                currentWord: action.payload.word
             }
         }
 
@@ -189,7 +189,7 @@ export function imageReducer(
                     let currentOcr = ocr[e];
                     let labels = currentOcr.labels;
                     for (var f = 0; f < labels.length; f++) {
-                        if (labels[f].value === action.payload.value) {
+                        if (labels[f].value === action.payload.value && labels[f].id === action.payload.id) {
                             let label = labels[f];
                             labels.splice(f, 1);
                             label.position = action.payload.position;

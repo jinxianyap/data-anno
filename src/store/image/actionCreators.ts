@@ -1,5 +1,5 @@
 import { Action } from "../Actions";
-import { ImageState, ImageActionTypes, IDBox, ImageProps, LandmarkData, OCRData, Position } from "./types";
+import { ImageState, ImageActionTypes, IDBox, ImageProps, LandmarkData, OCRData, Position, OCRWord } from "./types";
 
 export function loadImageState(currentImage: ImageState): ImageActionTypes {
     return {
@@ -47,7 +47,7 @@ export function deleteIDBox(id: number): ImageActionTypes {
     }
 }
 
-export function setCurrentSymbol(symbol: string): ImageActionTypes {
+export function setCurrentSymbol(symbol?: string): ImageActionTypes {
     return {
         type: Action.SET_CURRENT_SYMBOL,
         payload: {
@@ -97,20 +97,21 @@ export function addOCRData(index: number, ocr: OCRData): ImageActionTypes {
     }
 }
 
-export function setCurrentValue(value: string): ImageActionTypes {
+export function setCurrentWord(word: OCRWord): ImageActionTypes {
     return {
         type: Action.SET_CURRENT_VALUE,
         payload: {
-            value: value
+            word: word
         }
     }
 }
 
-export function updateOCRData(index: number, name: string, value: string, position?: Position): ImageActionTypes {
+export function updateOCRData(index: number, id: number, name: string, value: string, position?: Position): ImageActionTypes {
     return {
         type: Action.UPDATE_OCR_DATA,
         payload: {
             index: index,
+            id: id,
             name: name,
             value: value,
             position: position

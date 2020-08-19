@@ -19,7 +19,7 @@ export type ImageState = {
 
     // OCR
     ocr: OCRData[][];
-    currentValue?: string,
+    currentWord?: OCRWord,
 }
 
 export type IDBox = {
@@ -40,10 +40,7 @@ export type OCRData = {
     type: 'OCR',
     name: string,
     count: number,
-    labels: {
-        value: string,
-        position?: Position
-    }[]
+    labels: OCRWord[]
 }
 
 export type LandmarkOCRData = LandmarkData | OCRData;
@@ -64,6 +61,12 @@ export type Position = {
     y2: number,
     y3: number,
     y4: number
+}
+
+export type OCRWord = {
+    id: number,
+    value: string,
+    position?: Position
 }
 
 interface LoadImageState {
@@ -104,7 +107,7 @@ interface DeleteIDBox {
 interface SetCurrentSymbol {
     type: typeof Action.SET_CURRENT_SYMBOL;
     payload: {
-        symbol: string
+        symbol?: string
     }
 }
 
@@ -141,10 +144,10 @@ interface AddOCRData {
     }
 }
 
-interface SetCurrentValue {
+interface SetCurrentWord {
     type: typeof Action.SET_CURRENT_VALUE;
     payload: {
-        value: string
+        word: OCRWord
     }
 }
 
@@ -152,6 +155,7 @@ interface UpdateOCRData {
     type: typeof Action.UPDATE_OCR_DATA;
     payload: {
         index: number,
+        id: number,
         name: string,
         value: string,
         position?: Position
@@ -169,4 +173,4 @@ export type ImageActionTypes = LoadImageState
     | UpdateLandmarkFlags
     | AddOCRData
     | UpdateOCRData
-    | SetCurrentValue
+    | SetCurrentWord

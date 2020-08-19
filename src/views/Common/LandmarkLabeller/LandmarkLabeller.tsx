@@ -1,7 +1,7 @@
 import L from 'leaflet';
 import React from 'react';
 import { connect } from 'react-redux'; 
-import { ImageActionTypes, ImageState, LandmarkData, Position, OCRData } from '../../../store/image/types';
+import { ImageActionTypes, ImageState, LandmarkData, Position, OCRData, OCRWord } from '../../../store/image/types';
 import { addLandmarkData, deleteLandmarkData, updateOCRData } from '../../../store/image/actionCreators';
 import { AppState } from '../../../store';
 import trash from '../../../assets/trash.png';
@@ -11,12 +11,13 @@ interface IProps {
     currentStage: CurrentStage;
     currentImageState: ImageState,
     currentSymbol: string,
+    currentWord: OCRWord,
     committedLandmarks: LandmarkData[][],
     committedOCRs: OCRData[][],
 
     addLandmarkData: (index: number, landmark: LandmarkData) => ImageActionTypes,
     deleteLandmarkData: (index: number, landmark: string) => ImageActionTypes,
-    updateOCRData: (index: number, name: string, value: string, position?: Position) => ImageActionTypes
+    updateOCRData: (index: number, id: number, name: string, value: string, position?: Position) => ImageActionTypes
 }
 
 interface IState {
@@ -36,7 +37,10 @@ interface IState {
     drawnLandmarks: string[],
 
     ocrBoxes: Box[],
-    drawnOCRs: string[]
+    drawnOCRs: {
+        name: string,
+        word: OCRWord
+    }[]
 }
 
 type Box = {
@@ -174,117 +178,111 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         map.addLayer(layer);
         overlay.addTo(map);
         map.fitBounds(imageBounds);
-        map.dragging.disable();
         map.on('mousedown', this.handleMouseDown);
         map.on('mousemove', this.handleMouseMove);
         map.on('mouseup', this.handleMouseUp);
-        // map.on('mouseout', this.handleMouseOut);
 
         this.setState({map: map}, () => {this.renderCommittedLandmarks(); this.renderCommittedOCRs();});
     }
 
     renderCommittedLandmarks = () => {
-        // let map = this.state.map!;
-        // if (this.props.currentStage === CurrentStage.LANDMARK_EDIT
-        //     || this.props.currentStage === CurrentStage.OCR_DETAILS) {
-            // landmarks only
-            let newBoxes: Box[] = [];
-            let drawnLandmarks: string[] = [];
+        let newBoxes: Box[] = [];
+        let drawnLandmarks: string[] = [];
 
-            if (this.state.landmarkBoxes.length > 0) {
-                this.state.landmarkBoxes.forEach((each) => this.deleteMapElements(each))
+        if (this.state.landmarkBoxes.length > 0) {
+            this.state.landmarkBoxes.forEach((each) => this.deleteMapElements(each))
+        };
+
+        let landmarks = this.props.committedLandmarks[this.index];
+        landmarks.forEach((landmark: LandmarkData) => {
+            let createdBox = this.createRectangle(
+                landmark.position.y1 / this.state.ratio,
+                landmark.position.x1 / this.state.ratio,
+                landmark.position.y3 / this.state.ratio,
+                landmark.position.x3 / this.state.ratio,
+                landmark.name,
+                landmark.name,
+                this.props.currentStage !== CurrentStage.LANDMARK_EDIT);
+            let box: Box = {
+                id: landmark.id,
+                name: landmark.name,
+                position: {
+                    x1: landmark.position.x1,
+                    x2: landmark.position.x2,
+                    x3: landmark.position.x3,
+                    x4: landmark.position.x4,
+                    y1: landmark.position.y1,
+                    y2: landmark.position.y2,
+                    y3: landmark.position.y3,
+                    y4: landmark.position.y4,
+                },
+                rectangle: createdBox.rectangle,
+                descriptor: createdBox.descriptor,
+                wrapper: createdBox.wrapper,
+                delete: createdBox.delete,
+                deleteIcon: createdBox.deleteIcon,
             };
 
-            let landmarks = this.props.committedLandmarks[this.index];
-            landmarks.forEach((landmark: LandmarkData) => {
-                let createdBox = this.createRectangle(
-                    landmark.position.y1 / this.state.ratio,
-                    landmark.position.x1 / this.state.ratio,
-                    landmark.position.y3 / this.state.ratio,
-                    landmark.position.x3 / this.state.ratio,
-                    landmark.name,
-                    landmark.name,
-                    this.props.currentStage !== CurrentStage.LANDMARK_EDIT);
-                let box: Box = {
-                    id: landmark.id,
-                    name: landmark.name,
-                    position: {
-                        x1: landmark.position.x1,
-                        x2: landmark.position.x2,
-                        x3: landmark.position.x3,
-                        x4: landmark.position.x4,
-                        y1: landmark.position.y1,
-                        y2: landmark.position.y2,
-                        y3: landmark.position.y3,
-                        y4: landmark.position.y4,
-                    },
-                    rectangle: createdBox.rectangle,
-                    descriptor: createdBox.descriptor,
-                    wrapper: createdBox.wrapper,
-                    delete: createdBox.delete,
-                    deleteIcon: createdBox.deleteIcon,
-                };
-                console.log(box);
-
-                newBoxes.push(box);
-                drawnLandmarks.push(box.name);
-            });
-            this.setState({landmarkBoxes: newBoxes, drawnLandmarks: drawnLandmarks}, () => console.log(this.state));
-        // }
+            newBoxes.push(box);
+            drawnLandmarks.push(box.name);
+        });
+        this.setState({landmarkBoxes: newBoxes, drawnLandmarks: drawnLandmarks});
     }
 
     renderCommittedOCRs = () => {
-        // let map = this.state.map!;
-        // if (this.props.currentStage === CurrentStage.LANDMARK_EDIT
-        //     || this.props.currentStage === CurrentStage.OCR_DETAILS) {
-            // landmarks only
-            let newBoxes: Box[] = [];
-            let drawnOCRs: string[] = [];
+        let newBoxes: Box[] = [];
+        let drawnOCRs: {name: string, word: OCRWord}[] = [];
 
-            if (this.state.ocrBoxes.length > 0) {
-                this.state.ocrBoxes.forEach((each) => this.deleteMapElements(each))
-            };
+        if (this.state.ocrBoxes.length > 0) {
+            this.state.ocrBoxes.forEach((each) => this.deleteMapElements(each))
+        };
 
-            let ocrs = this.props.committedOCRs[this.index];
-            ocrs.forEach((ocr: OCRData) => {
-                ocr.labels.forEach((label, idx) => {
-                    if (label.position !== undefined) {
-                        let pos = label.position!;
-                        let createdBox = this.createRectangle(
-                            pos.y1 / this.state.ratio,
-                            pos.x1 / this.state.ratio,
-                            pos.y3 / this.state.ratio,
-                            pos.x3 / this.state.ratio,
-                            ocr.name,
-                            label.value,
-                            this.props.currentStage !== CurrentStage.OCR_EDIT);
-                        let box: Box = {
-                            id: idx,
-                            name: ocr.name,
-                            value: label.value,
-                            position: {
-                                x1: pos.x1,
-                                x2: pos.x2,
-                                x3: pos.x3,
-                                x4: pos.x4,
-                                y1: pos.y1,
-                                y2: pos.y2,
-                                y3: pos.y3,
-                                y4: pos.y4,
-                            },
-                            rectangle: createdBox.rectangle,
-                            descriptor: createdBox.descriptor,
-                            wrapper: createdBox.wrapper,
-                            delete: createdBox.delete,
-                            deleteIcon: createdBox.deleteIcon,
-                        };
-                        newBoxes.push(box);
-                        drawnOCRs.push(box.name);
-                    }
-                })
-            });
-            this.setState({ocrBoxes: newBoxes, drawnOCRs: drawnOCRs});
-        // }
+        let ocrs = this.props.committedOCRs[this.index];
+        ocrs.forEach((ocr: OCRData) => {
+            ocr.labels.forEach((label, idx) => {
+                if (label.position !== undefined) {
+                    let pos = label.position!;
+                    let createdBox = this.createRectangle(
+                        pos.y1 / this.state.ratio,
+                        pos.x1 / this.state.ratio,
+                        pos.y3 / this.state.ratio,
+                        pos.x3 / this.state.ratio,
+                        ocr.name,
+                        label.value,
+                        this.props.currentStage !== CurrentStage.OCR_EDIT);
+                    let box: Box = {
+                        id: label.id,
+                        name: ocr.name,
+                        value: label.value,
+                        position: {
+                            x1: pos.x1,
+                            x2: pos.x2,
+                            x3: pos.x3,
+                            x4: pos.x4,
+                            y1: pos.y1,
+                            y2: pos.y2,
+                            y3: pos.y3,
+                            y4: pos.y4,
+                        },
+                        rectangle: createdBox.rectangle,
+                        descriptor: createdBox.descriptor,
+                        wrapper: createdBox.wrapper,
+                        delete: createdBox.delete,
+                        deleteIcon: createdBox.deleteIcon,
+                    };
+                    newBoxes.push(box);
+                    drawnOCRs.push({name: ocr.name, word: label});
+                }
+            })
+        });
+        this.setState({ocrBoxes: newBoxes, drawnOCRs: drawnOCRs});
+    }
+
+    ocrWordDrawn() {
+        return this.state.drawnOCRs.find((each) => 
+        each.name === this.props.currentSymbol
+        && each.word.id === this.props.currentWord.id
+        && each.word.value === this.props.currentWord.value);
     }
 
     handleMouseDown = (e: any) => {
@@ -293,19 +291,21 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 return;
             }
             case (CurrentStage.LANDMARK_EDIT): {
-                if (this.props.currentSymbol === '') return;
+                if (!this.props.currentSymbol) return;
                 break;
             }
             case (CurrentStage.OCR_EDIT): {
-                if (this.props.currentSymbol === '' || !this.props.currentImageState.currentValue) return;
+                if (!this.props.currentSymbol || this.ocrWordDrawn()) return;
                 break;
             }
         }
 
+        this.state.map!.dragging.disable();
+
         this.setState({
             isDrawing: true,
             currentBox: {
-                id: this.props.currentStage === CurrentStage.OCR_EDIT ? this.state.drawnOCRs.length : this.state.drawnLandmarks.length,
+                id: this.props.currentStage === CurrentStage.OCR_EDIT ? this.props.currentWord.id : this.state.drawnLandmarks.length,
                 name: this.props.currentSymbol,
                 position: {
                     x1: e.latlng.lng * this.state.ratio,
@@ -329,7 +329,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 break;
             }
             case (CurrentStage.OCR_EDIT): {
-                if (this.state.drawnOCRs.includes(this.props.currentImageState.currentValue!)) return;
+                if (this.ocrWordDrawn()) return;
                 break;
             }
         }
@@ -345,7 +345,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         this.setState({
             isDrawing: true,
             currentBox: {
-                id: this.props.currentStage === CurrentStage.OCR_EDIT ? this.state.drawnOCRs.length : this.state.drawnLandmarks.length,
+                id: this.props.currentStage === CurrentStage.OCR_EDIT ? this.props.currentWord.id : this.state.drawnLandmarks.length,
                 name: this.props.currentSymbol,
                 position: {
                     ...this.state.currentBox.position,
@@ -362,9 +362,11 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
     handleMouseUp = (e: any) => {
         if (!this.state.isDrawing || !this.props.currentSymbol) return;
         if (this.props.currentStage === CurrentStage.LANDMARK_EDIT && this.state.drawnLandmarks.includes(this.props.currentSymbol)) return;
-        if (this.props.currentStage === CurrentStage.OCR_EDIT && this.state.drawnOCRs.includes(this.props.currentImageState.currentValue!)) return;
+        if (this.props.currentStage === CurrentStage.OCR_EDIT && this.ocrWordDrawn()) return;
         if (this.props.currentStage === CurrentStage.OCR_DETAILS) return;
 
+        this.state.map!.dragging.enable();
+        
         if (this.state.currentBox.rectangle) {
             this.state.currentBox.rectangle!.remove();
         }
@@ -394,29 +396,30 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 drawnLandmarks: drawnLandmarks
             }, () => this.submitLandmarkData(newBox));
         } else if (this.props.currentStage === CurrentStage.OCR_EDIT) {
+
             let newBox: Box = this.createRectangle(
                 currentPos.y1! / this.state.ratio, 
                 currentPos.x1! / this.state.ratio, 
                 e.latlng.lat, 
                 e.latlng.lng,
                 this.props.currentSymbol, 
-                this.props.currentImageState.currentValue!);
-            newBox.value = this.props.currentImageState.currentValue!;
+                this.props.currentImageState.currentWord!.value);
+            newBox.value = this.props.currentImageState.currentWord!.value;
             let boxes = this.state.ocrBoxes;
             boxes.push(newBox);
             let drawnOCRs = this.state.drawnOCRs;
-            drawnOCRs.push(this.props.currentImageState.currentValue!);
+            drawnOCRs.push({name: this.props.currentSymbol, word: this.props.currentWord});
 
             this.setState({
                 isDrawing: false,
                 currentBox: {
-                    id: this.state.drawnOCRs.length,
+                    id: 0,
                     name: '',
                     position: {}
                 },
-                landmarkBoxes: boxes,
-                drawnLandmarks: drawnOCRs
-            }, () => this.props.updateOCRData(this.index, newBox.name, newBox.value!, {
+                ocrBoxes: boxes,
+                drawnOCRs: drawnOCRs
+            }, () => this.props.updateOCRData(this.index, newBox.id, newBox.name, newBox.value!, {
                 x1: newBox.position.x1!,
                 x2: newBox.position.x2!,
                 x3: newBox.position.x3!,
@@ -443,9 +446,14 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         })});
         let deleteMarker = L.rectangle(deleteBounds, {color: "red", weight: 1, interactive: true});
 
+        let htmlText = '<p>' + value + '</p>';
+        if (this.props.currentStage === CurrentStage.OCR_EDIT) {
+            htmlText = '<p>' + this.props.currentWord.id + ": " + value + '</p>'
+        }
+
         let text = L.divIcon({
             iconSize: [0, 0],
-            html: '<p>' + value + '</p>',
+            html: htmlText,
             className: 'overlay-text'});
         let textMarker = L.marker(boxBounds[0], {icon: text}).addTo(this.state.map!);
 
@@ -495,7 +503,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         }
 
         let resultBox: Box = {
-            id: name === undefined ? this.state.drawnLandmarks.length : this.state.ocrBoxes.length,
+            id: this.props.currentStage === CurrentStage.OCR_EDIT ? this.props.currentWord.id : this.state.drawnLandmarks.length,
             name: name,
             value: value,
             position: {
@@ -589,13 +597,14 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         this.deleteMapElements(this.state.ocrBoxes[boxIndex]);
         let name = this.state.ocrBoxes[boxIndex].name;
         let value = this.state.ocrBoxes[boxIndex].value!;
-        let index = this.state.drawnOCRs.indexOf(value);
+        let id = this.state.ocrBoxes[boxIndex].id;
+        let index = this.state.drawnOCRs.findIndex((each) => each.name === name && each.word.value === value && each.word.id === id);
         let drawn = this.state.drawnOCRs;
         drawn.splice(index, 1);
         let boxes = this.state.ocrBoxes;
         boxes.splice(boxIndex, 1);
         this.setState({ocrBoxes: boxes, drawnOCRs: drawn, isDrawing: false}, () => {
-            this.props.updateOCRData(this.index, name, value);
+            this.props.updateOCRData(this.index, id, name, value);
         });
     }
 
@@ -619,6 +628,7 @@ const mapStateToProps = (state: AppState, ownProps: any) => {
         currentStage: state.general.currentStage,
         currentImageState: state.image,
         currentSymbol: state.image.currentSymbol!,
+        currentWord: state.image.currentWord!,
         committedLandmarks: state.image.landmark,
         committedOCRs: state.image.ocr
 }};

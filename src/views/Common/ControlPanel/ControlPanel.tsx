@@ -7,10 +7,10 @@ import options from '../../../options.json';
 import './ControlPanel.scss';
 import { GeneralActionTypes } from '../../../store/general/types';
 import { IDActionTypes, IDState } from '../../../store/id/types';
-import { ImageActionTypes, ImageState, IDBox, OCRData } from '../../../store/image/types';
+import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord } from '../../../store/image/types';
 import { progressNextStage, getNextID } from '../../../store/general/actionCreators';
 import { loadNextID, saveDocumentType } from '../../../store/id/actionCreators';
-import { saveSegCheck, loadImageState, addIDBox, setCurrentSymbol, setCurrentValue, updateLandmarkFlags, addOCRData } from '../../../store/image/actionCreators';
+import { saveSegCheck, loadImageState, addIDBox, setCurrentSymbol, setCurrentWord, updateLandmarkFlags, addOCRData } from '../../../store/image/actionCreators';
 import AddTypeModal from '../AddTypeModal/AddTypeModal';
 
 var fs = require('browserify-fs');
@@ -31,10 +31,10 @@ interface IProps {
 
     addIDBox: (box: IDBox, croppedID: File) => ImageActionTypes;
 
-    setCurrentSymbol: (landmark: string) => ImageActionTypes;
+    setCurrentSymbol: (symbol?: string) => ImageActionTypes;
     updateLandmarkFlags: (index: number, name: string, flags: string[]) => ImageActionTypes;
 
-    setCurrentValue: (value: string) => ImageActionTypes;
+    setCurrentWord: (word: OCRWord) => ImageActionTypes;
     addOCRData: (index: number, ocr: OCRData) => ImageActionTypes;
 }
 
@@ -463,9 +463,13 @@ class ControlPanel extends React.Component<IProps, IState> {
                         }
                 </Accordion>
                 <Button
-                        style={{width: "100%"}}
-                        value="0"
-                        onClick={() => this.setState({showAddLandmarkModal: true})}>+</Button>
+                    style={{width: "100%"}}
+                    value="0"
+                    onClick={() => this.setState({showAddLandmarkModal: true})}>+</Button>
+                <Button
+                    style={{width: "100%"}}
+                    value="0"
+                    onClick={() => this.props.setCurrentSymbol()}>Pan</Button>
                 <AddTypeModal showModal={this.state.showAddLandmarkModal} item='landmarks' add={addLandmark} closeModal={() => this.setState({showAddLandmarkModal: false})}/>
                 <Button variant="secondary" onClick={backStage}>Back</Button>
                 <Button onClick={submitLandmark}>Done</Button>
@@ -490,8 +494,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                     id: idx,
                     type: 'OCR',
                     name: each.name,
-                    labels: each.ref.value.split(' ').map((each: string) => {
-                        return {value: each};
+                    labels: each.ref.value.split(' ').map((each: string, idx: number) => {
+                        return {id: idx, value: each};
                     }),
                     count: each.ref.value.split(' ').length
                 };
@@ -519,7 +523,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 {
                     this.state.currentOCR.map((each, idx) => {
                         return (
-                            <Form.Group controlId={each.name + "OCR"}>
+                            <Form.Group key={each.name + "OCR"}>
                                 <Form.Label>{each.name}</Form.Label>
                                 <Form.Control type="text" defaultValue={each.value} ref={(ref: any) => {refs.push({name: each.name, ref})}} />
                             </Form.Group>
@@ -560,11 +564,11 @@ class ControlPanel extends React.Component<IProps, IState> {
                                             each.labels.map((each, idx) => {
                                                 return (
                                                     <Button 
-                                                        className={ocrs[index].labels[idx].position !== undefined ? "ocr-details" : ""}
+                                                        className={each.position !== undefined ? "ocr-details" : ""}
                                                         variant="secondary"
                                                         // type="checkbox"
                                                         value={each.value}
-                                                        onClick={() => this.props.setCurrentValue(each.value)}>{each.value}</Button>
+                                                        onClick={() => this.props.setCurrentWord(each)}>{each.id}: {each.value}</Button>
                                                 );
                                             })
                                         }
@@ -576,8 +580,12 @@ class ControlPanel extends React.Component<IProps, IState> {
                         })
                     }
                 </Accordion>
+            <Button
+                    style={{width: "100%"}}
+                    value="0"
+                    onClick={() => this.props.setCurrentSymbol()}>Pan</Button>
             <Button variant="secondary" onClick={() => this.props.progressNextStage(CurrentStage.OCR_DETAILS)}>Back</Button>
-            {/* <Button onClick={submitLandmark}>Done</Button> */}
+            <Button onClick={() => this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK)}>Done</Button>
         </div>);
     }
 
@@ -624,7 +632,7 @@ const mapDispatchToProps = {
     addIDBox,
     loadImageState,
     setCurrentSymbol,
-    setCurrentValue,
+    setCurrentWord,
     updateLandmarkFlags,
     addOCRData
 };
