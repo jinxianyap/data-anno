@@ -10,7 +10,12 @@
         }
     }
 
-    .labelling-flags.active {
+    .labelled-landmark {
+        background-color: lightgrey;
+    }
+
+    .labelling-flags.active,
+    .ocr-details {
         background-color: rgb(0, 68, 255);
     }
 }

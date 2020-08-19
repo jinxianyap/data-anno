@@ -7,10 +7,10 @@ import options from '../../../options.json';
 import './ControlPanel.scss';
 import { GeneralActionTypes } from '../../../store/general/types';
 import { IDActionTypes, IDState } from '../../../store/id/types';
-import { ImageActionTypes, ImageState, IDBox } from '../../../store/image/types';
+import { ImageActionTypes, ImageState, IDBox, OCRData } from '../../../store/image/types';
 import { progressNextStage, getNextID } from '../../../store/general/actionCreators';
 import { loadNextID, saveDocumentType } from '../../../store/id/actionCreators';
-import { saveSegCheck, loadImageState, addIDBox, setCurrentLandmark, updateLandmarkFlags } from '../../../store/image/actionCreators';
+import { saveSegCheck, loadImageState, addIDBox, setCurrentSymbol, setCurrentValue, updateLandmarkFlags, addOCRData } from '../../../store/image/actionCreators';
 import AddTypeModal from '../AddTypeModal/AddTypeModal';
 
 var fs = require('browserify-fs');
@@ -31,13 +31,15 @@ interface IProps {
 
     addIDBox: (box: IDBox, croppedID: File) => ImageActionTypes;
 
-    setCurrentLandmark: (landmark: string) => ImageActionTypes;
+    setCurrentSymbol: (landmark: string) => ImageActionTypes;
     updateLandmarkFlags: (index: number, name: string, flags: string[]) => ImageActionTypes;
+
+    setCurrentValue: (value: string) => ImageActionTypes;
+    addOCRData: (index: number, ocr: OCRData) => ImageActionTypes;
 }
 
 interface IState {
     // ownStage: CurrentStage;
-
     // Seg Check
     showAddDocTypeModal: boolean;
     documentTypes: string[];
@@ -65,11 +67,28 @@ interface IState {
         flags: string[],
     }[];
     selectedLandmark: string;
+
+    // OCR
+    showAddOCRModal: boolean;
+    OCRLoaded: boolean;
+    OCR: {
+        docType: string,
+        details: {
+            name: string,
+            value?: string
+        }[]
+    }[];
+    currentOCR: {
+        name: string,
+        value?: string
+    }[];
 }
 
 class ControlPanel extends React.Component<IProps, IState> {
 
     docTypeRef: any = undefined;
+    // keeps track of internal ID index
+    index: number = 0;
 
     constructor(props: IProps) {
         super(props);
@@ -88,6 +107,11 @@ class ControlPanel extends React.Component<IProps, IState> {
             currentLandmarks: [],
             landmarkFlags: [],
             selectedLandmark: '',
+
+            showAddOCRModal: false,
+            OCRLoaded: false,
+            OCR: [],
+            currentOCR: []
         }
     }
 
@@ -97,6 +121,29 @@ class ControlPanel extends React.Component<IProps, IState> {
                 if (!this.state.landmarksLoaded) {
                     this.loadLandmarkData();
                 }
+                break;
+            }
+            case (CurrentStage.OCR_DETAILS): {
+                if (!this.state.OCRLoaded) {
+                    this.loadOCRDetails();
+                }
+                // let currentOCR = this.state.currentOCR;
+                // if (currentOCR.length > 0 && currentOCR[0].value === undefined) {
+                //     currentOCR.forEach((each) => {
+                //         let ocrs = this.props.currentImage.ocr[this.index]
+                //                         .find((ocr) => each.name === ocr.name);
+        
+                //         if (ocrs !== undefined) {
+                //             each.value = ocrs.labels.map((label) => label.value)
+                //                         .join(' ');
+                //         } else {
+                //             each.value = '';
+                //         }
+                //     });
+                //     console.log(currentOCR);
+                //     this.setState({currentOCR: currentOCR});
+                // }
+                break;
             }
         }
     }
@@ -105,6 +152,15 @@ class ControlPanel extends React.Component<IProps, IState> {
         if (this.props.currentStage === CurrentStage.SEGMENTATION_CHECK) {
             this.props.loadNextID(this.props.indexedID);
             this.loadDocumentTypes();
+        }
+    }
+
+    getInternalIndex() {
+        for (var i = 0; i < this.props.currentImage.segEdit.internalIDProcessed.length; i++) {
+            if (!this.props.currentImage.segEdit.internalIDProcessed) {
+              this.index = i;
+              break;
+            }
         }
     }
 
@@ -159,8 +215,6 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     loadLandmarkData = () => {
-        // if (this.state.landmarks.length !== 0 && !reload) return;
-
         let criterion = '';
         if (this.state.docType === "MyKad") {
             criterion = (this.props.currentID.processStage === IDProcess.MYKAD_FRONT) ? 'MyKadFront' : 'MyKadBack';
@@ -172,7 +226,6 @@ class ControlPanel extends React.Component<IProps, IState> {
         let currentLandmarks: {name: string, flags: string[]}[] = [];
         let flags: {category: string, flags: string[]}[] = [];
 
-        console.log(options);
         options.landmark.keys.forEach((each, idx) => {
             let landmarks: {name: string, flags: string[]}[] = [];
             options.landmark.values[idx].forEach((each) => {
@@ -199,6 +252,30 @@ class ControlPanel extends React.Component<IProps, IState> {
         })
 
         this.setState({landmarks: docLandmarks, currentLandmarks: currentLandmarks, landmarkFlags: flags, landmarksLoaded: true});
+    }
+    
+    loadOCRDetails = () => {
+        let docOCR: {docType: string, details: {name: string, value?: string}[]}[] = [];
+        let currentOCR: {name: string, value?: string}[] = [];
+
+        options.ocr.keys.forEach((each, idx) => {
+            let ocr: {name: string, value?: string}[] = [];
+            options.ocr.values[idx].forEach((each) => {
+                ocr.push({
+                    name: each
+                });
+            });
+            docOCR.push({
+                docType: each,
+                details: ocr
+            });
+
+            if (this.state.docType === each) {
+                currentOCR = ocr;
+            }
+        });
+
+        this.setState({OCR: docOCR, currentOCR: currentOCR, OCRLoaded: true});
     }
 
     // Seg Check Components
@@ -280,9 +357,8 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     landmarkEdit = () => {
-
         const setLandmark = (item: string) => {
-            this.setState({selectedLandmark: item}, () => this.props.setCurrentLandmark(item));
+            this.setState({selectedLandmark: item}, () => this.props.setCurrentSymbol(item));
         }
 
         const addLandmark = (landmark: string) => {
@@ -326,7 +402,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     {
                         this.state.landmarkFlags.map((each, idx) => {
                             return (
-                                    <div>
+                                    <div key={idx}>
                                         <p>{each.category}</p>
                                         <ToggleButtonGroup type="checkbox">
                                             {each.flags.map((each, idx) => {
@@ -353,16 +429,10 @@ class ControlPanel extends React.Component<IProps, IState> {
 
         const submitLandmark = (e: any) => {
             e.preventDefault();
-            let index = 0;
-            for (var i = 0; i < this.props.currentImage.segEdit.internalIDProcessed.length; i++) {
-                if (!this.props.currentImage.segEdit.internalIDProcessed) {
-                  index = i;
-                  break;
-                }
-            }
+            this.getInternalIndex();
 
             this.state.currentLandmarks.forEach((each) => {
-                this.props.updateLandmarkFlags(index, each.name, each.flags);
+                this.props.updateLandmarkFlags(this.index, each.name, each.flags);
             }, this.props.progressNextStage(CurrentStage.OCR_DETAILS));
         }
 
@@ -373,8 +443,14 @@ class ControlPanel extends React.Component<IProps, IState> {
                             this.state.currentLandmarks.map((each, idx) => {
                                 return (
                                     <Card key={idx}>
-                                        <Accordion.Toggle as={Card.Header} eventKey={idx.toString()} onClick={() => setLandmark(each.name)}>
-                                            {each.name}
+                                        <Accordion.Toggle
+                                            as={Card.Header}
+                                            eventKey={idx.toString()}
+                                            className={this.props.currentImage.landmark[this.index].find((item) => item.name === each.name) !== undefined
+                                                ? 'labelled-landmark' : ''}
+                                            key={idx}
+                                            onClick={() => setLandmark(each.name)}>
+                                                {each.name}
                                         </Accordion.Toggle>
                                         <Accordion.Collapse eventKey={idx.toString()}>
                                         <Card.Body>
@@ -397,6 +473,114 @@ class ControlPanel extends React.Component<IProps, IState> {
         );
     }
 
+    ocrDetails = () => {
+        let refs: {name: string, ref: any}[] = [];
+
+        refs.forEach((each) => {
+            console.log(each.ref.value);
+        })
+
+        const handleSubmit = (e: any) => {
+            e.preventDefault();
+            this.getInternalIndex();
+
+            let currentOCR = this.state.currentOCR;
+            refs.forEach((each, idx) => {
+                let ocr: OCRData = {
+                    id: idx,
+                    type: 'OCR',
+                    name: each.name,
+                    labels: each.ref.value.split(' ').map((each: string) => {
+                        return {value: each};
+                    }),
+                    count: each.ref.value.split(' ').length
+                };
+                
+                if (currentOCR.find((ocr) => ocr.name === each.name)!.value !== each.ref.value) {
+                    for (var i = 0; i < currentOCR.length; i++) {
+                        if (currentOCR[i].name === each.name) {
+                            let curr = currentOCR[i];
+                            curr.value = each.ref.value;
+                            currentOCR.splice(i, 1);
+                            currentOCR.push(curr);
+                            break;
+                        }
+                    }
+
+                    this.setState({ currentOCR: currentOCR });
+                    this.props.addOCRData(this.index, ocr);
+                }
+            }, this.props.progressNextStage(CurrentStage.OCR_EDIT));
+        }
+
+        // load pre entered data
+        return (
+            <Form onSubmit={handleSubmit}>
+                {
+                    this.state.currentOCR.map((each, idx) => {
+                        return (
+                            <Form.Group controlId={each.name + "OCR"}>
+                                <Form.Label>{each.name}</Form.Label>
+                                <Form.Control type="text" defaultValue={each.value} ref={(ref: any) => {refs.push({name: each.name, ref})}} />
+                            </Form.Group>
+                        );
+                    })
+                }
+                <Button variant="secondary" onClick={() => this.props.progressNextStage(CurrentStage.LANDMARK_EDIT)}>
+                    Back
+                </Button>
+                <Button variant="primary" type="submit">
+                    Done
+                </Button>
+            </Form>
+        )
+    }
+
+    ocrEdit = () => {
+        // const setSymbol = (item: string) => {
+        //     this.setState({selectedLandmark: item}, () => this.props.setCurrentSymbol(item));
+        // }
+        let ocrs = this.props.currentImage.ocr[this.index];
+
+        return (
+            <div>
+                <Accordion>
+                    {
+                        ocrs.map((each, index) => {
+                            if (each.count <= 1) return <div/>;
+                            return (
+                                <Card key={index}>
+                                    <Accordion.Toggle as={Card.Header} eventKey={index.toString()} key={index} onClick={() => this.props.setCurrentSymbol(each.name)}>
+                                        {each.name}
+                                    </Accordion.Toggle>
+                                    <Accordion.Collapse eventKey={index.toString()}>
+                                    <Card.Body>
+                                    <ButtonGroup vertical>
+                                        {
+                                            each.labels.map((each, idx) => {
+                                                return (
+                                                    <Button 
+                                                        className={ocrs[index].labels[idx].position !== undefined ? "ocr-details" : ""}
+                                                        variant="secondary"
+                                                        // type="checkbox"
+                                                        value={each.value}
+                                                        onClick={() => this.props.setCurrentValue(each.value)}>{each.value}</Button>
+                                                );
+                                            })
+                                        }
+                                    </ButtonGroup>
+                                    </Card.Body>
+                                    </Accordion.Collapse>
+                                </Card>
+                            );
+                        })
+                    }
+                </Accordion>
+            <Button variant="secondary" onClick={() => this.props.progressNextStage(CurrentStage.OCR_DETAILS)}>Back</Button>
+            {/* <Button onClick={submitLandmark}>Done</Button> */}
+        </div>);
+    }
+
     render() {
 
         const controlFunctions = () => {
@@ -409,6 +593,12 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
                 case (CurrentStage.LANDMARK_EDIT): {
                     return this.landmarkEdit();
+                }
+                case (CurrentStage.OCR_DETAILS): {
+                    return this.ocrDetails();
+                }
+                case (CurrentStage.OCR_EDIT): {
+                    return this.ocrEdit();
                 }
                 default: {
                     return <div />;
@@ -433,8 +623,10 @@ const mapDispatchToProps = {
     saveSegCheck,
     addIDBox,
     loadImageState,
-    setCurrentLandmark,
-    updateLandmarkFlags
+    setCurrentSymbol,
+    setCurrentValue,
+    updateLandmarkFlags,
+    addOCRData
 };
 
 const mapStateToProps = (state: AppState) => {

@@ -15,7 +15,11 @@ export type ImageState = {
 
     // Landmarks for each internal id if more than 1
     landmark: LandmarkData[][];
-    currentLandmark?: string;
+    currentSymbol?: string;
+
+    // OCR
+    ocr: OCRData[][];
+    currentValue?: string,
 }
 
 export type IDBox = {
@@ -35,7 +39,11 @@ export type OCRData = {
     id: number,
     type: 'OCR',
     name: string,
-    position: Position
+    count: number,
+    labels: {
+        value: string,
+        position?: Position
+    }[]
 }
 
 export type LandmarkOCRData = LandmarkData | OCRData;
@@ -93,10 +101,10 @@ interface DeleteIDBox {
     }
 }
 
-interface SetCurrentLandmark {
-    type: typeof Action.SET_CURRENT_LANDMARK;
+interface SetCurrentSymbol {
+    type: typeof Action.SET_CURRENT_SYMBOL;
     payload: {
-        landmark: string
+        symbol: string
     }
 }
 
@@ -125,12 +133,40 @@ interface UpdateLandmarkFlags {
     }
 }
 
+interface AddOCRData {
+    type: typeof Action.ADD_OCR_DATA;
+    payload: {
+        index: number,
+        ocr: OCRData
+    }
+}
+
+interface SetCurrentValue {
+    type: typeof Action.SET_CURRENT_VALUE;
+    payload: {
+        value: string
+    }
+}
+
+interface UpdateOCRData {
+    type: typeof Action.UPDATE_OCR_DATA;
+    payload: {
+        index: number,
+        name: string,
+        value: string,
+        position?: Position
+    }
+}
+
 export type ImageActionTypes = LoadImageState
     | SaveSegCheck
     | AddIDBox
     | DeleteIDBox
     | SetImageProps
-    | SetCurrentLandmark
+    | SetCurrentSymbol
     | AddLandmarkData
     | DeleteLandmarkData
     | UpdateLandmarkFlags
+    | AddOCRData
+    | UpdateOCRData
+    | SetCurrentValue

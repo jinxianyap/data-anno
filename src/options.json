@@ -1,5 +1,5 @@
 {
-    "documentTypes": ["MyKad", "Passport"],
+    "documentTypes": ["MyKad", "Passport", "Other"],
     "landmark": {
         "keys": ["MyKadFront", "MyKadBack", "Passport", "Other"],
         "values": [

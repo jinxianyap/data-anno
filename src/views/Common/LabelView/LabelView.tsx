@@ -279,7 +279,7 @@ const mapStateToProps = (state: AppState, ownProps: any) => ({
     image: state.image,
 
     // Landmark Stage
-    currentLandmark: state.image.currentLandmark!
+    currentLandmark: state.image.currentSymbol!
 });
 
 const mapDispatchToProps = {

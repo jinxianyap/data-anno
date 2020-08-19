@@ -9,12 +9,12 @@ interface IProps {
 
 interface IState {
     mouseOver: boolean,
-    position: {
-      left: number,
-      top: number,
-      width: number,
-      height: number
-    }
+    // position: {
+    //   left: number,
+    //   top: number,
+    //   width: number,
+    //   height: number
+    // }
 }
 
 export default class BoundingBox extends React.Component<IProps, IState> {
@@ -26,16 +26,16 @@ export default class BoundingBox extends React.Component<IProps, IState> {
         this.timer = null;
         this.state = {
           mouseOver: false,
-          position: {
-            left: props.box.position.x1,
-            top: props.box.position.y1,
-            width: props.box.position.x2 - props.box.position.x1,
-            height: props.box.position.y1 - props.box.position.y4
-          }
+          // position: {
+          //   left: props.box.position.x1,
+          //   top: props.box.position.y1,
+          //   width: props.box.position.x2 - props.box.position.x1,
+          //   height: props.box.position.y1 - props.box.position.y4
+          // }
         };
-        console.log('bounding');
-        console.log(this.props.box);
-        console.log(this.state.position);
+        // console.log('bounding');
+        // console.log(this.props.box);
+        // console.log(this.state.position);
     }
 
   mouseOverHandler = () => {
@@ -57,7 +57,7 @@ export default class BoundingBox extends React.Component<IProps, IState> {
     return (
       <div
         className="BoundingBox"
-        style={this.state.position}
+        // style={this.state.position}
         onMouseOver={this.mouseOverHandler}
         onMouseLeave={this.mouseLeaveHandler}
       >

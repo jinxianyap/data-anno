@@ -30,6 +30,7 @@ const App: React.FC<IProps> = ({state, currentStage}) => {
         return <SegEdit />;
       case (CurrentStage.LANDMARK_EDIT):
       case (CurrentStage.OCR_DETAILS):
+      case (CurrentStage.OCR_EDIT):
         return <Landmark />;
       default:
        return <h4>ERROR</h4>;

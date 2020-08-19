@@ -41,13 +41,13 @@ class Landmark extends React.Component<IProps, IState> {
         return (
             <Container style={{height: "100%"}}>
                 <Row style={{height: "100%"}}>
-                    <Col xs={2}>
+                    <Col xs={1}>
                     </Col>
-                    <Col xs={8}>
+                    <Col xs={10}>
                         {/* <LabelView /> */}
                         <LandmarkLabeller />
                     </Col>
-                    <Col xs={2}>
+                    <Col xs={1}>
                     </Col>
                 </Row>
             </Container>

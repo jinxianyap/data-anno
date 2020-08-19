@@ -11,6 +11,7 @@ const initialState: ImageState = {
     },
     imageProps: [],
     landmark: [],
+    ocr: []
 }
 
 export function imageReducer(
@@ -47,9 +48,12 @@ export function imageReducer(
             newCroppedList.push(action.payload.croppedID);
             let landmark = state.landmark;
             landmark.push([]);
+            let ocr = state.ocr;
+            ocr.push([]);
             return {
                 ...state,
                 landmark: landmark,
+                ocr: ocr,
                 segEdit: {
                     IDBoxes: newIDList,
                     internalIDProcessed: newProcessedList,
@@ -62,12 +66,16 @@ export function imageReducer(
             let boxes = state.segEdit.IDBoxes;
             let internalIDs = state.segEdit.internalIDProcessed;
             let croppedIDs = state.segEdit.croppedIDs;
+            let landmark = state.landmark;
+            let ocr = state.ocr;
 
             for (var i = 0; i < boxes.length; i++) {
                 if (boxes[i].id === id) {
                     boxes.splice(i, 1);
                     internalIDs.splice(i, 1);
                     croppedIDs.splice(i, 1);
+                    landmark.splice(i ,1);
+                    ocr.splice(i, 1);
                 }
             }
 
@@ -77,14 +85,16 @@ export function imageReducer(
                     IDBoxes: boxes,
                     internalIDProcessed: internalIDs,
                     croppedIDs: croppedIDs
-                }
+                },
+                landmark: landmark,
+                ocr: ocr
             }
         }
 
-        case Action.SET_CURRENT_LANDMARK: {
+        case Action.SET_CURRENT_SYMBOL: {
             return {
                 ...state,
-                currentLandmark: action.payload.landmark
+                currentSymbol: action.payload.symbol
             }
         }
 
@@ -142,6 +152,61 @@ export function imageReducer(
             return {
                 ...state,
                 landmark: allLandmarks
+            }
+        }
+
+        case Action.ADD_OCR_DATA: {
+            let allOCR = state.ocr;
+            let ocr = allOCR[action.payload.index];
+            
+            for (var d = 0; d < ocr.length; d++) {
+                if (ocr[d].name === action.payload.ocr.name) {
+                    ocr.splice(d, 1);
+                }
+            } 
+
+            ocr.push(action.payload.ocr);
+            allOCR[action.payload.index] = ocr;
+
+            return {
+                ...state,
+                ocr: allOCR
+            }
+        }
+
+        case Action.SET_CURRENT_VALUE: {
+            return {
+                ...state,
+                currentValue: action.payload.value
+            }
+        }
+
+        case Action.UPDATE_OCR_DATA: {
+            let allOCR = state.ocr;
+            let ocr = allOCR[action.payload.index];
+            for (var e = 0; e < ocr.length; e++) {
+                if (ocr[e].name === action.payload.name) {
+                    let currentOcr = ocr[e];
+                    let labels = currentOcr.labels;
+                    for (var f = 0; f < labels.length; f++) {
+                        if (labels[f].value === action.payload.value) {
+                            let label = labels[f];
+                            labels.splice(f, 1);
+                            label.position = action.payload.position;
+                            labels.push(label);
+                            break;
+                        }
+                    }
+                    currentOcr.labels = labels;
+                    ocr.splice(e, 1);
+                    ocr.push(currentOcr);
+                    break;
+                }
+            }
+            allOCR[action.payload.index] = ocr;
+            return {
+                ...state,
+                ocr: allOCR
             }
         }
     }

@@ -12,7 +12,8 @@ export class DatabaseUtil {
                     croppedIDs: []
                 },
                 imageProps: [],
-                landmark: []
+                landmark: [],
+                ocr: []
             },
             croppedID: {
                 image: files[1],
@@ -23,7 +24,8 @@ export class DatabaseUtil {
                     croppedIDs: []
                 },
                 imageProps: [],
-                landmark: []
+                landmark: [],
+                ocr: []
             },
             backID: {
                 image: files[2],
@@ -34,7 +36,8 @@ export class DatabaseUtil {
                     croppedIDs: []
                 },
                 imageProps: [],
-                landmark: []
+                landmark: [],
+                ocr: []
             },
             selfieVideo: files[3],
             jsonData: files[4],

@@ -1,5 +1,5 @@
 import { Action } from "../Actions";
-import { ImageState, ImageActionTypes, IDBox, ImageProps, LandmarkData } from "./types";
+import { ImageState, ImageActionTypes, IDBox, ImageProps, LandmarkData, OCRData, Position } from "./types";
 
 export function loadImageState(currentImage: ImageState): ImageActionTypes {
     return {
@@ -47,11 +47,11 @@ export function deleteIDBox(id: number): ImageActionTypes {
     }
 }
 
-export function setCurrentLandmark(landmark: string): ImageActionTypes {
+export function setCurrentSymbol(symbol: string): ImageActionTypes {
     return {
-        type: Action.SET_CURRENT_LANDMARK,
+        type: Action.SET_CURRENT_SYMBOL,
         payload: {
-            landmark: landmark
+            symbol: symbol
         }
     }
 }
@@ -83,6 +83,37 @@ export function updateLandmarkFlags(index: number, name: string, flags: string[]
             index: index,
             name: name,
             flags: flags
+        }
+    }
+}
+
+export function addOCRData(index: number, ocr: OCRData): ImageActionTypes {
+    return {
+        type: Action.ADD_OCR_DATA,
+        payload: {
+            index: index,
+            ocr: ocr
+        }
+    }
+}
+
+export function setCurrentValue(value: string): ImageActionTypes {
+    return {
+        type: Action.SET_CURRENT_VALUE,
+        payload: {
+            value: value
+        }
+    }
+}
+
+export function updateOCRData(index: number, name: string, value: string, position?: Position): ImageActionTypes {
+    return {
+        type: Action.UPDATE_OCR_DATA,
+        payload: {
+            index: index,
+            name: name,
+            value: value,
+            position: position
         }
     }
 }
