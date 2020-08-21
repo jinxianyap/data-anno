@@ -128,3 +128,9 @@ export function setFaceCompareMatch(index: number, match: boolean): ImageActionT
         }
     }
 }
+
+export function incrementInternalIndex(): ImageActionTypes {
+    return {
+        type: Action.INCREMENT_INTERNAL_INDEX
+    }
+}

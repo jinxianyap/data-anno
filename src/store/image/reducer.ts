@@ -3,12 +3,12 @@ import { Action } from "../Actions";
 
 const initialState: ImageState = {
     image: new File([], ''),
-    passesCrop: false,
     segEdit: {
         IDBoxes: [],
         internalIDProcessed: [],
         croppedIDs: []
     },
+    currentIndex: 0,
     imageProps: [],
     landmark: [],
     ocr: [],
@@ -26,10 +26,19 @@ export function imageReducer(
             }
         }
         case Action.SAVE_SEG_CHECK: {
+            console.log('wetf');
+            console.log(action.payload);
             return {
                 ...state,
                 passesCrop: action.payload.passesCrop,
-                landmark: action.payload.passesCrop ? [[]] : [],
+                segEdit: {
+                    IDBoxes: [],
+                    internalIDProcessed: [],
+                    croppedIDs: []
+                },
+                currentIndex: 0,
+                landmark: [],
+                ocr: [],
             }
         }
         case Action.SET_IMAGE_PROPS: {
@@ -69,6 +78,10 @@ export function imageReducer(
             let croppedIDs = state.segEdit.croppedIDs;
             let landmark = state.landmark;
             let ocr = state.ocr;
+
+            if (id === -1) {
+                id = boxes.length - 1;
+            }
 
             for (var i = 0; i < boxes.length; i++) {
                 if (boxes[i].id === id) {
@@ -217,6 +230,13 @@ export function imageReducer(
             return {
                 ...state,
                 faceCompareMatch: matches
+            }
+        }
+
+        case Action.INCREMENT_INTERNAL_INDEX: {
+            return {
+                ...state,
+                currentIndex: state.currentIndex + 1
             }
         }
     }

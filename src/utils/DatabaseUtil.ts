@@ -5,12 +5,12 @@ export class DatabaseUtil {
         return {
             originalID: {
                 image: files[0],
-                passesCrop: false,
                 segEdit: {
                     IDBoxes: [],
                     internalIDProcessed: [],
                     croppedIDs: []
                 },
+                currentIndex: 0,
                 imageProps: [],
                 landmark: [],
                 ocr: [],
@@ -18,12 +18,12 @@ export class DatabaseUtil {
             },
             croppedID: {
                 image: files[1],
-                passesCrop: false,
                 segEdit: {
                     IDBoxes: [],
                     internalIDProcessed: [],
                     croppedIDs: []
                 },
+                currentIndex: 0,
                 imageProps: [],
                 landmark: [],
                 ocr: [],
@@ -31,12 +31,12 @@ export class DatabaseUtil {
             },
             backID: {
                 image: files[2],
-                passesCrop: false,
                 segEdit: {
                     IDBoxes: [],
                     internalIDProcessed: [],
                     croppedIDs: []
                 },
+                currentIndex: 0,
                 imageProps: [],
                 landmark: [],
                 ocr: [],

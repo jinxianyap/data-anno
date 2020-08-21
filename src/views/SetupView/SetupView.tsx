@@ -127,15 +127,13 @@ class SetupView extends React.Component<IProps, IState> {
                     name="file"
                     label="IC Front"
                     onChange={(e: any) => this.handleUpload(e)}
-                    id="validationFormik107"
                     />
-                <Form.File
+                {/* <Form.File
                     className="position-relative"
                     required
                     name="file"
                     label="IC cropped"
                     onChange={(e: any) => this.handleUpload(e)}
-                    id="validationFormik107"
                     />
                 <Form.File
                     className="position-relative"
@@ -143,7 +141,6 @@ class SetupView extends React.Component<IProps, IState> {
                     name="file"
                     label="IC Back"
                     onChange={(e: any) => this.handleUpload(e)}
-                    id="validationFormik107"
                     />
                 <Form.File
                     className="position-relative"
@@ -151,7 +148,6 @@ class SetupView extends React.Component<IProps, IState> {
                     name="file"
                     label="Selfie Video"
                     onChange={(e: any) => this.handleUpload(e)}
-                    id="validationFormik107"
                     />
                 <Form.File
                     className="position-relative"
@@ -159,8 +155,7 @@ class SetupView extends React.Component<IProps, IState> {
                     name="file"
                     label="JSON"
                     onChange={(e: any) => this.handleUpload(e)}
-                    id="validationFormik107"
-                    />
+                    /> */}
                 </Form.Group>
 
                 { this.state.incomplete

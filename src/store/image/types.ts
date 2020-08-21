@@ -3,13 +3,15 @@ import { Action } from "../Actions";
 export type ImageState = {
     image: File;
     // Seg Check
-    passesCrop: boolean;
+    passesCrop?: boolean;
 
     segEdit: {
         IDBoxes: IDBox[],
         internalIDProcessed: boolean[],
         croppedIDs: File[],
     }
+
+    currentIndex: number,
 
     imageProps: ImageProps[];
 
@@ -173,6 +175,10 @@ interface SetFaceCompareMatch {
     }
 }
 
+interface IncrementInternalIndex {
+    type: typeof Action.INCREMENT_INTERNAL_INDEX;
+}
+
 export type ImageActionTypes = LoadImageState
     | SaveSegCheck
     | AddIDBox
@@ -186,3 +192,4 @@ export type ImageActionTypes = LoadImageState
     | UpdateOCRData
     | SetCurrentWord
     | SetFaceCompareMatch
+    | IncrementInternalIndex

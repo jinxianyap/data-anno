@@ -10,6 +10,7 @@ import { CurrentStage } from '../../../utils/enums';
 interface IProps {
     currentStage: CurrentStage;
     currentImageState: ImageState,
+    currentIndex: number,
     currentSymbol: string,
     currentWord: OCRWord,
     committedLandmarks: LandmarkData[][],
@@ -66,8 +67,6 @@ type Box = {
 
 class LandmarkLabeller extends React.Component<IProps, IState> {
 
-    index: number = 0;
-
     constructor(props: IProps) {
         super(props);
         // need to handle preloaded boxes
@@ -92,12 +91,6 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
     }
 
     componentDidMount() {
-        for (var i = 0; i < this.props.currentImageState.segEdit.internalIDProcessed.length; i++) {
-            if (!this.props.currentImageState.segEdit.internalIDProcessed[i]) {
-              this.index = i;
-              break;
-            }
-          }
         this.loadImageData();
     }
 
@@ -150,7 +143,9 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 ratio: ratio,
             }, this.initializeMap);
         }
-        image.src = URL.createObjectURL(this.props.currentImageState.segEdit.croppedIDs[this.index]);
+        console.log(this.props.currentImageState.segEdit);
+        console.log(this.props.currentIndex);
+        image.src = URL.createObjectURL(this.props.currentImageState.segEdit.croppedIDs[this.props.currentIndex]);
     }
 
     initializeMap = () => {
@@ -193,7 +188,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             this.state.landmarkBoxes.forEach((each) => this.deleteMapElements(each))
         };
 
-        let landmarks = this.props.committedLandmarks[this.index];
+        let landmarks = this.props.committedLandmarks[this.props.currentIndex];
         landmarks.forEach((landmark: LandmarkData) => {
             let createdBox = this.createRectangle(
                 landmark.position.y1 / this.state.ratio,
@@ -237,7 +232,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             this.state.ocrBoxes.forEach((each) => this.deleteMapElements(each))
         };
 
-        let ocrs = this.props.committedOCRs[this.index];
+        let ocrs = this.props.committedOCRs[this.props.currentIndex];
         ocrs.forEach((ocr: OCRData) => {
             ocr.labels.forEach((label, idx) => {
                 if (label.position !== undefined) {
@@ -419,7 +414,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 },
                 ocrBoxes: boxes,
                 drawnOCRs: drawnOCRs
-            }, () => this.props.updateOCRData(this.index, newBox.id, newBox.name, newBox.value!, {
+            }, () => this.props.updateOCRData(this.props.currentIndex, newBox.id, newBox.name, newBox.value!, {
                 x1: newBox.position.x1!,
                 x2: newBox.position.x2!,
                 x3: newBox.position.x3!,
@@ -539,7 +534,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             },
             flags: []
         };
-        this.props.addLandmarkData(this.index, landmarkData);
+        this.props.addLandmarkData(this.props.currentIndex, landmarkData);
     }
 
     withinLandmarkRectangleBounds = (e: any) => {
@@ -589,7 +584,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         drawn.splice(index, 1);
         let boxes = this.state.landmarkBoxes;
         boxes.splice(boxIndex, 1);
-        this.setState({landmarkBoxes: boxes, drawnLandmarks: drawn, isDrawing: false}, () => {this.props.deleteLandmarkData(this.index, name)});
+        this.setState({landmarkBoxes: boxes, drawnLandmarks: drawn, isDrawing: false}, () => {this.props.deleteLandmarkData(this.props.currentIndex, name)});
     }
 
     deleteOcrBox = (e: any) => {
@@ -604,7 +599,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         let boxes = this.state.ocrBoxes;
         boxes.splice(boxIndex, 1);
         this.setState({ocrBoxes: boxes, drawnOCRs: drawn, isDrawing: false}, () => {
-            this.props.updateOCRData(this.index, id, name, value);
+            this.props.updateOCRData(this.props.currentIndex, id, name, value);
         });
     }
 
@@ -627,6 +622,7 @@ const mapStateToProps = (state: AppState, ownProps: any) => {
     return {
         currentStage: state.general.currentStage,
         currentImageState: state.image,
+        currentIndex: state.image.currentIndex,
         currentSymbol: state.image.currentSymbol!,
         currentWord: state.image.currentWord!,
         committedLandmarks: state.image.landmark,

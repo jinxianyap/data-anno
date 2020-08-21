@@ -10,7 +10,7 @@ import { IDActionTypes, IDState } from '../../../store/id/types';
 import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord } from '../../../store/image/types';
 import { progressNextStage, getNextID } from '../../../store/general/actionCreators';
 import { loadNextID, saveDocumentType, updateVideoData } from '../../../store/id/actionCreators';
-import { saveSegCheck, loadImageState, addIDBox, setCurrentSymbol, setCurrentWord, updateLandmarkFlags, addOCRData, setFaceCompareMatch } from '../../../store/image/actionCreators';
+import { saveSegCheck, loadImageState, addIDBox, deleteIDBox, setCurrentSymbol, setCurrentWord, updateLandmarkFlags, addOCRData, setFaceCompareMatch } from '../../../store/image/actionCreators';
 import AddTypeModal from '../AddTypeModal/AddTypeModal';
 
 var fs = require('browserify-fs');
@@ -20,6 +20,7 @@ interface IProps {
     indexedID: IDState;
     currentID: IDState;
     currentImage: ImageState;
+    currentIndex: number;
 
     progressNextStage: (nextStage: CurrentStage) => GeneralActionTypes;
     getNextID: () => GeneralActionTypes;
@@ -30,6 +31,7 @@ interface IProps {
     saveSegCheck: (passesCrop: boolean) => ImageActionTypes;
 
     addIDBox: (box: IDBox, croppedID: File) => ImageActionTypes;
+    deleteIDBox: (id: number) => ImageActionTypes;
 
     setCurrentSymbol: (symbol?: string) => ImageActionTypes;
     updateLandmarkFlags: (index: number, name: string, flags: string[]) => ImageActionTypes;
@@ -44,6 +46,7 @@ interface IProps {
 interface IState {
     // ownStage: CurrentStage;
     // Seg Check
+    loadedImageState: boolean;
     showAddDocTypeModal: boolean;
     documentTypes: string[];
     docType: string;
@@ -102,13 +105,12 @@ interface IState {
 class ControlPanel extends React.Component<IProps, IState> {
 
     docTypeRef: any = undefined;
-    // keeps track of internal ID index
-    index: number = 0;
 
     constructor(props: IProps) {
         super(props);
         this.state = {
             // ownStage: CurrentStage.SEGMENTATION_CHECK,
+            loadedImageState: false,
             showAddDocTypeModal: false,
             documentTypes: [],
             docType: '',
@@ -135,8 +137,15 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
     }
 
-    componentDidUpdate() {
+    componentDidUpdate(previousProps: IProps, previousState: IState) {
         switch (this.props.currentStage) {
+            case (CurrentStage.SEGMENTATION_CHECK): {
+                if (!this.state.loadedImageState) {
+                    this.loadSegCheckImage();
+                    this.setState({loadedImageState: true});
+                }
+                break;
+            }
             case (CurrentStage.LANDMARK_EDIT): {
                 if (!this.state.landmarksLoaded) {
                     this.loadLandmarkData();
@@ -165,15 +174,6 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
     }
 
-    getInternalIndex() {
-        for (var i = 0; i < this.props.currentImage.segEdit.internalIDProcessed.length; i++) {
-            if (!this.props.currentImage.segEdit.internalIDProcessed[i]) {
-              this.index = i;
-              break;
-            }
-        }
-    }
-
     handleCropFail = () => {
         this.setState({passesCrop: false, cropDirty: true}, this.validate);
     }
@@ -188,19 +188,20 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
     }
 
-    loadSegEditImage = () => {
+    loadSegCheckImage = () => {
         let process = this.props.currentID.processStage;
         if (process === IDProcess.MYKAD_BACK) {
             this.props.loadImageState(this.props.currentID.backID!);
         } else {
             this.props.loadImageState(this.props.currentID.originalID!);
+            console.log(this.props.currentImage);
             // console.log(this.props.currentID.originalID);
         }
     }
 
-    loadLandmarkImage = () => {
+    addIDBoxCropPasses = () => {
         // only if seg check passes right away: need to call api to pull new cropped image, IDBox data and store inside seg edit
-        this.props.loadImageState(this.props.currentID.originalID!);
+        // this.props.loadImageState(this.props.currentID.originalID!);
         let box: IDBox = {
             id: 0,
             position: {
@@ -322,21 +323,18 @@ class ControlPanel extends React.Component<IProps, IState> {
             e.preventDefault();
             this.props.saveDocumentType(this.state.docType);
             this.props.saveSegCheck(this.state.passesCrop);
-
             if (this.state.passesCrop) {
-                this.loadLandmarkImage();
-                this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
-            } else {
-                this.loadSegEditImage();
-                this.props.progressNextStage(CurrentStage.SEGMENTATION_EDIT);
+                this.addIDBoxCropPasses();
             }
+            this.props.progressNextStage(this.state.passesCrop ? CurrentStage.LANDMARK_EDIT : CurrentStage.SEGMENTATION_EDIT);
+
         }
 
         return (
             <Form onSubmit={submitSegCheck}>
                 <Form.Group controlId="docType">
                     <Form.Label>Document Type</Form.Label>
-                    <Button onClick={() => {console.log('click'); this.setState({showAddDocTypeModal: true})}} style={{padding: "0 0.5rem", margin: "0.5rem 1rem"}}>+</Button>
+                    <Button onClick={() => {this.setState({showAddDocTypeModal: true})}} style={{padding: "0 0.5rem", margin: "0.5rem 1rem"}}>+</Button>
                     <Form.Control as="select" value={this.state.docType} onChange={(e: any) => setDocType(e)}>
                         {Object.entries(this.state.documentTypes).map(([key, value]) => <option key={key} value={value}>{value}</option>)}
                     </Form.Control>
@@ -367,6 +365,35 @@ class ControlPanel extends React.Component<IProps, IState> {
         return (
             <div>
                 <h5>Please draw bounding boxes around any number of IDs in the image.</h5>
+                <h6>Boxes Drawn</h6>
+                    <Accordion>
+                        {
+                            this.props.currentImage.segEdit.IDBoxes.map((box, idx) => {
+                                return (
+                                    <Card key={idx}>
+                                        <Accordion.Toggle
+                                            as={Card.Header}
+                                            eventKey={idx.toString()}>
+                                                Box {(box.id + 1).toString()}
+                                        </Accordion.Toggle>
+                                        <Accordion.Collapse eventKey={idx.toString()}>
+                                        <Card.Body>
+                                            <p>x1: {box.position.x1}</p>
+                                            <p>y1: {box.position.y1}</p>
+                                            <p>x2: {box.position.x2}</p>
+                                            <p>y2: {box.position.y2}</p>
+                                            <p>x3: {box.position.x3}</p>
+                                            <p>y3: {box.position.y3}</p>
+                                            <p>x4: {box.position.x4}</p>
+                                            <p>y4: {box.position.y4}</p>
+                                        </Card.Body>
+                                        </Accordion.Collapse>
+                                    </Card>
+                                );
+                            })
+                        }
+                    </Accordion>
+                <Button variant="secondary" style={{width: '100%'}} onClick={() => this.props.deleteIDBox(-1)}>Undo Box</Button>
                 <Button variant="secondary" onClick={backStage}>Back</Button>
                 <Button disabled={this.props.currentImage.segEdit.IDBoxes.length === 0} onClick={() => this.props.progressNextStage(CurrentStage.LANDMARK_EDIT)}>
                     Next
@@ -376,8 +403,6 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     landmarkEdit = () => {
-        this.getInternalIndex();
-
         const setLandmark = (item: string) => {
             this.setState({selectedLandmark: item}, () => this.props.setCurrentSymbol(item));
         }
@@ -417,6 +442,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     }
                 }
             }
+            console.log(this.props.currentImage);
 
             return (
                 <div>
@@ -451,7 +477,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         const submitLandmark = (e: any) => {
             e.preventDefault();
             this.state.currentLandmarks.forEach((each) => {
-                this.props.updateLandmarkFlags(this.index, each.name, each.flags);
+                this.props.updateLandmarkFlags(this.props.currentIndex, each.name, each.flags);
             }, this.props.progressNextStage(CurrentStage.OCR_DETAILS));
         }
 
@@ -465,7 +491,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                         <Accordion.Toggle
                                             as={Card.Header}
                                             eventKey={idx.toString()}
-                                            className={this.props.currentImage.landmark[this.index].find((item) => item.name === each.name) !== undefined
+                                            className={this.props.currentImage.landmark[this.props.currentIndex].find((item) => item.name === each.name) !== undefined
                                                 ? 'labelled-landmark' : ''}
                                             key={idx}
                                             onClick={() => setLandmark(each.name)}>
@@ -505,7 +531,6 @@ class ControlPanel extends React.Component<IProps, IState> {
 
         const handleSubmit = (e: any) => {
             e.preventDefault();
-            this.getInternalIndex();
 
             let currentOCR = this.state.currentOCR;
             refs.forEach((each, idx) => {
@@ -531,7 +556,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     }
 
                     this.setState({ currentOCR: currentOCR });
-                    this.props.addOCRData(this.index, ocr);
+                    this.props.addOCRData(this.props.currentIndex, ocr);
                 }
             }, this.props.progressNextStage(CurrentStage.OCR_EDIT));
         }
@@ -563,7 +588,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         // const setSymbol = (item: string) => {
         //     this.setState({selectedLandmark: item}, () => this.props.setCurrentSymbol(item));
         // }
-        let ocrs = this.props.currentImage.ocr[this.index];
+        let ocrs = this.props.currentImage.ocr[this.props.currentIndex];
 
         return (
             <div>
@@ -685,8 +710,12 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     frCompareCheck = () => {
         const submitFaceCompareResults = () => {
-            this.props.setFaceCompareMatch(this.index, this.state.faceCompareMatch!);
+            this.props.setFaceCompareMatch(this.props.currentIndex, this.state.faceCompareMatch!);
             console.log(this.props);
+        }
+
+        const nextID = () => {
+
         }
 
         return (
@@ -749,7 +778,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 case (CurrentStage.FR_COMPARE_CHECK): {
                     return (
                         <div className="internalIDIndex">
-                            <p>{(this.index + 1).toString() + " of " + this.props.currentImage.segEdit.croppedIDs.length.toString()}</p>
+                            <p>{(this.props.currentIndex + 1).toString() + " of " + this.props.currentImage.segEdit.croppedIDs.length.toString()}</p>
                         </div>
                     );
                 }
@@ -773,6 +802,7 @@ const mapDispatchToProps = {
     saveDocumentType,
     saveSegCheck,
     addIDBox,
+    deleteIDBox,
     loadImageState,
     setCurrentSymbol,
     setCurrentWord,
@@ -787,7 +817,8 @@ const mapStateToProps = (state: AppState) => {
         currentStage: state.general.currentStage,
         indexedID: state.general.IDLibrary[state.general.currentIndex],
         currentID: state.id,
-        currentImage: state.image
+        currentImage: state.image,
+        currentIndex: state.image.currentIndex
     }
 };
 

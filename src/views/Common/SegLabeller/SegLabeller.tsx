@@ -2,13 +2,16 @@ import L from 'leaflet';
 import React from 'react';
 import { connect } from 'react-redux'; 
 import { ImageActionTypes, IDBox, ImageState } from '../../../store/image/types';
-import { addIDBox } from '../../../store/image/actionCreators';
+import { addIDBox, deleteIDBox } from '../../../store/image/actionCreators';
 import { AppState } from '../../../store';
+import { CurrentStage } from '../../../utils/enums';
 
 interface IProps {
+    currentStage: CurrentStage,
     image: ImageState,
     committedBoxes: IDBox[],
-    addIDBox: (box: IDBox, croppedID: File) => ImageActionTypes
+    addIDBox: (box: IDBox, croppedID: File) => ImageActionTypes,
+    deleteIDBox: (id: number) => ImageActionTypes,
 }
 
 interface IState {
@@ -23,7 +26,13 @@ interface IState {
 
     stage: number,
     currentBox: SegBox,
-    boxes: SegBox[]
+    boxes: SegBox[],
+
+    movingCircle?: {
+        circle: L.Circle,
+        index: number,
+        boxIndex: number
+    },
 }
 
 type SegBox = {
@@ -38,11 +47,14 @@ type SegBox = {
         y3?: number,
         y4?: number,
     },
+    textMarker?: L.Marker,
     circles: L.Circle[],
     lines: L.Polyline[]
 }
 
 class SegLabeller extends React.Component<IProps, IState> {
+
+    colors: string[] = ['#ffe6e6', '#ff9c9c', '#ff5c5c', '#ff0000'];
 
     constructor(props: IProps) {
         super(props);
@@ -76,8 +88,24 @@ class SegLabeller extends React.Component<IProps, IState> {
         }
     }
 
-    componentDidUpdate() {
-        // console.log(this.state.currentBox);
+    componentDidUpdate(previousProps: IProps, previousState: IState) {
+        if (previousProps.currentStage !== this.props.currentStage && !this.state.map) {
+            this.initializeMap();
+        } else if (this.state.movingCircle === undefined
+            && previousProps.currentStage === this.props.currentStage
+            && previousState.boxes.length !== this.props.committedBoxes.length) {
+            if (this.state.map !== undefined) {
+                this.renderCommittedBoxes();
+            }
+        } 
+    }
+
+    componentWillUnmount() {
+        this.state.boxes.forEach((box) => {
+            box.circles.forEach((circle) => circle.remove());
+            box.lines.forEach((line) => line.remove());
+            box.textMarker!.remove();
+        });
     }
 
     loadImageData = () => {
@@ -136,13 +164,25 @@ class SegLabeller extends React.Component<IProps, IState> {
         map.addLayer(layer);
         map.fitBounds(imageBounds);
         map.on('click', this.handleMapClick);
+        map.on('mousedown', this.handleMouseDown);
+        map.on('mousemove', this.handleMoveCircle);
+        map.on('mouseup', this.handleDoneMoving);
 
-        this.setState({map: map}, this.renderCommittedBoxes);
+        this.setState({map: map});
     }
 
     renderCommittedBoxes = () => {
         let boxes = this.props.committedBoxes;
         let map = this.state.map!;
+        
+        this.state.boxes.forEach((box) => {
+            box.circles.forEach((circle) => circle.remove());
+            box.lines.forEach((line) => line.remove());
+            box.textMarker!.remove();
+        });
+        this.setState({boxes: []});
+
+        let newBoxes: SegBox[] = [];
         boxes.forEach((box) => {
             let x1 = box.position.x1 / this.state.ratio;
             let x2 = box.position.x2 / this.state.ratio;
@@ -154,26 +194,26 @@ class SegLabeller extends React.Component<IProps, IState> {
             let y4 = box.position.y4 / this.state.ratio;
             let circles: L.Circle[] = [
                 L.circle([y1,x1], {
-                    color: 'red',
-                    fillColor: '#f03',
+                    color: this.colors[0],
+                    fillColor: this.colors[0],
                     fillOpacity: 0.5,
                     radius: 10
                 }).addTo(map),
                 L.circle([y2, x2], {
-                    color: 'red',
-                    fillColor: '#f03',
+                    color: this.colors[1],
+                    fillColor: this.colors[1],
                     fillOpacity: 0.5,
                     radius: 10
                 }).addTo(map),
                 L.circle([y3, x3], {
-                    color: 'red',
-                    fillColor: '#f03',
+                    color: this.colors[2],
+                    fillColor: this.colors[2],
                     fillOpacity: 0.5,
                     radius: 10
                 }).addTo(map),
                 L.circle([y4, x4], {
-                    color: 'red',
-                    fillColor: '#f03',
+                    color: this.colors[3],
+                    fillColor: this.colors[3],
                     fillOpacity: 0.5,
                     radius: 10
                 }).addTo(map),
@@ -186,34 +226,143 @@ class SegLabeller extends React.Component<IProps, IState> {
                 this.drawLine([y4, x4], [y1, x1])
             ];
 
+            let text = L.divIcon({
+                iconSize: [0, 0],
+                html: '<p>Box' + (box.id + 1).toString() + '</p>',
+                className: 'overlay-text'});
+            let textMarker = L.marker(circles[0].getLatLng(), {icon: text}).addTo(this.state.map!);
+
             let segBox: SegBox = {
                 id: box.id,
                 position: box.position,
+                textMarker: textMarker,
                 circles: circles,
                 lines: lines
             }
 
-            this.state.boxes.push(segBox);
+            newBoxes.push(segBox);
         });
+        this.setState({boxes: newBoxes});
     }
 
     handleMapClick = (e: any) => {
-        for (var i = 0; i < this.state.currentBox.circles.length; i++) {
-            if (this.state.currentBox.circles[i].getBounds().contains(e.latlng)) {
-                this.handleCircleClick(e, i);
-                return;
+        if (this.state.stage !== 0) {
+            for (var i = 0; i < this.state.currentBox.circles.length; i++) {
+                if (this.state.currentBox.circles[i].getBounds().contains(e.latlng)) {
+                    this.handleDeleteCircle(e, i);
+                    return;
+                }
             }
         }
 
         this.addCircle(e);
     }
 
+    handleMouseDown = (e: any) => {
+        if (this.state.boxes.length === 0) return;
+        for (var i = 0; i < this.state.boxes.length; i++) {
+            this.state.boxes[i].circles.forEach((each, idx) => {
+                if (each.getBounds().contains(e.latlng)) {
+                    this.setState({
+                        movingCircle: {
+                            circle: each,
+                            index: idx,
+                            boxIndex: i
+                        }
+                    }, () => this.state.map!.dragging.disable());
+                }
+            })
+        }
+    }
+
+    handleMoveCircle = (e: any) => {
+        if (this.state.movingCircle !== undefined) {
+            this.state.movingCircle.circle.remove();
+            let idx = this.state.movingCircle.index;
+            let boxes = this.state.boxes;
+            let box = boxes[this.state.movingCircle.boxIndex];
+
+            let circle = L.circle([e.latlng.lat, e.latlng.lng], {
+                color: this.colors[idx],
+                fillColor: this.colors[idx],
+                fillOpacity: 0.5,
+                radius: 10
+            }).addTo(this.state.map!);
+
+            box.circles.splice(idx, 1, circle);
+
+            let prevIndex = idx - 1;
+            let nextIndex = idx + 1;
+
+            if (idx === 0) {
+                prevIndex = 3;
+            } else if (idx === 3) { 
+                nextIndex = 0;
+            } 
+
+            let prevCircle = box.circles[prevIndex];
+            let nextCircle = box.circles[nextIndex]
+
+            let newPoint: [number, number] = [circle.getLatLng().lat, circle.getLatLng().lng];
+            let prevPoint: [number, number] = [prevCircle.getLatLng().lat, prevCircle.getLatLng().lng];
+            let nextPoint: [number, number] = [nextCircle.getLatLng().lat, nextCircle.getLatLng().lng];
+
+            let firstLine = this.drawLine(newPoint, prevPoint);
+            let secondLine = this.drawLine(newPoint, nextPoint);
+
+            let lines = box.lines;
+            lines[prevIndex].remove();
+            lines[idx === 3 ? 3 : nextIndex - 1].remove();
+            lines.splice(prevIndex, 1, firstLine);
+            lines.splice(idx === 3 ? 3 : nextIndex - 1, 1, secondLine);
+
+            if (idx === 0) {
+                box.textMarker!.setLatLng(circle.getLatLng());
+            }
+
+            box.position = {
+                x1: box.circles[0].getLatLng().lng * this.state.ratio,
+                x2: box.circles[1].getLatLng().lng * this.state.ratio,
+                x3: box.circles[2].getLatLng().lng * this.state.ratio,
+                x4: box.circles[3].getLatLng().lng * this.state.ratio,
+                y1: box.circles[0].getLatLng().lat * this.state.ratio,
+                y2: box.circles[1].getLatLng().lat * this.state.ratio,
+                y3: box.circles[2].getLatLng().lat * this.state.ratio,
+                y4: box.circles[3].getLatLng().lat * this.state.ratio
+            }
+            
+            boxes.splice(this.state.movingCircle.boxIndex, 1, box);
+            this.setState({
+                movingCircle: {
+                    ...this.state.movingCircle,
+                    circle: circle
+                },
+                boxes: boxes
+            });
+            
+
+        }
+    }
+
+    handleDoneMoving = (e: any) => {
+        if (this.state.movingCircle !== undefined) {
+            this.state.map!.dragging.enable();
+            let boxIndex = this.state.movingCircle.boxIndex;
+            this.setState({
+                movingCircle: undefined
+            }, () => {
+                this.props.deleteIDBox(this.state.boxes[boxIndex].id);
+                this.handleSubmit(this.state.boxes[boxIndex]);
+            });
+        }
+    }
+
     addCircle = (e: any) => {
         let st = this.state;
         let map = st.map!;
         let circle = L.circle([e.latlng.lat, e.latlng.lng], {
-            color: 'red',
-            fillColor: '#f03',
+            color: this.colors[st.stage],
+            fillColor: this.colors[st.stage],
             fillOpacity: 0.5,
             radius: 10
         }).addTo(map);
@@ -272,6 +421,13 @@ class SegLabeller extends React.Component<IProps, IState> {
             newLines.push(line1);
             newLines.push(line2);
 
+            let text = L.divIcon({
+                iconSize: [0, 0],
+                html: '<p>Box' + (this.state.currentBox.id + 1).toString() + '</p>',
+                className: 'overlay-text'});
+            let textMarker = L.marker(currentBox.circles[0].getLatLng(), {icon: text}).addTo(this.state.map!);
+    
+
             let newBox = {
                 ...currentBox,
                 position: {
@@ -279,6 +435,7 @@ class SegLabeller extends React.Component<IProps, IState> {
                     x4: e.latlng.lng * this.state.ratio,
                     y4: e.latlng.lat * this.state.ratio
                 },
+                textMarker: textMarker,
                 circles: newCircles,
                 lines: newLines
             }
@@ -289,13 +446,12 @@ class SegLabeller extends React.Component<IProps, IState> {
                 stage: 0,
                 currentBox: newBox,
                 boxes: newBoxes
-            });
+            }, () => this.handleSubmit(newBox));
 
-            this.handleSubmit();
         } else {
             // let boxes = this.state.boxes;
             let newBox = {
-                id: this.state.boxes.length,
+                id: this.props.committedBoxes.length,
                 position: {
                     x1: circle.getLatLng().lng * this.state.ratio,
                     y1: circle.getLatLng().lat * this.state.ratio
@@ -313,14 +469,12 @@ class SegLabeller extends React.Component<IProps, IState> {
     }
 
     drawLine = (point1: [number, number], point2: [number, number]) => {
-        let polyline = L.polyline([point1, point2], {color: 'red'});
+        let polyline = L.polyline([point1, point2], {color: 'red', weight: 2});
         polyline.addTo(this.state.map!);
         return polyline;
     }
 
-    handleCircleClick = (e: any, circleIndex: number) => {
-        console.log(this.state.stage);
-        
+    handleDeleteCircle = (e: any, circleIndex: number) => {        
         // only can click to delete circles for the current box
         if (this.state.stage === 0) {
             return;
@@ -354,10 +508,9 @@ class SegLabeller extends React.Component<IProps, IState> {
         } 
     }
 
-    handleSubmit = () => {
+    handleSubmit = (box: SegBox) => {
         // supposed to call crop API first then only send to store
         console.log('submitting boxes');
-        let box = this.state.currentBox;
         let IDBox: IDBox = {
             id: box.id,
             position: {
@@ -383,12 +536,14 @@ class SegLabeller extends React.Component<IProps, IState> {
 
 const mapStateToProps = (state: AppState, ownProps: any) => {
     return {
+        currentStage: state.general.currentStage,
         image: state.image,
         committedBoxes: state.image.segEdit.IDBoxes,
 }};
     
 const mapDispatchToProps = {
-    addIDBox
+    addIDBox,
+    deleteIDBox
 }
     
 export default connect(
