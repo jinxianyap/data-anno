@@ -26,8 +26,6 @@ export function imageReducer(
             }
         }
         case Action.SAVE_SEG_CHECK: {
-            console.log('wetf');
-            console.log(action.payload);
             return {
                 ...state,
                 passesCrop: action.payload.passesCrop,

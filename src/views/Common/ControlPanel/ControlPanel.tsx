@@ -194,7 +194,7 @@ class ControlPanel extends React.Component<IProps, IState> {
             this.props.loadImageState(this.props.currentID.backID!);
         } else {
             this.props.loadImageState(this.props.currentID.originalID!);
-            console.log(this.props.currentImage);
+            // console.log(this.props.currentImage);
             // console.log(this.props.currentID.originalID);
         }
     }
@@ -415,7 +415,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
             })
             options.landmark.values[index].push(landmark);
-            console.log(options);
+            // console.log(options);
             fs.writeFile('../../../options.json', JSON.stringify(options));
             this.setState({showAddLandmarkModal: false}, this.loadLandmarkData);
         }
@@ -442,7 +442,6 @@ class ControlPanel extends React.Component<IProps, IState> {
                     }
                 }
             }
-            console.log(this.props.currentImage);
 
             return (
                 <div>
@@ -525,9 +524,9 @@ class ControlPanel extends React.Component<IProps, IState> {
     ocrDetails = () => {
         let refs: {name: string, ref: any}[] = [];
 
-        refs.forEach((each) => {
-            console.log(each.ref.value);
-        })
+        // refs.forEach((each) => {
+        //     console.log(each.ref.value);
+        // })
 
         const handleSubmit = (e: any) => {
             e.preventDefault();
@@ -595,7 +594,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <Accordion>
                     {
                         ocrs.map((each, index) => {
-                            if (each.count <= 1) return <div/>;
+                            if (each.count <= 1) return <div key={index} />;
                             return (
                                 <Card key={index}>
                                     <Accordion.Toggle as={Card.Header} eventKey={index.toString()} key={index} onClick={() => this.props.setCurrentSymbol(each.name)}>
@@ -610,7 +609,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                                     <Button 
                                                         className={each.position !== undefined ? "ocr-details" : ""}
                                                         variant="secondary"
-                                                        // type="checkbox"
+                                                        key={idx}
                                                         value={each.value}
                                                         onClick={() => this.props.setCurrentWord(each)}>{each.id}: {each.value}</Button>
                                                 );
@@ -711,7 +710,6 @@ class ControlPanel extends React.Component<IProps, IState> {
     frCompareCheck = () => {
         const submitFaceCompareResults = () => {
             this.props.setFaceCompareMatch(this.props.currentIndex, this.state.faceCompareMatch!);
-            console.log(this.props);
         }
 
         const nextID = () => {
