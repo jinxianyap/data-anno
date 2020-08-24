@@ -38,13 +38,17 @@ class FaceRecognition extends React.Component<IProps, IState> {
         if (this.props.currentStage === CurrentStage.FR_LIVENESS_CHECK) {
             return (
                 <Container className="setupView">
-                    <ReactPlayer
-                        url={URL.createObjectURL(this.props.id.selfieVideo)}
-                        playing={true}
-                        loop={true}
-                        width="100%"
-                        height="70vh"
-                    />
+                    {
+                        this.props.id.selfieVideo !== undefined ?
+                        <ReactPlayer
+                            url={URL.createObjectURL(this.props.id.selfieVideo)}
+                            playing={true}
+                            loop={true}
+                            width="100%"
+                            height="70vh"
+                        />
+                        : <div />
+                    }
                 </Container>
             );
         } else {
@@ -55,6 +59,8 @@ class FaceRecognition extends React.Component<IProps, IState> {
                             <div id="frCompareID" className="pairDisplay"></div>
                         </Col>
                         <Col xs={6}>
+                        {
+                            this.props.id.selfieVideo !== undefined ?
                             <ReactPlayer
                                 url={URL.createObjectURL(this.props.id.selfieVideo)}
                                 playing={true}
@@ -62,6 +68,8 @@ class FaceRecognition extends React.Component<IProps, IState> {
                                 width="100%"
                                 height="70vh"
                             />
+                            : <div />
+                        }
                         </Col>
                     </Row>
                 </Container>

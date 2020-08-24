@@ -16,6 +16,7 @@
     "browserify-fs": "^1.0.0",
     "create-react-class": "^15.6.3",
     "leaflet": "^1.6.0",
+    "leaflet-easybutton": "^2.4.0",
     "node-sass": "^4.14.1",
     "react": "^16.13.1",
     "react-bootstrap": "^1.3.0",
