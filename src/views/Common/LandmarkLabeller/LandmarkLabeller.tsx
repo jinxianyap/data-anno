@@ -10,15 +10,15 @@ import { CurrentStage } from '../../../utils/enums';
 interface IProps {
     currentStage: CurrentStage;
     currentImageState: ImageState,
-    currentIndex: number,
     currentSymbol: string,
+    ocrToLandmark: string,
     currentWord: OCRWord,
-    committedLandmarks: LandmarkData[][],
-    committedOCRs: OCRData[][],
+    committedLandmarks: LandmarkData[],
+    committedOCRs: OCRData[],
 
-    addLandmarkData: (index: number, landmark: LandmarkData) => ImageActionTypes,
-    deleteLandmarkData: (index: number, landmark: string) => ImageActionTypes,
-    updateOCRData: (index: number, id: number, name: string, value: string, position?: Position) => ImageActionTypes
+    addLandmarkData: (landmark: LandmarkData) => ImageActionTypes,
+    deleteLandmarkData: (landmark: string) => ImageActionTypes,
+    updateOCRData: (id: number, name: string, value: string, position?: Position) => ImageActionTypes
 }
 
 interface IState {
@@ -120,6 +120,16 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     break;
                 }
             }
+        } else {
+            if (this.props.currentStage === CurrentStage.OCR_EDIT) {
+                if (this.state.map !== undefined) {
+                    if (this.props.currentSymbol !== undefined && this.props.ocrToLandmark !== undefined) {
+                        this.focusMap(true);
+                    } else {
+                        this.focusMap(false);
+                    }
+                }
+            }
         }
     }
 
@@ -150,7 +160,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 ratio: ratio,
             }, this.initializeMap);
         }
-        image.src = URL.createObjectURL(this.props.currentImageState.segEdit.croppedIDs[this.props.currentIndex]);
+        image.src = URL.createObjectURL(this.props.currentImageState.croppedImage);
     }
 
     initializeMap = () => {
@@ -187,6 +197,22 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         this.setState({map: map}, () => {this.renderCommittedLandmarks(); this.renderCommittedOCRs();});
     }
 
+    focusMap = (focus: boolean) => {
+        let map = this.state.map!;
+
+        if (!focus) {
+            map.setView(map.getCenter(), 0);
+            return;
+        }
+
+        let box = this.getLandmarkFromOCR(this.props.ocrToLandmark);
+
+        if (box !== undefined) {
+            map.panTo(box.rectangle!.getCenter());
+            map.fitBounds(box.rectangle!.getBounds());
+        }
+    }
+
     renderCommittedLandmarks = () => {
         let newBoxes: Box[] = [];
         let drawnLandmarks: string[] = [];
@@ -195,7 +221,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             this.state.landmarkBoxes.forEach((each) => this.removeMapElements(each))
         };
 
-        let landmarks = this.props.committedLandmarks[this.props.currentIndex];
+        let landmarks = this.props.committedLandmarks;
         landmarks.forEach((landmark: LandmarkData) => {
             let createdBox = this.createRectangle(
                 landmark.position.y1 / this.state.ratio,
@@ -238,7 +264,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             this.state.ocrBoxes.forEach((each) => this.removeMapElements(each))
         };
 
-        let ocrs = this.props.committedOCRs[this.props.currentIndex];
+        let ocrs = this.props.committedOCRs;
         ocrs.forEach((ocr: OCRData) => {
             ocr.labels.forEach((label, idx) => {
                 if (label.position !== undefined) {
@@ -335,6 +361,12 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
         this.state.map!.dragging.disable();
 
+        if (this.props.currentStage === CurrentStage.OCR_EDIT) {
+            let landmark = this.getLandmarkFromOCR(this.props.ocrToLandmark);
+            if (landmark === undefined) return;
+            if (!landmark.rectangle!.getBounds().contains(e.latlng)) return;
+        }
+
         this.setState({
             isDrawing: true,
             currentBox: {
@@ -348,6 +380,11 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 }
             }
         });
+    }
+
+    getLandmarkFromOCR = (name: string)  => {
+        if (name === undefined) return undefined;
+        return this.state.landmarkBoxes.find((each) => each.name === name);
     }
 
     handleMouseMove = (e: any) => {
@@ -457,12 +494,15 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 drawnLandmarks: drawnLandmarks
             }, () => this.submitLandmarkData(newBox));
         } else if (this.props.currentStage === CurrentStage.OCR_EDIT) {
+            let landmark = this.getLandmarkFromOCR(this.props.ocrToLandmark);
+            if (landmark === undefined) return;
+            let latlng: [number, number] = this.getConstrainedBounds(landmark, e.latlng.lat, e.latlng.lng);
 
             let newBox: Box = this.createRectangle(
                 currentPos.y1! / this.state.ratio, 
                 currentPos.x1! / this.state.ratio, 
-                e.latlng.lat, 
-                e.latlng.lng,
+                latlng[0], 
+                latlng[1],
                 this.props.currentSymbol, 
                 this.props.currentImageState.currentWord!.value);
             newBox.value = this.props.currentImageState.currentWord!.value;
@@ -480,7 +520,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 },
                 ocrBoxes: boxes,
                 drawnOCRs: drawnOCRs
-            }, () => this.props.updateOCRData(this.props.currentIndex, newBox.id, newBox.name, newBox.value!, {
+            }, () => this.props.updateOCRData(newBox.id, newBox.name, newBox.value!, {
                 x1: newBox.position.x1!,
                 x2: newBox.position.x2!,
                 x3: newBox.position.x3!,
@@ -491,6 +531,27 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 y4: newBox.position.y4!,
             }));
         }
+    }
+
+    getConstrainedBounds = (landmark: Box, lat: number, lng: number) => {
+        let bounds = landmark.rectangle!.getBounds();
+        let finalLat = lat;
+        let finalLng = lng;
+        if (lat > bounds.getNorth()) {
+            finalLat = bounds.getNorth();
+        } else if (lat < bounds.getSouth()) {
+            finalLat = bounds.getSouth();
+        }
+
+        if (lng > bounds.getEast()) {
+            finalLng = bounds.getEast();
+        } else if (lng < bounds.getWest()) {
+            finalLng = bounds.getWest();
+        }
+
+        let result: [number, number] = [finalLat, finalLng];
+
+        return result;
     }
 
     handleContextMenu = (e: any) => {
@@ -560,7 +621,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             },
             flags: []
         };
-        this.props.addLandmarkData(this.props.currentIndex, landmarkData);
+        this.props.addLandmarkData(landmarkData);
     }
 
     withinLandmarkRectangleBounds = (e: any) => {
@@ -769,7 +830,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                         position: {}
                     },
                     ocrBoxes: boxes,
-                }, () => this.props.updateOCRData(this.props.currentIndex, newBox.id, newBox.name, newBox.value!, {
+                }, () => this.props.updateOCRData(newBox.id, newBox.name, newBox.value!, {
                     x1: newBox.position.x1!,
                     x2: newBox.position.x2!,
                     x3: newBox.position.x3!,
@@ -836,7 +897,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                         position: {}
                     },
                     ocrBoxes: boxes,
-                }, () => this.props.updateOCRData(this.props.currentIndex, newBox.id, newBox.name, newBox.value!, {
+                }, () => this.props.updateOCRData(newBox.id, newBox.name, newBox.value!, {
                     x1: newBox.position.x1!,
                     x2: newBox.position.x2!,
                     x3: newBox.position.x3!,
@@ -864,7 +925,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         drawn.splice(index, 1);
         let boxes = this.state.landmarkBoxes;
         boxes.splice(index, 1);
-        this.setState({landmarkBoxes: boxes, drawnLandmarks: drawn, isDrawing: false}, () => {this.props.deleteLandmarkData(this.props.currentIndex, name)});
+        this.setState({landmarkBoxes: boxes, drawnLandmarks: drawn, isDrawing: false}, () => {this.props.deleteLandmarkData(name)});
     }
 
     deleteOcrBox = (e: any) => {
@@ -884,7 +945,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         let boxes = this.state.ocrBoxes;
         boxes.splice(boxIndex, 1);
         this.setState({ocrBoxes: boxes, drawnOCRs: drawn, isDrawing: false}, () => {
-            this.props.updateOCRData(this.props.currentIndex, id, name, value);
+            this.props.updateOCRData(id, name, value);
         });
     }
 
@@ -905,8 +966,8 @@ const mapStateToProps = (state: AppState, ownProps: any) => {
     return {
         currentStage: state.general.currentStage,
         currentImageState: state.image,
-        currentIndex: state.image.currentIndex,
         currentSymbol: state.image.currentSymbol!,
+        ocrToLandmark: state.image.ocrToLandmark!,
         currentWord: state.image.currentWord!,
         committedLandmarks: state.image.landmark,
         committedOCRs: state.image.ocr

@@ -82,17 +82,10 @@ const mapDispatchToProps = {
 };
 
 const mapStateToProps = (state: AppState) => {
-    var image: File = new File([], '');
-    for (var i = 0; i < state.image.segEdit.internalIDProcessed.length; i++) {
-        if (!state.image.segEdit.internalIDProcessed[i]) {
-            image = state.image.segEdit.croppedIDs[i];
-            break;
-        }
-    }
     return {
         currentStage: state.general.currentStage,
         id: state.id,
-        image: image
+        image: state.image.croppedImage!
     };
 }
 

@@ -2,16 +2,20 @@ import L from 'leaflet';
 import React from 'react';
 import { connect } from 'react-redux'; 
 import { ImageActionTypes, IDBox, ImageState } from '../../../store/image/types';
-import { addIDBox, deleteIDBox } from '../../../store/image/actionCreators';
+// import { setIDBox } from '../../../store/image/actionCreators';
 import { AppState } from '../../../store';
 import { CurrentStage } from '../../../utils/enums';
+import { createNewID, setIDBox } from '../../../store/id/actionCreators';
+import { IDActionTypes, InternalIDState } from '../../../store/id/types';
 
 interface IProps {
     currentStage: CurrentStage,
-    image: ImageState,
+    originalProcessed: boolean,
+    internalIDs: InternalIDState[],
+    IDImage: ImageState,
     committedBoxes: IDBox[],
-    addIDBox: (box: IDBox, croppedID: File) => ImageActionTypes,
-    deleteIDBox: (id: number) => ImageActionTypes,
+    createNewID: (box: IDBox, croppedImage: File) => IDActionTypes,
+    setIDBox: (box: IDBox) => IDActionTypes,
 }
 
 interface IState {
@@ -83,7 +87,7 @@ class SegLabeller extends React.Component<IProps, IState> {
     }
 
     componentDidMount() {
-        if (this.props.image.image.size !== 0 && this.props.image.image.name !== '') {
+        if (this.props.IDImage.image.size !== 0 && this.props.IDImage.image.name !== '') {
             this.loadImageData();
         }
     }
@@ -135,7 +139,7 @@ class SegLabeller extends React.Component<IProps, IState> {
                 ratio: ratio,
             }, this.initializeMap);
         }
-        image.src = URL.createObjectURL(this.props.image.image);
+        image.src = URL.createObjectURL(this.props.IDImage.image);
     }
 
     initializeMap = () => {
@@ -174,7 +178,7 @@ class SegLabeller extends React.Component<IProps, IState> {
     renderCommittedBoxes = () => {
         let boxes = this.props.committedBoxes;
         let map = this.state.map!;
-        
+        console.log(boxes);
         this.state.boxes.forEach((box) => {
             box.circles.forEach((circle) => circle.remove());
             box.lines.forEach((line) => line.remove());
@@ -351,13 +355,17 @@ class SegLabeller extends React.Component<IProps, IState> {
             this.setState({
                 movingCircle: undefined
             }, () => {
-                this.props.deleteIDBox(this.state.boxes[boxIndex].id);
-                this.handleSubmit(this.state.boxes[boxIndex]);
+                // this.props.deleteIDBox(this.state.boxes[boxIndex].id);
+                this.handleSubmit(this.state.boxes[boxIndex], true);
             });
         }
     }
 
     addCircle = (e: any) => {
+        if (this.props.originalProcessed && this.props.internalIDs.length <= this.state.boxes.length) {
+            return;
+        }
+
         let st = this.state;
         let map = st.map!;
         let circle = L.circle([e.latlng.lat, e.latlng.lng], {
@@ -446,7 +454,7 @@ class SegLabeller extends React.Component<IProps, IState> {
                 stage: 0,
                 currentBox: newBox,
                 boxes: newBoxes
-            }, () => this.handleSubmit(newBox));
+            }, () => this.handleSubmit(newBox, this.props.originalProcessed));
 
         } else {
             // let boxes = this.state.boxes;
@@ -508,7 +516,7 @@ class SegLabeller extends React.Component<IProps, IState> {
         } 
     }
 
-    handleSubmit = (box: SegBox) => {
+    handleSubmit = (box: SegBox, update: boolean) => {
         // supposed to call crop API first then only send to store
         console.log('submitting boxes');
         let IDBox: IDBox = {
@@ -524,7 +532,12 @@ class SegLabeller extends React.Component<IProps, IState> {
                 y4: box.position.y4!,
             }
         }
-        this.props.addIDBox(IDBox, this.props.image.image);
+        if (update) {
+            this.props.setIDBox(IDBox);
+
+        } else {
+            this.props.createNewID(IDBox, this.props.IDImage.image);
+        }
     }
 
     render() {
@@ -535,15 +548,25 @@ class SegLabeller extends React.Component<IProps, IState> {
 }
 
 const mapStateToProps = (state: AppState, ownProps: any) => {
+    let boxes: IDBox[] = [];
+    state.id.internalIDs.forEach((each) => {
+        if (state.id.originalIDProcessed && each.backID!.IDBox !== undefined) {
+            boxes.push(each.backID!.IDBox);
+        } else if (!state.id.originalIDProcessed && each.originalID!.IDBox !== undefined) {
+            boxes.push(each.originalID!.IDBox);
+        }
+    })
     return {
         currentStage: state.general.currentStage,
-        image: state.image,
-        committedBoxes: state.image.segEdit.IDBoxes,
+        internalIDs: state.id.internalIDs,
+        originalProcessed: state.id.originalIDProcessed,
+        IDImage: state.id.originalIDProcessed ? state.id.backID! : state.id.originalID!,
+        committedBoxes: boxes
 }};
     
 const mapDispatchToProps = {
-    addIDBox,
-    deleteIDBox
+    createNewID,
+    setIDBox,
 }
     
 export default connect(

@@ -2,29 +2,23 @@ import { Action } from "../Actions";
 
 export type ImageState = {
     image: File;
+
     // Seg Check
     passesCrop?: boolean;
+    IDBox?: IDBox,
+    croppedImage?: File;
+    imageProps?: ImageProps;
 
-    segEdit: {
-        IDBoxes: IDBox[],
-        internalIDProcessed: boolean[],
-        croppedIDs: File[],
-    }
-
-    currentIndex: number,
-
-    imageProps: ImageProps[];
-
-    // Landmarks for each internal id if more than 1
-    landmark: LandmarkData[][];
+    landmark: LandmarkData[];
     currentSymbol?: string;
 
     // OCR
-    ocr: OCRData[][];
-    currentWord?: OCRWord,
+    ocr: OCRData[];
+    ocrToLandmark?: string;
+    currentWord?: OCRWord;
 
     // FR Compare (for each cropped internal ID)
-    faceCompareMatch: boolean[]
+    faceCompareMatch?: boolean
 }
 
 export type IDBox = {
@@ -44,6 +38,7 @@ export type OCRData = {
     id: number,
     type: 'OCR',
     name: string,
+    mapToLandmark: string,
     count: number,
     labels: OCRWord[]
 }
@@ -77,7 +72,8 @@ export type OCRWord = {
 interface LoadImageState {
     type: typeof Action.LOAD_IMAGE_STATE;
     payload: {
-        currentImage: ImageState
+        currentImage: ImageState,
+        passesCrop?: boolean
     }
 }
 
@@ -95,31 +91,25 @@ interface SetImageProps {
     }
 }
 
-interface AddIDBox {
-    type: typeof Action.ADD_ID_BOX;
-    payload: {
-        IDBox: IDBox,
-        croppedID: File
-    }
-}
-interface DeleteIDBox {
-    type: typeof Action.DELETE_ID_BOX;
-    payload: {
-        id: number
-    }
-}
+// interface SetIDBox {
+//     type: typeof Action.SET_ID_BOX;
+//     payload: {
+//         IDBox: IDBox,
+//         croppedImage: File
+//     }
+// }
 
 interface SetCurrentSymbol {
     type: typeof Action.SET_CURRENT_SYMBOL;
     payload: {
-        symbol?: string
+        symbol?: string,
+        mapToLandmark?: string,
     }
 }
 
 interface AddLandmarkData {
     type: typeof Action.ADD_LANDMARK_DATA;
     payload: {
-        index: number,
         landmark: LandmarkData
     }
 }
@@ -127,7 +117,6 @@ interface AddLandmarkData {
 interface DeleteLandmarkData {
     type: typeof Action.DELETE_LANDMARK_DATA;
     payload: {
-        index: number,
         landmark: string
     }
 }
@@ -135,7 +124,6 @@ interface DeleteLandmarkData {
 interface UpdateLandmarkFlags {
     type: typeof Action.UPDATE_LANDMARK_FLAGS;
     payload: {
-        index: number,
         name: string,
         flags: string[]
     }
@@ -144,7 +132,6 @@ interface UpdateLandmarkFlags {
 interface AddOCRData {
     type: typeof Action.ADD_OCR_DATA;
     payload: {
-        index: number,
         ocr: OCRData
     }
 }
@@ -159,7 +146,6 @@ interface SetCurrentWord {
 interface UpdateOCRData {
     type: typeof Action.UPDATE_OCR_DATA;
     payload: {
-        index: number,
         id: number,
         name: string,
         value: string,
@@ -170,19 +156,17 @@ interface UpdateOCRData {
 interface SetFaceCompareMatch {
     type: typeof Action.SET_FACE_COMPARE_MATCH;
     payload: {
-        index: number,
         match: boolean
     }
 }
 
-interface IncrementInternalIndex {
-    type: typeof Action.INCREMENT_INTERNAL_INDEX;
+interface RestoreImage {
+    type: typeof Action.RESTORE_IMAGE;
 }
 
 export type ImageActionTypes = LoadImageState
     | SaveSegCheck
-    | AddIDBox
-    | DeleteIDBox
+    // | SetIDBox
     | SetImageProps
     | SetCurrentSymbol
     | AddLandmarkData
@@ -192,4 +176,4 @@ export type ImageActionTypes = LoadImageState
     | UpdateOCRData
     | SetCurrentWord
     | SetFaceCompareMatch
-    | IncrementInternalIndex
+    | RestoreImage

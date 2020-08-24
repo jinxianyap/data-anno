@@ -6,47 +6,51 @@ import { Form, Button, ButtonGroup, ToggleButton, ToggleButtonGroup, Card, Accor
 import options from '../../../options.json';
 import './ControlPanel.scss';
 import { GeneralActionTypes } from '../../../store/general/types';
-import { IDActionTypes, IDState } from '../../../store/id/types';
+import { IDActionTypes, IDState, InternalIDState } from '../../../store/id/types';
 import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord } from '../../../store/image/types';
 import { progressNextStage, getNextID } from '../../../store/general/actionCreators';
-import { loadNextID, saveDocumentType, updateVideoData } from '../../../store/id/actionCreators';
-import { saveSegCheck, loadImageState, addIDBox, deleteIDBox, setCurrentSymbol, setCurrentWord, updateLandmarkFlags, addOCRData, setFaceCompareMatch } from '../../../store/image/actionCreators';
+import { loadNextID, createNewID, setIDBox, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, restoreID } from '../../../store/id/actionCreators';
+import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, updateLandmarkFlags, addOCRData, setFaceCompareMatch, restoreImage } from '../../../store/image/actionCreators';
 import AddTypeModal from '../AddTypeModal/AddTypeModal';
 
 var fs = require('browserify-fs');
 
 interface IProps {
     currentStage: CurrentStage;
-    indexedID: IDState;
     currentID: IDState;
+    indexedID: IDState;
+    internalID: InternalIDState;
     currentImage: ImageState;
-    currentIndex: number;
 
     progressNextStage: (nextStage: CurrentStage) => GeneralActionTypes;
     getNextID: () => GeneralActionTypes;
-    loadImageState: (currentImage: ImageState) => ImageActionTypes;
+    loadImageState: (currentImage: ImageState, passesCrop?: boolean) => ImageActionTypes;
 
     loadNextID: (ID: IDState) => IDActionTypes;
-    saveDocumentType: (documentType: string) => IDActionTypes;
+    createNewID: (IDBox: IDBox, croppedImage: File) => IDActionTypes;
+    setIDBox: (IDBox: IDBox, croppedImage?: File) => IDActionTypes;
+    refreshIDs: () => IDActionTypes;
+    saveDocumentType: (internalIndex: number, documentType: string) => IDActionTypes;
     saveSegCheck: (passesCrop: boolean) => ImageActionTypes;
 
-    addIDBox: (box: IDBox, croppedID: File) => ImageActionTypes;
-    deleteIDBox: (id: number) => ImageActionTypes;
-
-    setCurrentSymbol: (symbol?: string) => ImageActionTypes;
-    updateLandmarkFlags: (index: number, name: string, flags: string[]) => ImageActionTypes;
+    setCurrentSymbol: (symbol?: string, landmark?: string) => ImageActionTypes;
+    updateLandmarkFlags: (name: string, flags: string[]) => ImageActionTypes;
 
     setCurrentWord: (word: OCRWord) => ImageActionTypes;
-    addOCRData: (index: number, ocr: OCRData) => ImageActionTypes;
+    addOCRData: (ocr: OCRData) => ImageActionTypes;
 
     updateVideoData: (liveness: boolean, flags: string[]) => IDActionTypes;
-    setFaceCompareMatch: (index: number, match: boolean) => ImageActionTypes;
+    setFaceCompareMatch: (match: boolean) => ImageActionTypes;
+
+    saveToInternalID: (imageState: ImageState) => IDActionTypes;
+    restoreID: () => IDActionTypes;
+    restoreImage: () => ImageActionTypes;
 }
 
 interface IState {
     // ownStage: CurrentStage;
     // Seg Check
-    loadedImageState: boolean;
+    loadedSegCheckImage: boolean;
     showAddDocTypeModal: boolean;
     documentTypes: string[];
     docType: string;
@@ -81,11 +85,13 @@ interface IState {
         docType: string,
         details: {
             name: string,
+            mapToLandmark: string,
             value?: string
         }[]
     }[];
     currentOCR: {
         name: string,
+        mapToLandmark: string,
         value?: string
     }[];
 
@@ -110,7 +116,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         super(props);
         this.state = {
             // ownStage: CurrentStage.SEGMENTATION_CHECK,
-            loadedImageState: false,
+            loadedSegCheckImage: false,
             showAddDocTypeModal: false,
             documentTypes: [],
             docType: '',
@@ -140,15 +146,44 @@ class ControlPanel extends React.Component<IProps, IState> {
     componentDidUpdate(previousProps: IProps, previousState: IState) {
         switch (this.props.currentStage) {
             case (CurrentStage.SEGMENTATION_CHECK): {
-                if (!this.state.loadedImageState) {
+                if (previousProps.indexedID.index !== this.props.indexedID.index) {
+                    this.props.loadNextID(this.props.indexedID);
+                    break;
+                }
+                if (this.state.documentTypes.length === 0) this.loadDocumentTypes();
+                if (!this.state.loadedSegCheckImage) {
                     this.loadSegCheckImage();
-                    this.setState({loadedImageState: true});
+                    this.setState({loadedSegCheckImage: true});
+                    break;
+                }
+                if (previousProps.internalID === undefined && this.props.internalID !== undefined) {
+                    this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
+                    this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                    break;
+                }
+                if (!this.props.currentID.originalIDProcessed && this.props.currentID.internalIDs.length > 0) {
+                    this.props.refreshIDs();
+                } else if (this.props.currentID.originalIDProcessed && this.props.currentID.internalIDs.filter((each) => each.backID!.IDBox !== undefined).length > 0) {
+                    this.props.refreshIDs();
                 }
                 break;
             }
             case (CurrentStage.LANDMARK_EDIT): {
+                if (this.props.internalID === undefined) return;
                 if (!this.state.landmarksLoaded) {
                     this.loadLandmarkData();
+                } else {
+                    let criterion = '';
+                    if (this.state.docType === "MyKad") {
+                        criterion = (this.props.internalID.processStage === IDProcess.MYKAD_FRONT) ? 'MyKadFront' : 'MyKadBack';
+                    } else {
+                        criterion = this.state.docType;
+                    }
+                    this.state.landmarks.forEach((each) => {
+                        if (each.docType === criterion && each.landmarks !== this.state.currentLandmarks) {
+                            this.setState({currentLandmarks: each.landmarks});
+                        }
+                    });
                 }
                 break;
             }
@@ -163,6 +198,37 @@ class ControlPanel extends React.Component<IProps, IState> {
                     this.loadVideoFlags();
                 };
                 break;
+            }
+            // case (CurrentStage.FR_COMPARE_CHECK): {
+            //     if (previousProps.internalID && 
+            //         (previousProps.internalID.originalID!.faceCompareMatch !== undefined || previousProps.internalID.backID!.faceCompareMatch !== undefined)) {
+            //         if (this.props.currentID.internalIndex >= this.props.currentID.internalIDs.length) {
+            //             this.loadNextID();
+            //         } else if (this.props.currentID.internalIndex < this.props.currentID.internalIDs.length) {
+            //             if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
+            //                 this.loadBackId();
+            //             } else {
+            //                 this.loadNextInternalId();
+            //             }
+            //         }
+            //     }
+            // }
+            case (CurrentStage.END_STAGE): {
+                if (previousProps.internalID && 
+                    (previousProps.internalID.originalID!.faceCompareMatch !== undefined || previousProps.internalID.backID!.faceCompareMatch !== undefined)) {
+                    if (this.props.currentID.internalIndex >= this.props.currentID.internalIDs.length) {
+                        console.log('next id');
+                        this.loadNextID();
+                    } else if (this.props.currentID.internalIndex < this.props.currentID.internalIDs.length) {
+                        if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
+                            console.log('back id');
+                            this.loadBackId();
+                        } else {
+                            console.log('next internal id');
+                            this.loadNextInternalId();
+                        }
+                    }
+                }
             }
         }
     }
@@ -189,33 +255,11 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     loadSegCheckImage = () => {
-        let process = this.props.currentID.processStage;
-        if (process === IDProcess.MYKAD_BACK) {
+        if (this.props.currentID.originalIDProcessed) {
             this.props.loadImageState(this.props.currentID.backID!);
         } else {
             this.props.loadImageState(this.props.currentID.originalID!);
-            // console.log(this.props.currentImage);
-            // console.log(this.props.currentID.originalID);
         }
-    }
-
-    addIDBoxCropPasses = () => {
-        // only if seg check passes right away: need to call api to pull new cropped image, IDBox data and store inside seg edit
-        // this.props.loadImageState(this.props.currentID.originalID!);
-        let box: IDBox = {
-            id: 0,
-            position: {
-                x1: 0,
-                x2: 0,
-                x3: 0,
-                x4: 0,
-                y1: 0,
-                y2: 0,
-                y3: 0,
-                y4: 0
-            }
-        };
-        this.props.addIDBox(box, this.props.currentID.originalID!.image);
     }
 
     loadDocumentTypes = (doc?: string) => {
@@ -228,7 +272,7 @@ class ControlPanel extends React.Component<IProps, IState> {
     loadLandmarkData = () => {
         let criterion = '';
         if (this.state.docType === "MyKad") {
-            criterion = (this.props.currentID.processStage === IDProcess.MYKAD_FRONT) ? 'MyKadFront' : 'MyKadBack';
+            criterion = (this.props.internalID.processStage === IDProcess.MYKAD_FRONT) ? 'MyKadFront' : 'MyKadBack';
         } else {
             criterion = this.state.docType;
         }
@@ -266,16 +310,17 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
     
     loadOCRDetails = () => {
-        let docOCR: {docType: string, details: {name: string, value?: string}[]}[] = [];
-        let currentOCR: {name: string, value?: string}[] = [];
+        let docOCR: {docType: string, details: {name: string, mapToLandmark: string, value?: string}[]}[] = [];
+        let currentOCR: {name: string, mapToLandmark: string, value?: string}[] = [];
 
         options.ocr.keys.forEach((each, idx) => {
-            let ocr: {name: string, value?: string}[] = [];
-            options.ocr.values[idx].forEach((each) => {
+            let ocr: {name: string, mapToLandmark: string, value?: string}[] = [];
+            for (var i = 0; i < options.ocr.values[idx].length; i++) {
                 ocr.push({
-                    name: each
+                    name: options.ocr.values[idx][i],
+                    mapToLandmark: options.ocr.mapToLandmark[idx][i]
                 });
-            });
+            }
             docOCR.push({
                 docType: each,
                 details: ocr
@@ -310,35 +355,49 @@ class ControlPanel extends React.Component<IProps, IState> {
             this.setState({showAddDocTypeModal: false}, () => this.loadDocumentTypes(doc));
         }
 
-        const setDocType = (e: any) => {
-            if (this.state.landmarks.length === 0) {
-                this.setState({docType: e.target.value});
-            } else {
-                let landmarks = this.state.landmarks.find((each) => (each.docType === e.target.value))!.landmarks;
-                this.setState({docType: e.target.value, currentLandmarks: landmarks});
-            }
-        }
-
         const submitSegCheck = (e: any) => {
             e.preventDefault();
-            this.props.saveDocumentType(this.state.docType);
-            this.props.saveSegCheck(this.state.passesCrop);
-            if (this.state.passesCrop) {
-                this.addIDBoxCropPasses();
-            }
-            this.props.progressNextStage(this.state.passesCrop ? CurrentStage.LANDMARK_EDIT : CurrentStage.SEGMENTATION_EDIT);
 
+            let box: IDBox = {
+                id: 0,
+                position: {
+                    x1: 0,
+                    x2: 0,
+                    x3: 0,
+                    x4: 0,
+                    y1: 0,
+                    y2: 0,
+                    y3: 0,
+                    y4: 0
+                }
+            };
+
+            if (this.state.passesCrop) {
+                if (this.props.currentID.originalIDProcessed) {
+                    this.props.setIDBox(box, this.props.currentID.backID!.image);
+                    this.props.loadImageState(this.props.internalID.backID!, this.state.passesCrop);
+                    this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                } else {
+                    this.props.createNewID(box, this.props.currentID.originalID!.image);
+                    this.props.saveDocumentType(0, this.state.docType);
+                }
+            } else {
+                this.props.progressNextStage(CurrentStage.SEGMENTATION_EDIT);
+            }
         }
 
         return (
             <Form onSubmit={submitSegCheck}>
-                <Form.Group controlId="docType">
-                    <Form.Label>Document Type</Form.Label>
-                    <Button onClick={() => {this.setState({showAddDocTypeModal: true})}} style={{padding: "0 0.5rem", margin: "0.5rem 1rem"}}>+</Button>
-                    <Form.Control as="select" value={this.state.docType} onChange={(e: any) => setDocType(e)}>
-                        {Object.entries(this.state.documentTypes).map(([key, value]) => <option key={key} value={value}>{value}</option>)}
-                    </Form.Control>
-                </Form.Group>
+                {
+                    this.props.currentID.originalIDProcessed ? <div /> :
+                    <Form.Group controlId="docType">
+                        <Form.Label>Document Type</Form.Label>
+                        <Button onClick={() => {this.setState({showAddDocTypeModal: true})}} style={{padding: "0 0.5rem", margin: "0.5rem 1rem"}}>+</Button>
+                        <Form.Control as="select" value={this.state.docType} onChange={(e: any) => this.setDocType(e)}>
+                            {Object.entries(this.state.documentTypes).map(([key, value]) => <option key={key} value={value}>{value}</option>)}
+                        </Form.Control>
+                    </Form.Group>
+                }
 
                 <AddTypeModal showModal={this.state.showAddDocTypeModal} item='documentTypes' add={addDocType} closeModal={() => this.setState({showAddDocTypeModal: false})}/>
 
@@ -357,9 +416,27 @@ class ControlPanel extends React.Component<IProps, IState> {
         )
     }
 
+    setDocType = (e: any) => {
+        if (this.state.landmarks.length === 0) {
+            this.setState({docType: e.target.value});
+        } else {
+            let landmarks = this.state.landmarks.find((each) => (each.docType === e.target.value))!;
+            if (landmarks !== undefined) {
+                this.setState({docType: e.target.value, currentLandmarks: landmarks.landmarks});
+            } else {
+                this.setState({docType: e.target.value});
+            }
+        }
+    }
+
     segEdit = () => {
         const backStage = () => {
             this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+        }
+
+        const submitDocType = (e: any, idx: number) => {
+            e.preventDefault();
+            this.props.saveDocumentType(idx, this.state.docType);
         }
 
         return (
@@ -368,7 +445,9 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <h6>Boxes Drawn</h6>
                     <Accordion>
                         {
-                            this.props.currentImage.segEdit.IDBoxes.map((box, idx) => {
+                            this.props.currentID.internalIDs.map((id, idx) => {
+                                let box = this.props.currentID.originalIDProcessed ? id.backID!.IDBox : id.originalID!.IDBox;
+                                if (box === undefined) return;
                                 return (
                                     <Card key={idx}>
                                         <Accordion.Toggle
@@ -378,14 +457,14 @@ class ControlPanel extends React.Component<IProps, IState> {
                                         </Accordion.Toggle>
                                         <Accordion.Collapse eventKey={idx.toString()}>
                                         <Card.Body>
-                                            <p>x1: {box.position.x1}</p>
-                                            <p>y1: {box.position.y1}</p>
-                                            <p>x2: {box.position.x2}</p>
-                                            <p>y2: {box.position.y2}</p>
-                                            <p>x3: {box.position.x3}</p>
-                                            <p>y3: {box.position.y3}</p>
-                                            <p>x4: {box.position.x4}</p>
-                                            <p>y4: {box.position.y4}</p>
+                                            <Form.Group controlId="docType">
+                                                <Form.Label>Document Type</Form.Label>
+                                                <Button onClick={() => {this.setState({showAddDocTypeModal: true})}} style={{padding: "0 0.5rem", margin: "0.5rem 1rem"}}>+</Button>
+                                                <Form.Control as="select" value={this.state.docType} onChange={(e: any) => this.setDocType(e)}>
+                                                    {Object.entries(this.state.documentTypes).map(([key, value]) => <option key={key} value={value}>{value}</option>)}
+                                                </Form.Control>
+                                            </Form.Group>
+                                            <Button onClick={(e: any) => submitDocType(e, idx)}>Submit</Button>
                                         </Card.Body>
                                         </Accordion.Collapse>
                                     </Card>
@@ -393,9 +472,12 @@ class ControlPanel extends React.Component<IProps, IState> {
                             })
                         }
                     </Accordion>
-                <Button variant="secondary" style={{width: '100%'}} onClick={() => this.props.deleteIDBox(-1)}>Undo Box</Button>
+                {/* <Button variant="secondary" style={{width: '100%'}} onClick={() => this.props.deleteIDBox(-1)}>Undo Box</Button> */}
                 <Button variant="secondary" onClick={backStage}>Back</Button>
-                <Button disabled={this.props.currentImage.segEdit.IDBoxes.length === 0} onClick={() => this.props.progressNextStage(CurrentStage.LANDMARK_EDIT)}>
+                <Button disabled={this.props.currentID.internalIDs.length === 0} onClick={() => {
+                    this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
+                    this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                }}>
                     Next
                 </Button>
             </div>
@@ -476,8 +558,15 @@ class ControlPanel extends React.Component<IProps, IState> {
         const submitLandmark = (e: any) => {
             e.preventDefault();
             this.state.currentLandmarks.forEach((each) => {
-                this.props.updateLandmarkFlags(this.props.currentIndex, each.name, each.flags);
-            }, this.props.progressNextStage(CurrentStage.OCR_DETAILS));
+                this.props.updateLandmarkFlags(each.name, each.flags);
+            });
+            if (this.props.currentID.originalIDProcessed) {
+                this.props.saveToInternalID(this.props.currentImage);
+                this.props.progressNextStage(CurrentStage.END_STAGE);
+                // this.loadNextInternalId();
+            } else {
+                this.props.progressNextStage(CurrentStage.OCR_DETAILS);
+            }
         }
 
         return (
@@ -490,7 +579,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                         <Accordion.Toggle
                                             as={Card.Header}
                                             eventKey={idx.toString()}
-                                            className={this.props.currentImage.landmark[this.props.currentIndex].find((item) => item.name === each.name) !== undefined
+                                            className={this.props.currentImage.landmark.find((item) => item.name === each.name) !== undefined
                                                 ? 'labelled-landmark' : ''}
                                             key={idx}
                                             onClick={() => setLandmark(each.name)}>
@@ -522,11 +611,7 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     ocrDetails = () => {
-        let refs: {name: string, ref: any}[] = [];
-
-        // refs.forEach((each) => {
-        //     console.log(each.ref.value);
-        // })
+        let refs: {name: string, mapToLandmark: string, ref: any}[] = [];
 
         const handleSubmit = (e: any) => {
             e.preventDefault();
@@ -537,6 +622,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     id: idx,
                     type: 'OCR',
                     name: each.name,
+                    mapToLandmark: each.mapToLandmark,
                     labels: each.ref.value.split(' ').map((each: string, idx: number) => {
                         return {id: idx, value: each};
                     }),
@@ -555,7 +641,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     }
 
                     this.setState({ currentOCR: currentOCR });
-                    this.props.addOCRData(this.props.currentIndex, ocr);
+                    this.props.addOCRData(ocr);
                 }
             }, this.props.progressNextStage(CurrentStage.OCR_EDIT));
         }
@@ -568,7 +654,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                         return (
                             <Form.Group key={each.name + "OCR"}>
                                 <Form.Label>{each.name}</Form.Label>
-                                <Form.Control type="text" defaultValue={each.value} ref={(ref: any) => {refs.push({name: each.name, ref})}} />
+                                <Form.Control type="text" defaultValue={each.value} ref={(ref: any) => {refs.push({name: each.name, mapToLandmark: each.mapToLandmark,ref})}} />
                             </Form.Group>
                         );
                     })
@@ -587,7 +673,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         // const setSymbol = (item: string) => {
         //     this.setState({selectedLandmark: item}, () => this.props.setCurrentSymbol(item));
         // }
-        let ocrs = this.props.currentImage.ocr[this.props.currentIndex];
+        let ocrs = this.props.currentImage.ocr;
 
         return (
             <div>
@@ -597,21 +683,24 @@ class ControlPanel extends React.Component<IProps, IState> {
                             if (each.count <= 1) return <div key={index} />;
                             return (
                                 <Card key={index}>
-                                    <Accordion.Toggle as={Card.Header} eventKey={index.toString()} key={index} onClick={() => this.props.setCurrentSymbol(each.name)}>
+                                    <Accordion.Toggle as={Card.Header} eventKey={index.toString()} key={index} onClick={() => this.props.setCurrentSymbol(each.name, each.mapToLandmark)}>
                                         {each.name}
                                     </Accordion.Toggle>
                                     <Accordion.Collapse eventKey={index.toString()}>
                                     <Card.Body>
                                     <ButtonGroup vertical>
                                         {
-                                            each.labels.map((each, idx) => {
+                                            each.labels.map((label, idx) => {
                                                 return (
                                                     <Button 
-                                                        className={each.position !== undefined ? "ocr-details" : ""}
+                                                        className={label.position !== undefined ? "ocr-details" : ""}
                                                         variant="secondary"
                                                         key={idx}
-                                                        value={each.value}
-                                                        onClick={() => this.props.setCurrentWord(each)}>{each.id}: {each.value}</Button>
+                                                        value={label.value}
+                                                        onClick={() => {
+                                                            this.props.setCurrentSymbol(each.name, each.mapToLandmark);
+                                                            this.props.setCurrentWord(label)}}
+                                                        >{label.id}: {label.value}</Button>
                                                 );
                                             })
                                         }
@@ -709,11 +798,8 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     frCompareCheck = () => {
         const submitFaceCompareResults = () => {
-            this.props.setFaceCompareMatch(this.props.currentIndex, this.state.faceCompareMatch!);
-        }
-
-        const nextID = () => {
-
+            this.props.saveToInternalID(this.props.currentImage);
+            this.props.progressNextStage(CurrentStage.END_STAGE);
         }
 
         return (
@@ -722,19 +808,68 @@ class ControlPanel extends React.Component<IProps, IState> {
                     <Card.Title>Match</Card.Title>
                     <Card.Body>
                         <ButtonGroup aria-label="passessFRMatchButtons" style={{display: "block", width: "100%"}}>
-                            <Button variant="secondary" onClick={() => this.setState({faceCompareMatch: false})} value="true">Fail</Button>
-                            <Button variant="secondary" onClick={() => this.setState({faceCompareMatch: true})} value="false">Pass</Button>
+                            <Button variant="secondary" onClick={() => this.props.setFaceCompareMatch(false)} value="true">Fail</Button>
+                            <Button variant="secondary" onClick={() => this.props.setFaceCompareMatch(true)} value="false">Pass</Button>
                         </ButtonGroup>
                     </Card.Body>
                 </Card>
                 <Button variant="secondary" onClick={() => this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK)}>
                     Back
                 </Button>
-                <Button onClick={submitFaceCompareResults} disabled={this.state.faceCompareMatch === undefined}>
+                <Button onClick={submitFaceCompareResults}>
                     Done
                 </Button>
             </div>
         );
+    }
+
+    loadBackId = () => {
+        this.props.loadImageState(this.props.internalID.backID!);
+
+        this.setState({loadedSegCheckImage: false}, () => this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK));
+    }
+
+    loadNextInternalId = () => {
+        this.resetState();
+        this.props.loadImageState(this.props.internalID.originalID!);
+        this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+    }
+
+    loadNextID = () => {
+        this.resetState();
+        this.props.restoreID();
+        this.props.restoreImage();
+        this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+        this.props.getNextID();
+    }
+
+    resetState = () => {
+        this.setState({
+            loadedSegCheckImage: false,
+            showAddDocTypeModal: false,
+            documentTypes: [],
+            docType: '',
+            passesCrop: false,
+            cropDirty: false,
+            segCheckValidation: false,
+
+            showAddLandmarkModal: false,
+            landmarksLoaded: false,
+            landmarks: [],
+            currentLandmarks: [],
+            landmarkFlags: [],
+            selectedLandmark: '',
+
+            showAddOCRModal: false,
+            OCRLoaded: false,
+            OCR: [],
+            currentOCR: [],
+
+            videoFlagsLoaded: false,
+            videoFlags: [],
+            selectedVideoFlags: [],
+            livenessValidation: false,
+        });
     }
 
     render() {
@@ -776,7 +911,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 case (CurrentStage.FR_COMPARE_CHECK): {
                     return (
                         <div className="internalIDIndex">
-                            <p>{(this.props.currentIndex + 1).toString() + " of " + this.props.currentImage.segEdit.croppedIDs.length.toString()}</p>
+                            <p>{(this.props.currentID.internalIndex + 1).toString() + " of " + this.props.currentID.internalIDs.length.toString()}</p>
                         </div>
                     );
                 }
@@ -797,17 +932,21 @@ const mapDispatchToProps = {
     progressNextStage,
     getNextID,
     loadNextID,
+    createNewID,
+    setIDBox,
+    refreshIDs,
     saveDocumentType,
     saveSegCheck,
-    addIDBox,
-    deleteIDBox,
     loadImageState,
     setCurrentSymbol,
     setCurrentWord,
     updateLandmarkFlags,
     addOCRData,
     updateVideoData,
-    setFaceCompareMatch
+    setFaceCompareMatch,
+    saveToInternalID,
+    restoreID,
+    restoreImage,
 };
 
 const mapStateToProps = (state: AppState) => {
@@ -815,8 +954,8 @@ const mapStateToProps = (state: AppState) => {
         currentStage: state.general.currentStage,
         indexedID: state.general.IDLibrary[state.general.currentIndex],
         currentID: state.id,
-        currentImage: state.image,
-        currentIndex: state.image.currentIndex
+        internalID: state.id.internalIDs[state.id.internalIndex],
+        currentImage: state.image
     }
 };
 

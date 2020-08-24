@@ -7,7 +7,9 @@ import { Container, Row, Col } from 'react-bootstrap';
 import './SegCheck.scss';
 
 interface IProps {
+    originalProcessed: boolean;
     originalID: ImageState;
+    backID: ImageState;
     croppedID: ImageState;
 }
 
@@ -19,7 +21,11 @@ interface IProps {
 class SegCheck extends React.Component<IProps> {
 
     componentDidMount() {
-        ImageUtil.loadImage("segCheckID", this.props.originalID.image);
+        if (this.props.originalProcessed) {
+            ImageUtil.loadImage("segCheckID", this.props.backID.image);
+        } else {
+            ImageUtil.loadImage("segCheckID", this.props.originalID.image);
+        }
         ImageUtil.loadImage("segCheckCropped", this.props.croppedID.image);
     }
 
@@ -47,7 +53,9 @@ const mapStateToProps = (state: AppState) => {
     let index = state.general.currentIndex;
     let ID = state.general.IDLibrary[index];
     return {
+        originalProcessed: state.id.originalIDProcessed,
         originalID: ID.originalID!,
+        backID: ID.backID!,
         // need to change later
         croppedID: ID.originalID!
     };

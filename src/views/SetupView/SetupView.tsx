@@ -63,9 +63,10 @@ class SetupView extends React.Component<IProps, IState> {
             // console.log(setup);
             //temp to simulate loading fileobjects from database
             let folders = [];
-            let IDFolder = DatabaseUtil.loadIntoIDFolder(st.files);
-            folders.push(IDFolder);
-            folders.push(IDFolder);
+            let IDFolder1 = DatabaseUtil.loadIntoIDFolder(st.files, 0);
+            folders.push(IDFolder1);
+            let IDFolder2 = DatabaseUtil.loadIntoIDFolder(st.files, 1);
+            folders.push(IDFolder2);
 
             this.props.loadFromDatabase(folders);
 
@@ -121,6 +122,7 @@ class SetupView extends React.Component<IProps, IState> {
                 
 
                 <Form.Group controlId="fileUpload">
+                {/* <input type="file" multiple/> */}
                 <Form.File
                     className="position-relative"
                     required
@@ -134,7 +136,7 @@ class SetupView extends React.Component<IProps, IState> {
                     name="file"
                     label="IC cropped"
                     onChange={(e: any) => this.handleUpload(e)}
-                    />
+                    /> */}
                 <Form.File
                     className="position-relative"
                     required
@@ -142,14 +144,14 @@ class SetupView extends React.Component<IProps, IState> {
                     label="IC Back"
                     onChange={(e: any) => this.handleUpload(e)}
                     />
-                <Form.File
+                {/* <Form.File
                     className="position-relative"
                     required
                     name="file"
                     label="Selfie Video"
                     onChange={(e: any) => this.handleUpload(e)}
-                    />
-                <Form.File
+                    /> */}
+                {/* <Form.File
                     className="position-relative"
                     required
                     name="file"

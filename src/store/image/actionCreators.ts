@@ -1,11 +1,12 @@
 import { Action } from "../Actions";
 import { ImageState, ImageActionTypes, IDBox, ImageProps, LandmarkData, OCRData, Position, OCRWord } from "./types";
 
-export function loadImageState(currentImage: ImageState): ImageActionTypes {
+export function loadImageState(currentImage: ImageState, passesCrop?: boolean): ImageActionTypes {
     return {
         type: Action.LOAD_IMAGE_STATE,
         payload: {
-            currentImage: currentImage
+            currentImage: currentImage,
+            passesCrop: passesCrop
         }
     }
 }
@@ -28,70 +29,58 @@ export function setImageProps(props: ImageProps): ImageActionTypes {
     }
 }
 
-export function addIDBox(box: IDBox, croppedID: File): ImageActionTypes {
-    return {
-        type: Action.ADD_ID_BOX,
-        payload: {
-            IDBox: box,
-            croppedID: croppedID
-        }
-    }
-}
+// export function setIDBox(box: IDBox, croppedImage: File): ImageActionTypes {
+//     return {
+//         type: Action.SET_ID_BOX,
+//         payload: {
+//             IDBox: box,
+//             croppedImage: croppedImage
+//         }
+//     }
+// }
 
-export function deleteIDBox(id: number): ImageActionTypes {
-    return {
-        type: Action.DELETE_ID_BOX,
-        payload: {
-            id: id
-        }
-    }
-}
-
-export function setCurrentSymbol(symbol?: string): ImageActionTypes {
+export function setCurrentSymbol(symbol?: string, mapToLandmark?: string): ImageActionTypes {
     return {
         type: Action.SET_CURRENT_SYMBOL,
         payload: {
-            symbol: symbol
+            symbol: symbol,
+            mapToLandmark: mapToLandmark
         }
     }
 }
 
-export function addLandmarkData(index: number, landmark: LandmarkData): ImageActionTypes {
+export function addLandmarkData(landmark: LandmarkData): ImageActionTypes {
     return {
         type: Action.ADD_LANDMARK_DATA,
         payload: {
-            index: index,
             landmark: landmark
         }
     }
 }
 
-export function deleteLandmarkData(index: number, landmark: string): ImageActionTypes {
+export function deleteLandmarkData(landmark: string): ImageActionTypes {
     return {
         type: Action.DELETE_LANDMARK_DATA,
         payload: {
-            index: index,
             landmark: landmark
         }
     }
 }
 
-export function updateLandmarkFlags(index: number, name: string, flags: string[]): ImageActionTypes {
+export function updateLandmarkFlags(name: string, flags: string[]): ImageActionTypes {
     return {
         type: Action.UPDATE_LANDMARK_FLAGS,
         payload: {
-            index: index,
             name: name,
             flags: flags
         }
     }
 }
 
-export function addOCRData(index: number, ocr: OCRData): ImageActionTypes {
+export function addOCRData(ocr: OCRData): ImageActionTypes {
     return {
         type: Action.ADD_OCR_DATA,
         payload: {
-            index: index,
             ocr: ocr
         }
     }
@@ -106,11 +95,10 @@ export function setCurrentWord(word: OCRWord): ImageActionTypes {
     }
 }
 
-export function updateOCRData(index: number, id: number, name: string, value: string, position?: Position): ImageActionTypes {
+export function updateOCRData(id: number, name: string, value: string, position?: Position): ImageActionTypes {
     return {
         type: Action.UPDATE_OCR_DATA,
         payload: {
-            index: index,
             id: id,
             name: name,
             value: value,
@@ -119,18 +107,17 @@ export function updateOCRData(index: number, id: number, name: string, value: st
     }
 }
 
-export function setFaceCompareMatch(index: number, match: boolean): ImageActionTypes {
+export function setFaceCompareMatch(match: boolean): ImageActionTypes {
     return {
         type: Action.SET_FACE_COMPARE_MATCH,
         payload: {
-            index: index,
             match: match
         }
     }
 }
 
-export function incrementInternalIndex(): ImageActionTypes {
+export function restoreImage(): ImageActionTypes {
     return {
-        type: Action.INCREMENT_INTERNAL_INDEX
+        type: Action.RESTORE_IMAGE
     }
 }
