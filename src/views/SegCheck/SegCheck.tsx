@@ -5,12 +5,17 @@ import { AppState } from '../../store';
 import { ImageUtil } from '../../utils/ImageUtil';
 import { Container, Row, Col } from 'react-bootstrap';
 import './SegCheck.scss';
+import { CurrentStage } from '../../utils/enums';
+import { GeneralActionTypes } from '../../store/general/types';
+import { progressNextStage } from '../../store/general/actionCreators';
 
 interface IProps {
-    originalProcessed: boolean;
-    originalID: ImageState;
-    backID: ImageState;
-    croppedID: ImageState;
+    noMoreIDs: boolean;
+    originalProcessed?: boolean;
+    originalID?: ImageState;
+    backID?: ImageState;
+    croppedID?: ImageState;
+    progressNextStage: (stage: CurrentStage) => GeneralActionTypes;
 }
 
 // interface IState {
@@ -20,20 +25,26 @@ interface IProps {
 
 class SegCheck extends React.Component<IProps> {
 
-    componentDidMount() {
-        if (this.props.originalProcessed) {
-            ImageUtil.loadImage("segCheckID", this.props.backID.image);
-        } else {
-            ImageUtil.loadImage("segCheckID", this.props.originalID.image);
+    componentWillMount() {
+        if (this.props.noMoreIDs) {
+            this.props.progressNextStage(CurrentStage.SETUP);
         }
-        ImageUtil.loadImage("segCheckCropped", this.props.croppedID.image);
+    }
+    componentDidMount() {
+        if (this.props.noMoreIDs) return;
+        if (this.props.originalProcessed) {
+            ImageUtil.loadImage("segCheckID", this.props.backID!.image);
+        } else {
+            ImageUtil.loadImage("segCheckID", this.props.originalID!.image);
+        }
+        ImageUtil.loadImage("segCheckCropped", this.props.croppedID!.image);
     }
 
 
     render() {
         return (
             <Container style={{height: "100%"}}>
-                <Row style={{height: "100%"}}>
+                <Row style={{height: "100%", padding: "6rem 0"}}>
                     <Col xs={6}>
                         <div id="segCheckID" className="pairDisplay"></div>
                     </Col>
@@ -47,12 +58,24 @@ class SegCheck extends React.Component<IProps> {
 }
 
 const mapDispatchToProps = {
+    progressNextStage
 };
 
 const mapStateToProps = (state: AppState) => {
     let index = state.general.currentIndex;
     let ID = state.general.IDLibrary[index];
+    if (index >= state.general.IDLibrary.length) {
+        return {
+            noMoreIDs: true,
+            originalProcessed: undefined,
+            originalID: undefined,
+            backID: undefined,
+            // need to change later
+            croppedID: undefined
+        }
+    }
     return {
+        noMoreIDs: false,
         originalProcessed: state.id.originalIDProcessed,
         originalID: ID.originalID!,
         backID: ID.backID!,

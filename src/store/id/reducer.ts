@@ -1,6 +1,7 @@
 import { IDState, IDActionTypes, InternalIDState } from './types';
 import { Action } from '../Actions';
 import { IDProcess } from '../../utils/enums';
+import { ImageState } from '../image/types';
 
 const initialState: IDState = {
     processed: false,
@@ -10,6 +11,26 @@ const initialState: IDState = {
     index: 0,
     internalIndex: 0,
     internalIDs: [],
+}
+
+function cloneImageState(original: ImageState): ImageState {
+    const getDeepCopy = (obj: any) => {
+        return obj === undefined ? undefined : JSON.parse(JSON.stringify(obj));
+    };
+
+    return {
+        image: new File([original.image], original.image.name),
+        passesCrop: getDeepCopy(original.passesCrop),
+        IDBox: getDeepCopy(original.IDBox),
+        croppedImage: original.croppedImage === undefined ? undefined : new File([original.croppedImage], original.croppedImage.name),
+        imageProps: getDeepCopy(original.imageProps),
+        landmark: getDeepCopy(original.landmark),
+        currentSymbol: getDeepCopy(original.currentSymbol),
+        ocr: getDeepCopy(original.ocr),
+        ocrToLandmark: getDeepCopy(original.ocrToLandmark),
+        currentWord: getDeepCopy(original.currentWord),
+        faceCompareMatch: getDeepCopy(original.faceCompareMatch)
+    }
 }
 
 export function IDReducer(
@@ -26,9 +47,9 @@ export function IDReducer(
             let ID: InternalIDState = {
                 processed: false,
                 source: state.source,
-                originalID: {...state.originalID!},
-                backID: {...state.backID!},
-                croppedID: {...state.croppedID!},
+                originalID: cloneImageState(state.originalID!),
+                backID: cloneImageState(state.backID!),
+                croppedID: state.croppedID!.image === undefined ? undefined : cloneImageState(state.croppedID!),
                 documentType: 'MyKad',
                 processStage: IDProcess.MYKAD_FRONT
             }
@@ -44,10 +65,10 @@ export function IDReducer(
         case Action.REFRESH_IDS: {
             return {
                 ...state,
-                originalIDProcessed: false,
+                originalIDProcessed: action.payload.originalIDProcessed,
                 backIDProcessed: false,
                 internalIndex: 0,
-                internalIDs: []
+                internalIDs: action.payload.originalIDProcessed ? state.internalIDs.map((each) => {each.backID!.IDBox = undefined; return each;}) : []
             }
         }
         case Action.SET_ID_BOX: {
@@ -119,14 +140,20 @@ export function IDReducer(
             let index = state.internalIndex + 1;
             if (internalID.processStage === IDProcess.MYKAD_BACK) {
                 internalID.backID = action.payload.imageState;
+                state.backIDProcessed = true;
+                state.processed = true;
                 internalID.processed = true;
             } else {
                 internalID.originalID = action.payload.imageState;
-                internalID.processed = true;
                 if (internalID.processStage === IDProcess.MYKAD_FRONT) {
                     internalID.processStage = IDProcess.MYKAD_BACK;
                     internalID.processed = false;
                     index--;
+                } else {
+                    internalID.processed = true;
+                    state.processed = true;
+                    state.originalIDProcessed = true;
+                    state.backIDProcessed = true;
                 }
             }
             IDs.splice(state.internalIndex, 1, internalID);

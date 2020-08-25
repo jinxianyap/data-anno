@@ -7,12 +7,34 @@ const initialState: ImageState = {
     ocr: [],
 }
 
+// function cloneImageState(original: ImageState): ImageState {
+//     const getDeepCopy = (obj: any) => {
+//         console.log(obj);
+//         return obj === undefined ? undefined : JSON.parse(JSON.stringify(obj));
+//     };
+
+//     return {
+//         image: new File([original.image], original.image.name),
+//         passesCrop: getDeepCopy(original.passesCrop),
+//         IDBox: getDeepCopy(original.IDBox),
+//         croppedImage: original.croppedImage === undefined ? undefined : new File([original.croppedImage], original.croppedImage.name),
+//         imageProps: getDeepCopy(original.imageProps),
+//         landmark: getDeepCopy(original.landmark),
+//         currentSymbol: getDeepCopy(original.currentSymbol),
+//         ocr: getDeepCopy(original.ocr),
+//         ocrToLandmark: getDeepCopy(original.ocrToLandmark),
+//         currentWord: getDeepCopy(original.currentWord),
+//         faceCompareMatch: getDeepCopy(original.faceCompareMatch)
+//     }
+// }
+
 export function imageReducer(
     state = initialState,
     action: ImageActionTypes
 ): ImageState {
     switch (action.type) {
         case Action.LOAD_IMAGE_STATE: {
+            // let img: ImageState = cloneImageState(action.payload.currentImage);
             if (action.payload.passesCrop !== undefined) {
                 action.payload.currentImage.passesCrop = action.payload.passesCrop;
             }

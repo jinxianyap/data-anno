@@ -21,9 +21,12 @@ export function createNewID(IDBox: IDBox, croppedImage: File): IDActionTypes {
     }
 }
 
-export function refreshIDs(): IDActionTypes {
+export function refreshIDs(originalIDProcessed: boolean): IDActionTypes {
     return {
-        type: Action.REFRESH_IDS
+        type: Action.REFRESH_IDS,
+        payload: {
+            originalIDProcessed: originalIDProcessed
+        }
     }
 }
 

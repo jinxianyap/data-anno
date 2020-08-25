@@ -46,6 +46,20 @@ export function generalReducer(
                 currentIndex: state.currentIndex + 1
             }
         }
+        case Action.SAVE_TO_LIBRARY: {
+            let lib = state.IDLibrary;
+            let idx = lib.findIndex((each) => each.index === action.payload.id.index);
+            lib.splice(idx, 1, action.payload.id);
+            return {
+                ...state,
+                IDLibrary: lib
+            }
+        }
+        case Action.RESTORE_GENERAL: {
+            return {
+                ...initialState
+            }
+        }
         default:
             return state;
     }

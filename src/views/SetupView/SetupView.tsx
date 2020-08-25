@@ -1,19 +1,25 @@
 import React from 'react';
 import './SetupView.scss'
-import { Form, Button, Container } from 'react-bootstrap';
+import { Form, Button, Container, Card } from 'react-bootstrap';
 import DatePicker from 'react-datepicker';
 import { ProcessType, CurrentStage, UsersTemp, DatabasesTemp } from '../../utils/enums';
 import { SetupOptions, GeneralActionTypes } from '../../store/general/types';
-import { saveSetupOptions, progressNextStage, loadFromDatabase } from '../../store/general/actionCreators';
+import { saveSetupOptions, progressNextStage, loadFromDatabase, restoreGeneral } from '../../store/general/actionCreators';
+import { restoreID } from '../../store/id/actionCreators';
+import { restoreImage } from '../../store/image/actionCreators';
 import { AppState } from '../../store';
 import {connect} from "react-redux";
 import { DatabaseUtil } from '../../utils/DatabaseUtil';
-import { IDState } from '../../store/id/types';
+import { IDState, IDActionTypes } from '../../store/id/types';
+import { ImageActionTypes } from '../../store/image/types';
 
 interface IProps {
     saveSetupOptions: (setupOptions: SetupOptions) => GeneralActionTypes;
     progressNextStage: (nextStage: CurrentStage) => GeneralActionTypes;
     loadFromDatabase: (IDs: IDState[]) => GeneralActionTypes;
+    restoreGeneral: () => GeneralActionTypes;
+    restoreID: () => IDActionTypes;
+    restoreImage: () => ImageActionTypes;
     setupOptions: SetupOptions;
 }
 
@@ -43,6 +49,12 @@ class SetupView extends React.Component<IProps, IState> {
             loadedIDs: false,
             files: []
         };
+    }
+
+    componentWillMount() {
+        this.props.restoreImage();
+        this.props.restoreID();
+        this.props.restoreGeneral();
     }
 
     handleSubmit = (e: any) => {
@@ -84,91 +96,93 @@ class SetupView extends React.Component<IProps, IState> {
     render() {
         return (
             <Container className="setupView">
-                <Form onSubmit={this.handleSubmit}>
-                <Form.Group controlId="setupUser">
-                    <Form.Label>User</Form.Label>
-                    <Form.Control as="select" value={this.state.user} onChange={(e: any) => this.setState({user: e.target.value})} >
-                        {Object.entries(UsersTemp).map(([key, value]) => <option key={value} value={value}>{key}</option>)}
-                    </Form.Control>
-                </Form.Group>
+                <Card style={{padding: "2rem"}}>               
+                    <Form onSubmit={this.handleSubmit}>
+                        <Form.Group controlId="setupUser">
+                            <Form.Label>User</Form.Label>
+                            <Form.Control as="select" value={this.state.user} onChange={(e: any) => this.setState({user: e.target.value})} >
+                                {Object.entries(UsersTemp).map(([key, value]) => <option key={value} value={value}>{key}</option>)}
+                            </Form.Control>
+                        </Form.Group>
 
-                <Form.Group controlId="database">
-                    <Form.Label>Database</Form.Label>
-                    <Form.Control as="select" value={this.state.database} onChange={(e: any) => this.setState({database: e.target.value})}>
-                        {Object.entries(DatabasesTemp).map(([key, value]) => <option key={value} value={value}>{key}</option>)}
-                    </Form.Control>
-                </Form.Group>
-    
-                <Form.Group controlId="startDate">
-                    <Form.Label>Start Date</Form.Label>
-                    <DatePicker id="startDatepicker" selected={this.state.startDate} onChange={(date: Date) => this.setState({startDate: date})} />
-                </Form.Group>
+                        <Form.Group controlId="database">
+                            <Form.Label>Database</Form.Label>
+                            <Form.Control as="select" value={this.state.database} onChange={(e: any) => this.setState({database: e.target.value})}>
+                                {Object.entries(DatabasesTemp).map(([key, value]) => <option key={value} value={value}>{key}</option>)}
+                            </Form.Control>
+                        </Form.Group>
+            
+                        <Form.Group controlId="startDate">
+                            <Form.Label>Start Date</Form.Label>
+                            <DatePicker id="startDatepicker" selected={this.state.startDate} onChange={(date: Date) => this.setState({startDate: date})} />
+                        </Form.Group>
 
-                <Form.Group controlId="endDate">
-                    <Form.Label>End Date</Form.Label>
-                    <DatePicker id="endDatepicker" selected={this.state.endDate} onChange={(date: Date) => this.setState({endDate: date})} />
-                </Form.Group>
+                        <Form.Group controlId="endDate">
+                            <Form.Label>End Date</Form.Label>
+                            <DatePicker id="endDatepicker" selected={this.state.endDate} onChange={(date: Date) => this.setState({endDate: date})} />
+                        </Form.Group>
 
-                <Form.Group controlId="process">
-                    <Form.Label>Process</Form.Label>
-                    <Form.Control as="select" defaultValue={this.state.processType} onChange={(e: any) => this.setState({processType: e.target.value})}>
-                        <option key="full" value={ProcessType.WHOLE}>Full</option>
-                        <option key="seg" value={ProcessType.SEGMENTATION}>Up to Segmentation</option>
-                        <option key="landmark" value={ProcessType.LANDMARK}>Up to Landmark</option>
-                        <option key="ocr" value={ProcessType.OCR}>Up To OCR</option>
-                    </Form.Control>
-                </Form.Group>
+                        <Form.Group controlId="process">
+                            <Form.Label>Process</Form.Label>
+                            <Form.Control as="select" defaultValue={this.state.processType} onChange={(e: any) => this.setState({processType: e.target.value})}>
+                                <option key="full" value={ProcessType.WHOLE}>Full</option>
+                                <option key="seg" value={ProcessType.SEGMENTATION}>Up to Segmentation</option>
+                                <option key="landmark" value={ProcessType.LANDMARK}>Up to Landmark</option>
+                                <option key="ocr" value={ProcessType.OCR}>Up To OCR</option>
+                            </Form.Control>
+                        </Form.Group>
 
-                
+                        
 
-                <Form.Group controlId="fileUpload">
-                {/* <input type="file" multiple/> */}
-                <Form.File
-                    className="position-relative"
-                    required
-                    name="file"
-                    label="IC Front"
-                    onChange={(e: any) => this.handleUpload(e)}
-                    />
-                {/* <Form.File
-                    className="position-relative"
-                    required
-                    name="file"
-                    label="IC cropped"
-                    onChange={(e: any) => this.handleUpload(e)}
-                    /> */}
-                <Form.File
-                    className="position-relative"
-                    required
-                    name="file"
-                    label="IC Back"
-                    onChange={(e: any) => this.handleUpload(e)}
-                    />
-                {/* <Form.File
-                    className="position-relative"
-                    required
-                    name="file"
-                    label="Selfie Video"
-                    onChange={(e: any) => this.handleUpload(e)}
-                    /> */}
-                {/* <Form.File
-                    className="position-relative"
-                    required
-                    name="file"
-                    label="JSON"
-                    onChange={(e: any) => this.handleUpload(e)}
-                    /> */}
-                </Form.Group>
+                        <Form.Group controlId="fileUpload">
+                        {/* <input type="file" multiple/> */}
+                        <Form.File
+                            className="position-relative"
+                            required
+                            name="file"
+                            label="IC Front"
+                            onChange={(e: any) => this.handleUpload(e)}
+                            />
+                        {/* <Form.File
+                            className="position-relative"
+                            required
+                            name="file"
+                            label="IC cropped"
+                            onChange={(e: any) => this.handleUpload(e)}
+                            /> */}
+                        <Form.File
+                            className="position-relative"
+                            required
+                            name="file"
+                            label="IC Back"
+                            onChange={(e: any) => this.handleUpload(e)}
+                            />
+                        <Form.File
+                            className="position-relative"
+                            required
+                            name="file"
+                            label="Selfie Video"
+                            onChange={(e: any) => this.handleUpload(e)}
+                            />
+                        {/* <Form.File
+                            className="position-relative"
+                            required
+                            name="file"
+                            label="JSON"
+                            onChange={(e: any) => this.handleUpload(e)}
+                            /> */}
+                        </Form.Group>
 
-                { this.state.incomplete
-                    ? <p color='red'>Form not complete.</p>
-                    : <div />
-                }
+                        { this.state.incomplete
+                            ? <p color='red'>Form not complete.</p>
+                            : <div />
+                        }
 
-                <Button variant="primary" type="submit">
-                    Submit
-                </Button>
-                </Form>
+                        <Button variant="primary" type="submit">
+                            Submit
+                        </Button>
+                    </Form>
+                </Card>
             </Container>
         )
     }
@@ -178,6 +192,9 @@ const mapDispatchToProps = {
     saveSetupOptions,
     progressNextStage,
     loadFromDatabase,
+    restoreGeneral,
+    restoreID,
+    restoreImage
 };
 
 const mapStateToProps = (state: AppState) => ({

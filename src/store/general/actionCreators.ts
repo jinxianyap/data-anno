@@ -35,3 +35,18 @@ export function getNextID(): GeneralActionTypes {
         type: Action.GET_NEXT_ID
     }
 }
+
+export function saveToLibrary(id: IDState): GeneralActionTypes {
+    return {
+        type: Action.SAVE_TO_LIBRARY,
+        payload: {
+            id: id
+        }
+    }
+}
+
+export function restoreGeneral(): GeneralActionTypes {
+    return {
+        type: Action.RESTORE_GENERAL
+    }
+}

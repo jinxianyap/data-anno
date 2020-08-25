@@ -9,7 +9,7 @@ export class DatabaseUtil {
                 ocr: [],
             },
             croppedID: {
-                image: files[2],
+                image: files[3],
                 landmark: [],
                 ocr: [],
             },
@@ -18,7 +18,7 @@ export class DatabaseUtil {
                 landmark: [],
                 ocr: [],
             },
-            selfieVideo: files[3],
+            selfieVideo: files[2],
             jsonData: files[4],
             processed: false,
             // for testing need to fix!!!
@@ -29,6 +29,11 @@ export class DatabaseUtil {
             internalIDs: [],
             internalIndex: 0
         }
+    }
+
+    public static beautifyWord(word: string): string {
+        let separates = word.replace(/([A-Z])/g,' $1');
+        return separates.charAt(0).toUpperCase()+separates.slice(1);
     }
 
 }

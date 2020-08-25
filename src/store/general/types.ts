@@ -43,7 +43,20 @@ interface GetNextID {
     type: typeof Action.GET_NEXT_ID;
 }
 
+interface SaveToLibrary {
+    type: typeof Action.SAVE_TO_LIBRARY;
+    payload: {
+        id: IDState
+    }
+}
+
+interface RestoreGeneral {
+    type: typeof Action.RESTORE_GENERAL;
+}
+
 export type GeneralActionTypes = SaveSetupOptions
     | ProgressToStage
     | LoadFromDatabase
     | GetNextID
+    | SaveToLibrary
+    | RestoreGeneral

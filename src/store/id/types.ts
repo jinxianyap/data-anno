@@ -59,6 +59,9 @@ interface CreateNewID {
 
 interface RefreshIDs {
     type: typeof Action.REFRESH_IDS;
+    payload: {
+        originalIDProcessed: boolean
+    }
 }
 
 interface SetIDBox {

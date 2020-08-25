@@ -8,10 +8,11 @@ import './ControlPanel.scss';
 import { GeneralActionTypes } from '../../../store/general/types';
 import { IDActionTypes, IDState, InternalIDState } from '../../../store/id/types';
 import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord } from '../../../store/image/types';
-import { progressNextStage, getNextID } from '../../../store/general/actionCreators';
+import { progressNextStage, getNextID, saveToLibrary } from '../../../store/general/actionCreators';
 import { loadNextID, createNewID, setIDBox, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, restoreID } from '../../../store/id/actionCreators';
 import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, updateLandmarkFlags, addOCRData, setFaceCompareMatch, restoreImage } from '../../../store/image/actionCreators';
 import AddTypeModal from '../AddTypeModal/AddTypeModal';
+import { DatabaseUtil } from '../../../utils/DatabaseUtil';
 
 var fs = require('browserify-fs');
 
@@ -22,27 +23,34 @@ interface IProps {
     internalID: InternalIDState;
     currentImage: ImageState;
 
+    // Moving between stages
     progressNextStage: (nextStage: CurrentStage) => GeneralActionTypes;
     getNextID: () => GeneralActionTypes;
     loadImageState: (currentImage: ImageState, passesCrop?: boolean) => ImageActionTypes;
 
+    // Seg Check
     loadNextID: (ID: IDState) => IDActionTypes;
     createNewID: (IDBox: IDBox, croppedImage: File) => IDActionTypes;
     setIDBox: (IDBox: IDBox, croppedImage?: File) => IDActionTypes;
-    refreshIDs: () => IDActionTypes;
+    refreshIDs: (originalProcessed: boolean) => IDActionTypes;
     saveDocumentType: (internalIndex: number, documentType: string) => IDActionTypes;
     saveSegCheck: (passesCrop: boolean) => ImageActionTypes;
 
+    // Landmark
     setCurrentSymbol: (symbol?: string, landmark?: string) => ImageActionTypes;
     updateLandmarkFlags: (name: string, flags: string[]) => ImageActionTypes;
 
+    // OCR
     setCurrentWord: (word: OCRWord) => ImageActionTypes;
     addOCRData: (ocr: OCRData) => ImageActionTypes;
 
+    // Video Liveness & Match
     updateVideoData: (liveness: boolean, flags: string[]) => IDActionTypes;
     setFaceCompareMatch: (match: boolean) => ImageActionTypes;
 
+    // Saving to store
     saveToInternalID: (imageState: ImageState) => IDActionTypes;
+    saveToLibrary: (id: IDState) => GeneralActionTypes;
     restoreID: () => IDActionTypes;
     restoreImage: () => ImageActionTypes;
 }
@@ -162,9 +170,9 @@ class ControlPanel extends React.Component<IProps, IState> {
                     break;
                 }
                 if (!this.props.currentID.originalIDProcessed && this.props.currentID.internalIDs.length > 0) {
-                    this.props.refreshIDs();
+                    this.props.refreshIDs(false);
                 } else if (this.props.currentID.originalIDProcessed && this.props.currentID.internalIDs.filter((each) => each.backID!.IDBox !== undefined).length > 0) {
-                    this.props.refreshIDs();
+                    this.props.refreshIDs(true);
                 }
                 break;
             }
@@ -174,10 +182,10 @@ class ControlPanel extends React.Component<IProps, IState> {
                     this.loadLandmarkData();
                 } else {
                     let criterion = '';
-                    if (this.state.docType === "MyKad") {
+                    if (this.props.internalID.documentType === "MyKad") {
                         criterion = (this.props.internalID.processStage === IDProcess.MYKAD_FRONT) ? 'MyKadFront' : 'MyKadBack';
                     } else {
-                        criterion = this.state.docType;
+                        criterion = this.props.internalID.documentType!;
                     }
                     this.state.landmarks.forEach((each) => {
                         if (each.docType === criterion && each.landmarks !== this.state.currentLandmarks) {
@@ -190,13 +198,22 @@ class ControlPanel extends React.Component<IProps, IState> {
             case (CurrentStage.OCR_DETAILS): {
                 if (!this.state.OCRLoaded) {
                     this.loadOCRDetails();
-                };
+                } else {
+                    this.state.OCR.forEach((each) => {
+                        if (each.docType === this.props.internalID.documentType && each.details !== this.state.currentOCR) {
+                            this.setState({currentOCR: each.details});
+                        }
+                    })
+                }
                 break;
             }
             case (CurrentStage.FR_LIVENESS_CHECK): {
                 if (!this.state.videoFlagsLoaded) {
                     this.loadVideoFlags();
                 };
+                if (this.props.currentID.internalIndex > 0 && this.props.currentID.videoLiveness !== undefined) {
+                    this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
+                }
                 break;
             }
             // case (CurrentStage.FR_COMPARE_CHECK): {
@@ -271,10 +288,10 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     loadLandmarkData = () => {
         let criterion = '';
-        if (this.state.docType === "MyKad") {
+        if (this.props.internalID.documentType! === "MyKad") {
             criterion = (this.props.internalID.processStage === IDProcess.MYKAD_FRONT) ? 'MyKadFront' : 'MyKadBack';
         } else {
-            criterion = this.state.docType;
+            criterion = this.props.internalID.documentType!;
         }
 
         let docLandmarks: {docType: string, landmarks: {name: string, flags: string[]}[]}[] = [];
@@ -326,7 +343,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 details: ocr
             });
 
-            if (this.state.docType === each) {
+            if (this.props.internalID.documentType === each) {
                 currentOCR = ocr;
             }
         });
@@ -404,12 +421,12 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <Form.Group controlId="passesCrop">
                     <Form.Label>Cropping</Form.Label>
                     <ButtonGroup aria-label="passesCropButtons" style={{display: "block", width: "100%"}}>
-                        <Button variant="secondary" onClick={this.handleCropFail} value="true">Fail</Button>
-                        <Button variant="secondary" onClick={this.handlePassesCrop}>Pass</Button>
+                        <Button variant="secondary" className="common-button" onClick={this.handleCropFail} value="true">Fail</Button>
+                        <Button variant="secondary" className="common-button" onClick={this.handlePassesCrop}>Pass</Button>
                     </ButtonGroup>
                 </Form.Group>
 
-                <Button type="submit" disabled={!this.state.segCheckValidation}>
+                <Button type="submit" className="block-button" disabled={!this.state.segCheckValidation}>
                     Next
                 </Button>
             </Form>
@@ -439,6 +456,15 @@ class ControlPanel extends React.Component<IProps, IState> {
             this.props.saveDocumentType(idx, this.state.docType);
         }
 
+        const loadImageAndProgress = () => {
+            if (this.props.internalID.processStage !== IDProcess.MYKAD_BACK) {
+                this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
+            } else {
+                this.props.loadImageState(this.props.internalID.backID!, this.state.passesCrop);
+            }
+            this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+        }
+
         return (
             <div>
                 <h5>Please draw bounding boxes around any number of IDs in the image.</h5>
@@ -447,7 +473,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                         {
                             this.props.currentID.internalIDs.map((id, idx) => {
                                 let box = this.props.currentID.originalIDProcessed ? id.backID!.IDBox : id.originalID!.IDBox;
-                                if (box === undefined) return;
+                                if (box === undefined) return <div/>;
                                 return (
                                     <Card key={idx}>
                                         <Accordion.Toggle
@@ -456,16 +482,18 @@ class ControlPanel extends React.Component<IProps, IState> {
                                                 Box {(box.id + 1).toString()}
                                         </Accordion.Toggle>
                                         <Accordion.Collapse eventKey={idx.toString()}>
-                                        <Card.Body>
-                                            <Form.Group controlId="docType">
-                                                <Form.Label>Document Type</Form.Label>
-                                                <Button onClick={() => {this.setState({showAddDocTypeModal: true})}} style={{padding: "0 0.5rem", margin: "0.5rem 1rem"}}>+</Button>
-                                                <Form.Control as="select" value={this.state.docType} onChange={(e: any) => this.setDocType(e)}>
-                                                    {Object.entries(this.state.documentTypes).map(([key, value]) => <option key={key} value={value}>{value}</option>)}
-                                                </Form.Control>
-                                            </Form.Group>
-                                            <Button onClick={(e: any) => submitDocType(e, idx)}>Submit</Button>
-                                        </Card.Body>
+                                            { this.props.currentID.originalIDProcessed ? <div /> :
+                                                <Card.Body>
+                                                    <Form.Group controlId="docType">
+                                                        <Form.Label>Document Type</Form.Label>
+                                                        <Button onClick={() => {this.setState({showAddDocTypeModal: true})}} style={{padding: "0 0.5rem", margin: "0.5rem 1rem"}}>+</Button>
+                                                        <Form.Control as="select" value={this.state.docType} onChange={(e: any) => this.setDocType(e)}>
+                                                            {Object.entries(this.state.documentTypes).map(([key, value]) => <option key={key} value={value}>{value}</option>)}
+                                                        </Form.Control>
+                                                    </Form.Group>
+                                                    <Button className="common-button" onClick={(e: any) => submitDocType(e, idx)}>Submit</Button>
+                                                </Card.Body>
+                                            }
                                         </Accordion.Collapse>
                                     </Card>
                                 );
@@ -473,11 +501,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                         }
                     </Accordion>
                 {/* <Button variant="secondary" style={{width: '100%'}} onClick={() => this.props.deleteIDBox(-1)}>Undo Box</Button> */}
-                <Button variant="secondary" onClick={backStage}>Back</Button>
-                <Button disabled={this.props.currentID.internalIDs.length === 0} onClick={() => {
-                    this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
-                    this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
-                }}>
+                <Button variant="secondary" className="common-button" onClick={backStage}>Back</Button>
+                <Button disabled={this.props.currentID.internalIDs.length === 0}  className="common-button" onClick={loadImageAndProgress}>
                     Next
                 </Button>
             </div>
@@ -497,7 +522,6 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
             })
             options.landmark.values[index].push(landmark);
-            // console.log(options);
             fs.writeFile('../../../options.json', JSON.stringify(options));
             this.setState({showAddLandmarkModal: false}, this.loadLandmarkData);
         }
@@ -531,7 +555,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                         this.state.landmarkFlags.map((each, idx) => {
                             return (
                                     <div key={idx}>
-                                        <p>{each.category}</p>
+                                        <p>{DatabaseUtil.beautifyWord(each.category)}</p>
                                         <ToggleButtonGroup type="checkbox">
                                             {each.flags.map((each, idx) => {
                                                 return (
@@ -560,10 +584,9 @@ class ControlPanel extends React.Component<IProps, IState> {
             this.state.currentLandmarks.forEach((each) => {
                 this.props.updateLandmarkFlags(each.name, each.flags);
             });
-            if (this.props.currentID.originalIDProcessed) {
+            if (this.props.internalID.documentType === "MyKad" && this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
                 this.props.saveToInternalID(this.props.currentImage);
                 this.props.progressNextStage(CurrentStage.END_STAGE);
-                // this.loadNextInternalId();
             } else {
                 this.props.progressNextStage(CurrentStage.OCR_DETAILS);
             }
@@ -583,7 +606,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                                 ? 'labelled-landmark' : ''}
                                             key={idx}
                                             onClick={() => setLandmark(each.name)}>
-                                                {each.name}
+                                                {DatabaseUtil.beautifyWord(each.name)}
                                         </Accordion.Toggle>
                                         <Accordion.Collapse eventKey={idx.toString()}>
                                         <Card.Body>
@@ -598,14 +621,16 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <Button
                     style={{width: "100%"}}
                     value="0"
+                    className="block-button" 
                     onClick={() => this.setState({showAddLandmarkModal: true})}>+</Button>
                 <Button
                     style={{width: "100%"}}
                     value="0"
+                    className="block-button" 
                     onClick={() => this.props.setCurrentSymbol()}>Pan</Button>
                 <AddTypeModal showModal={this.state.showAddLandmarkModal} item='landmarks' add={addLandmark} closeModal={() => this.setState({showAddLandmarkModal: false})}/>
-                <Button variant="secondary" onClick={backStage}>Back</Button>
-                <Button onClick={submitLandmark}>Done</Button>
+                <Button variant="secondary" className="common-button" onClick={backStage}>Back</Button>
+                <Button className="common-button" onClick={submitLandmark}>Done</Button>
             </div>
         );
     }
@@ -653,16 +678,16 @@ class ControlPanel extends React.Component<IProps, IState> {
                     this.state.currentOCR.map((each, idx) => {
                         return (
                             <Form.Group key={each.name + "OCR"}>
-                                <Form.Label>{each.name}</Form.Label>
+                                <Form.Label>{DatabaseUtil.beautifyWord(each.name)}</Form.Label>
                                 <Form.Control type="text" defaultValue={each.value} ref={(ref: any) => {refs.push({name: each.name, mapToLandmark: each.mapToLandmark,ref})}} />
                             </Form.Group>
                         );
                     })
                 }
-                <Button variant="secondary" onClick={() => this.props.progressNextStage(CurrentStage.LANDMARK_EDIT)}>
+                <Button variant="secondary" className="common-button" onClick={() => this.props.progressNextStage(CurrentStage.LANDMARK_EDIT)}>
                     Back
                 </Button>
-                <Button variant="primary" type="submit">
+                <Button variant="primary" className="common-button" type="submit">
                     Done
                 </Button>
             </Form>
@@ -715,9 +740,10 @@ class ControlPanel extends React.Component<IProps, IState> {
             <Button
                     style={{width: "100%"}}
                     value="0"
+                    className="block-button" 
                     onClick={() => this.props.setCurrentSymbol()}>Pan</Button>
-            <Button variant="secondary" onClick={() => this.props.progressNextStage(CurrentStage.OCR_DETAILS)}>Back</Button>
-            <Button onClick={() => this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK)}>Done</Button>
+            <Button variant="secondary" className="common-button" onClick={() => this.props.progressNextStage(CurrentStage.OCR_DETAILS)}>Back</Button>
+            <Button className="common-button" onClick={() => this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK)}>Done</Button>
         </div>);
     }
 
@@ -745,53 +771,53 @@ class ControlPanel extends React.Component<IProps, IState> {
 
         return (
             <div>
-                <Card>
+                <Card className="individual-card">
                     <Card.Title>Liveness</Card.Title>
                     <Card.Body>
                         <ButtonGroup aria-label="passesLivenessButtons" style={{display: "block", width: "100%"}}>
-                            <Button variant="secondary" onClick={() => this.setState({passesLiveness: false}, validate)} value="true">Fail</Button>
-                            <Button variant="secondary" onClick={() => this.setState({passesLiveness: true}, validate)} value="false">Pass</Button>
+                            <Button variant="secondary" className="common-button"  onClick={() => this.setState({passesLiveness: false}, validate)} value="true">Fail</Button>
+                            <Button variant="secondary" className="common-button"  onClick={() => this.setState({passesLiveness: true}, validate)} value="false">Pass</Button>
                         </ButtonGroup>
                     </Card.Body>
                 </Card>
 
-                    <Card>
-                        <Card.Title>Flags</Card.Title>
-                        <Card.Body>
-                            {
-                                this.state.videoFlags.map((each, idx) => {
-                                    return (
-                                        <div key={idx}>
-                                            <p>{each.category}</p>
-                                            <ToggleButtonGroup type="checkbox">
-                                            {
-                                                each.flags.map((flag, i) => {
-                                                    return (
-                                                        <ToggleButton
-                                                            className="video-flags"
-                                                            key={i}
-                                                            value={flag}
-                                                            variant="secondary"
-                                                            checked={this.state.selectedVideoFlags.includes(flag)}
-                                                            onClick={() => setFlag(flag)}>
-                                                            {flag}
-                                                        </ToggleButton>
-                                                    );
-                                                })
-                                            }
-                                            </ToggleButtonGroup>
-                                        </div>
-                                    );
-                                })
-                            }
-                        </Card.Body>
-                    </Card>
-                    <Button variant="secondary" onClick={() => this.props.progressNextStage(CurrentStage.OCR_EDIT)}>
-                        Back
-                    </Button>
-                    <Button onClick={submitLiveness} disabled={!this.state.livenessValidation}>
-                        Done
-                    </Button>
+                <Card className="individual-card">
+                    <Card.Title>Flags</Card.Title>
+                    <Card.Body>
+                        {
+                            this.state.videoFlags.map((each, idx) => {
+                                return (
+                                    <div key={idx}>
+                                        <p>{each.category}</p>
+                                        <ToggleButtonGroup type="checkbox">
+                                        {
+                                            each.flags.map((flag, i) => {
+                                                return (
+                                                    <ToggleButton
+                                                        className="video-flags"
+                                                        key={i}
+                                                        value={flag}
+                                                        variant="secondary"
+                                                        checked={this.state.selectedVideoFlags.includes(flag)}
+                                                        onClick={() => setFlag(flag)}>
+                                                        {flag}
+                                                    </ToggleButton>
+                                                );
+                                            })
+                                        }
+                                        </ToggleButtonGroup>
+                                    </div>
+                                );
+                            })
+                        }
+                    </Card.Body>
+                </Card>
+                <Button variant="secondary" className="common-button" onClick={() => this.props.progressNextStage(CurrentStage.OCR_EDIT)}>
+                    Back
+                </Button>
+                <Button className="common-button" onClick={submitLiveness} disabled={!this.state.livenessValidation}>
+                    Done
+                </Button>
             </div>
         )
     }
@@ -804,19 +830,19 @@ class ControlPanel extends React.Component<IProps, IState> {
 
         return (
             <div>
-                <Card>
+                <Card className="individual-card">
                     <Card.Title>Match</Card.Title>
                     <Card.Body>
                         <ButtonGroup aria-label="passessFRMatchButtons" style={{display: "block", width: "100%"}}>
-                            <Button variant="secondary" onClick={() => this.props.setFaceCompareMatch(false)} value="true">Fail</Button>
-                            <Button variant="secondary" onClick={() => this.props.setFaceCompareMatch(true)} value="false">Pass</Button>
+                            <Button variant="secondary" className="common-button" onClick={() => this.props.setFaceCompareMatch(false)} value="true">Fail</Button>
+                            <Button variant="secondary" className="common-button" onClick={() => this.props.setFaceCompareMatch(true)} value="false">Pass</Button>
                         </ButtonGroup>
                     </Card.Body>
                 </Card>
-                <Button variant="secondary" onClick={() => this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK)}>
+                <Button variant="secondary" className="common-button" onClick={() => this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK)}>
                     Back
                 </Button>
-                <Button onClick={submitFaceCompareResults}>
+                <Button className="common-button" onClick={submitFaceCompareResults}>
                     Done
                 </Button>
             </div>
@@ -837,6 +863,7 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     loadNextID = () => {
         this.resetState();
+        this.props.saveToLibrary(this.props.currentID);
         this.props.restoreID();
         this.props.restoreImage();
         this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
@@ -945,6 +972,7 @@ const mapDispatchToProps = {
     updateVideoData,
     setFaceCompareMatch,
     saveToInternalID,
+    saveToLibrary,
     restoreID,
     restoreImage,
 };

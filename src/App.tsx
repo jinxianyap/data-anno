@@ -21,10 +21,7 @@ interface IProps {
 const App: React.FC<IProps> = ({state, currentStage}) => {
 
   const paintContent = () => {
-    console.log(state);
     switch (currentStage) {
-      case (CurrentStage.SETUP):
-       return <SetupView />;
       case (CurrentStage.SEGMENTATION_CHECK):
        return <SegCheck />;
       case (CurrentStage.SEGMENTATION_EDIT):
@@ -40,19 +37,27 @@ const App: React.FC<IProps> = ({state, currentStage}) => {
        return <h4>ERROR</h4>;
     }
   }
-
+  console.log(state);
   return (
     <div className="app-wrapper">
       <TopBar />
         <Container className="content-container">
-          <Row style={{height: "100%", width: "100%", margin: 0}}>
-            <Col md={7} lg={9}>
-              {paintContent()}
-            </Col>
-            <Col style={{padding: 0}}>
-              {currentStage === CurrentStage.SETUP ? <div/> : <ControlPanel />}
-            </Col>
-          </Row>
+            {currentStage !== CurrentStage.SETUP ?
+              (
+                <Row style={{height: "100%", width: "100%", margin: 0}}>
+                  <Col md={7} lg={9}>
+                    {paintContent()}
+                  </Col>
+                  <Col style={{padding: 0}}>
+                    <ControlPanel />
+                  </Col>
+                </Row>)
+              : <Row style={{height: "100%", width: "100%", margin: 0}}>
+                  <Col md={3} lg={2} />
+                  <Col md={6} lg={8}><SetupView/></Col>
+                  <Col md={3} lg={2} />
+                </Row>
+            }
         </Container> 
         {currentStage === CurrentStage.SETUP ? <div/> : <BottomBar />}
     </div>

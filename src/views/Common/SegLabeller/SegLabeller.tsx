@@ -15,7 +15,7 @@ interface IProps {
     IDImage: ImageState,
     committedBoxes: IDBox[],
     createNewID: (box: IDBox, croppedImage: File) => IDActionTypes,
-    setIDBox: (box: IDBox) => IDActionTypes,
+    setIDBox: (box: IDBox, croppedImage?: File) => IDActionTypes,
 }
 
 interface IState {
@@ -178,7 +178,6 @@ class SegLabeller extends React.Component<IProps, IState> {
     renderCommittedBoxes = () => {
         let boxes = this.props.committedBoxes;
         let map = this.state.map!;
-        console.log(boxes);
         this.state.boxes.forEach((box) => {
             box.circles.forEach((circle) => circle.remove());
             box.lines.forEach((line) => line.remove());
@@ -533,7 +532,7 @@ class SegLabeller extends React.Component<IProps, IState> {
             }
         }
         if (update) {
-            this.props.setIDBox(IDBox);
+            this.props.setIDBox(IDBox, this.props.IDImage.image);
 
         } else {
             this.props.createNewID(IDBox, this.props.IDImage.image);
