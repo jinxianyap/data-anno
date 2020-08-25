@@ -72,6 +72,13 @@ interface SetIDBox {
     }
 }
 
+interface DeleteIDBox {
+    type: typeof Action.DELETE_ID_BOX;
+    payload: {
+        index: number
+    }
+}
+
 interface UpdateVideoData {
     type: typeof Action.UPDATE_VIDEO_DATA;
     payload: {
@@ -94,6 +101,7 @@ interface RestoreID {
 export type IDActionTypes = SaveDocumentType
     | LoadNextID
     | CreateNewID
+    | DeleteIDBox
     | RefreshIDs
     | SetIDBox
     | UpdateVideoData

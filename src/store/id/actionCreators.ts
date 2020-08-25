@@ -21,6 +21,15 @@ export function createNewID(IDBox: IDBox, croppedImage: File): IDActionTypes {
     }
 }
 
+export function deleteIDBox(index: number): IDActionTypes {
+    return {
+        type: Action.DELETE_ID_BOX,
+        payload: {
+            index: index
+        }
+    }
+}
+
 export function refreshIDs(originalIDProcessed: boolean): IDActionTypes {
     return {
         type: Action.REFRESH_IDS,

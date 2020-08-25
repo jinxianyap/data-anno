@@ -110,6 +110,30 @@ export function IDReducer(
                     internalIDs: IDs
                 }            }
         }
+        case Action.DELETE_ID_BOX: {
+            if (state.originalIDProcessed) {
+                let internalIDs = state.internalIDs;
+                let id = undefined;
+                if (action.payload.index === -1) {
+                    id = internalIDs.slice(-1)[0];
+                } else {
+                    id = internalIDs[action.payload.index];
+                }
+                id.backID!.IDBox = undefined;
+                internalIDs.splice(action.payload.index, 1, id);
+                return {
+                    ...state,
+                    internalIDs: internalIDs
+                }
+            } else {
+                let internalIDs = state.internalIDs;
+                internalIDs.splice(action.payload.index, 1);
+                return {
+                    ...state,
+                    internalIDs: internalIDs
+                }
+            }
+        }
         case Action.SAVE_DOCUMENT_TYPE: {
             let IDs = state.internalIDs;
             let internalID = state.internalIDs[action.payload.internalIndex];

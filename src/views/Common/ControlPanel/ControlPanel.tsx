@@ -9,7 +9,7 @@ import { GeneralActionTypes } from '../../../store/general/types';
 import { IDActionTypes, IDState, InternalIDState } from '../../../store/id/types';
 import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord } from '../../../store/image/types';
 import { progressNextStage, getNextID, saveToLibrary } from '../../../store/general/actionCreators';
-import { loadNextID, createNewID, setIDBox, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, restoreID } from '../../../store/id/actionCreators';
+import { loadNextID, createNewID, setIDBox, deleteIDBox, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, restoreID } from '../../../store/id/actionCreators';
 import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, updateLandmarkFlags, addOCRData, setFaceCompareMatch, restoreImage } from '../../../store/image/actionCreators';
 import AddTypeModal from '../AddTypeModal/AddTypeModal';
 import { DatabaseUtil } from '../../../utils/DatabaseUtil';
@@ -32,6 +32,7 @@ interface IProps {
     loadNextID: (ID: IDState) => IDActionTypes;
     createNewID: (IDBox: IDBox, croppedImage: File) => IDActionTypes;
     setIDBox: (IDBox: IDBox, croppedImage?: File) => IDActionTypes;
+    deleteIDBox: (index: number) => IDActionTypes;
     refreshIDs: (originalProcessed: boolean) => IDActionTypes;
     saveDocumentType: (internalIndex: number, documentType: string) => IDActionTypes;
     saveSegCheck: (passesCrop: boolean) => ImageActionTypes;
@@ -500,7 +501,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                             })
                         }
                     </Accordion>
-                {/* <Button variant="secondary" style={{width: '100%'}} onClick={() => this.props.deleteIDBox(-1)}>Undo Box</Button> */}
+                <Button variant="secondary" style={{width: '100%'}} onClick={() => this.props.deleteIDBox(-1)}>Undo Box</Button>
                 <Button variant="secondary" className="common-button" onClick={backStage}>Back</Button>
                 <Button disabled={this.props.currentID.internalIDs.length === 0}  className="common-button" onClick={loadImageAndProgress}>
                     Next
@@ -961,6 +962,7 @@ const mapDispatchToProps = {
     loadNextID,
     createNewID,
     setIDBox,
+    deleteIDBox,
     refreshIDs,
     saveDocumentType,
     saveSegCheck,
