@@ -31,12 +31,19 @@
     }
 
     .labelled-landmark {
-        background-color: lightgrey;
+        background-color: #d3d3d3;
     }
 
-    .labelling-flags.active,
+    .selected-landmark {
+        border: 2px solid #007bff;
+    }
+
     .ocr-details {
-        background-color: rgb(0, 68, 255);
+        background-color: #bababa;
+    }
+    
+    .selected-ocr {
+        border: 2px solid #007bff;
     }
 
     .block-button {

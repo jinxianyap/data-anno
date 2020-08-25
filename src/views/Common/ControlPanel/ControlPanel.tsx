@@ -62,10 +62,13 @@ interface IState {
     loadedSegCheckImage: boolean;
     showAddDocTypeModal: boolean;
     documentTypes: string[];
-    docType: string;
+    singleDocumentType: string;
+    selectedDocumentTypes: {
+        id: number,
+        value: string
+    }[];
     passesCrop: boolean;
     cropDirty: boolean;
-    segCheckValidation: boolean;
 
     // Landmark
     showAddLandmarkModal: boolean;
@@ -128,10 +131,10 @@ class ControlPanel extends React.Component<IProps, IState> {
             loadedSegCheckImage: false,
             showAddDocTypeModal: false,
             documentTypes: [],
-            docType: '',
+            singleDocumentType: '',
+            selectedDocumentTypes: [],
             passesCrop: false,
             cropDirty: false,
-            segCheckValidation: false,
 
             showAddLandmarkModal: false,
             landmarksLoaded: false,
@@ -177,6 +180,21 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
                 break;
             }
+            case (CurrentStage.SEGMENTATION_EDIT): {
+                let docTypes = this.state.selectedDocumentTypes;
+                if (docTypes.length < this.props.currentID.internalIDs.length) {
+                    this.props.currentID.internalIDs.forEach((each, idx) => {
+                        let doc = docTypes.find((doc) => doc.id === idx);
+                        if (doc === undefined) {
+                            docTypes.push({
+                                id: idx,
+                                value: this.state.documentTypes[0]
+                            });
+                        }
+                    })
+                    this.setState({selectedDocumentTypes: docTypes});
+                }        
+            }
             case (CurrentStage.LANDMARK_EDIT): {
                 if (this.props.internalID === undefined) return;
                 if (!this.state.landmarksLoaded) {
@@ -217,20 +235,6 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
                 break;
             }
-            // case (CurrentStage.FR_COMPARE_CHECK): {
-            //     if (previousProps.internalID && 
-            //         (previousProps.internalID.originalID!.faceCompareMatch !== undefined || previousProps.internalID.backID!.faceCompareMatch !== undefined)) {
-            //         if (this.props.currentID.internalIndex >= this.props.currentID.internalIDs.length) {
-            //             this.loadNextID();
-            //         } else if (this.props.currentID.internalIndex < this.props.currentID.internalIDs.length) {
-            //             if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
-            //                 this.loadBackId();
-            //             } else {
-            //                 this.loadNextInternalId();
-            //             }
-            //         }
-            //     }
-            // }
             case (CurrentStage.END_STAGE): {
                 if (previousProps.internalID && 
                     (previousProps.internalID.originalID!.faceCompareMatch !== undefined || previousProps.internalID.backID!.faceCompareMatch !== undefined)) {
@@ -259,17 +263,11 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     handleCropFail = () => {
-        this.setState({passesCrop: false, cropDirty: true}, this.validate);
+        this.setState({passesCrop: false, cropDirty: true});
     }
 
     handlePassesCrop = () => {
-        this.setState({passesCrop: true, cropDirty: true}, this.validate);
-    }
-
-    validate = () => {
-        if (this.state.cropDirty && this.state.docType !== '') {
-            this.setState({segCheckValidation: true});
-        }
+        this.setState({passesCrop: true, cropDirty: true});
     }
 
     loadSegCheckImage = () => {
@@ -280,10 +278,10 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
     }
 
-    loadDocumentTypes = (doc?: string) => {
+    loadDocumentTypes = () => {
         this.setState({
             documentTypes: options.documentTypes,
-            docType: doc ? doc : options.documentTypes[0]
+            singleDocumentType: options.documentTypes[0]
         });
     }
 
@@ -363,6 +361,19 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     // Seg Check Components
     segCheck = () => {
+        const setSingleDocType = (e: any) => {
+            if (this.state.landmarks.length === 0) {
+                this.setState({singleDocumentType: e.target.value});
+            } else {
+                let landmarks = this.state.landmarks.find((each) => (each.docType === e.target.value))!;
+                if (landmarks !== undefined) {
+                    this.setState({singleDocumentType: e.target.value, currentLandmarks: landmarks.landmarks});
+                } else {
+                    this.setState({singleDocumentType: e.target.value});
+                }
+            }
+        }
+
         const addDocType = (doc: string) => {
             options.documentTypes.push(doc);
             options.landmark.keys.push(doc);
@@ -370,7 +381,7 @@ class ControlPanel extends React.Component<IProps, IState> {
             options.ocr.keys.push(doc);
             options.ocr.values.push([]);
             fs.writeFile('../../../options.json', JSON.stringify(options));
-            this.setState({showAddDocTypeModal: false}, () => this.loadDocumentTypes(doc));
+            this.setState({showAddDocTypeModal: false}, () => this.loadDocumentTypes());
         }
 
         const submitSegCheck = (e: any) => {
@@ -397,7 +408,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
                 } else {
                     this.props.createNewID(box, this.props.currentID.originalID!.image);
-                    this.props.saveDocumentType(0, this.state.docType);
+                    this.props.saveDocumentType(0, this.state.singleDocumentType);
                 }
             } else {
                 this.props.progressNextStage(CurrentStage.SEGMENTATION_EDIT);
@@ -411,7 +422,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     <Form.Group controlId="docType">
                         <Form.Label>Document Type</Form.Label>
                         <Button onClick={() => {this.setState({showAddDocTypeModal: true})}} style={{padding: "0 0.5rem", margin: "0.5rem 1rem"}}>+</Button>
-                        <Form.Control as="select" value={this.state.docType} onChange={(e: any) => this.setDocType(e)}>
+                        <Form.Control as="select" value={this.state.singleDocumentType} onChange={(e: any) => setSingleDocType(e)}>
                             {Object.entries(this.state.documentTypes).map(([key, value]) => <option key={key} value={value}>{value}</option>)}
                         </Form.Control>
                     </Form.Group>
@@ -427,37 +438,54 @@ class ControlPanel extends React.Component<IProps, IState> {
                     </ButtonGroup>
                 </Form.Group>
 
-                <Button type="submit" className="block-button" disabled={!this.state.segCheckValidation}>
+                <Button type="submit" className="block-button" disabled={!this.state.cropDirty}>
                     Next
                 </Button>
             </Form>
         )
     }
 
-    setDocType = (e: any) => {
-        if (this.state.landmarks.length === 0) {
-            this.setState({docType: e.target.value});
-        } else {
-            let landmarks = this.state.landmarks.find((each) => (each.docType === e.target.value))!;
-            if (landmarks !== undefined) {
-                this.setState({docType: e.target.value, currentLandmarks: landmarks.landmarks});
+    segEdit = () => {
+        const setDocType = (e: any, id: number) => {
+            // if (this.state.landmarks.length === 0) {
+            //     this.setState({selectedDocumentTypes: e.target.value});
+            // } else {
+            //     let landmarks = this.state.landmarks.find((each) => (each.docType === e.target.value))!;
+            //     if (landmarks !== undefined) {
+            //         this.setState({selectedDocumentTypes: e.target.value, currentLandmarks: landmarks.landmarks});
+            //     } else {
+            //         this.setState({selectedDocumentTypes: e.target.value});
+            //     }
+            // }
+            let docs = this.state.selectedDocumentTypes;
+            let index = docs.findIndex((each) => each.id === id);
+            let doc = docs[index];
+            doc.value = e.target.value;
+            docs.splice(index, 1, doc);
+            this.setState({selectedDocumentTypes: docs});
+        }
+
+        const getValue = (id: number) => {
+            let doc = this.state.selectedDocumentTypes.find((each) => each.id === id);
+            if (doc !== undefined) {
+                return doc.value;
             } else {
-                this.setState({docType: e.target.value});
+                return undefined;
             }
         }
-    }
 
-    segEdit = () => {
         const backStage = () => {
             this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
         }
 
-        const submitDocType = (e: any, idx: number) => {
-            e.preventDefault();
-            this.props.saveDocumentType(idx, this.state.docType);
+        const submitDocTypes = () => {
+            this.state.selectedDocumentTypes.forEach((each) => {
+                this.props.saveDocumentType(each.id, each.value);
+            });
         }
 
         const loadImageAndProgress = () => {
+            submitDocTypes();
             if (this.props.internalID.processStage !== IDProcess.MYKAD_BACK) {
                 this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
             } else {
@@ -488,11 +516,10 @@ class ControlPanel extends React.Component<IProps, IState> {
                                                     <Form.Group controlId="docType">
                                                         <Form.Label>Document Type</Form.Label>
                                                         <Button onClick={() => {this.setState({showAddDocTypeModal: true})}} style={{padding: "0 0.5rem", margin: "0.5rem 1rem"}}>+</Button>
-                                                        <Form.Control as="select" value={this.state.docType} onChange={(e: any) => this.setDocType(e)}>
+                                                        <Form.Control as="select" value={getValue(idx)} onChange={(e: any) => setDocType(e, idx)}>
                                                             {Object.entries(this.state.documentTypes).map(([key, value]) => <option key={key} value={value}>{value}</option>)}
                                                         </Form.Control>
                                                     </Form.Group>
-                                                    <Button className="common-button" onClick={(e: any) => submitDocType(e, idx)}>Submit</Button>
                                                 </Card.Body>
                                             }
                                         </Accordion.Collapse>
@@ -518,7 +545,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         const addLandmark = (landmark: string) => {
             let index = 0;
             options.landmark.keys.forEach((each, idx) => {
-                if (each === this.state.docType) {
+                if (each === this.props.internalID.documentType) {
                     index = idx;
                 }
             })
@@ -564,7 +591,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                                         className="labelling-flags"
                                                         key={idx}
                                                         value={each}
-                                                        variant="secondary"
+                                                        variant="light"
                                                         checked={flags.includes(each)}
                                                         onClick={() => setFlag(each)}>
                                                         {each}
@@ -593,6 +620,18 @@ class ControlPanel extends React.Component<IProps, IState> {
             }
         }
 
+        const getClassName = (each: any) => {
+            let name = "";
+            let landmark = this.props.currentImage.landmark.find((item) => item.name === each.name);
+            if (landmark !== undefined) {
+                name += "labelled-landmark ";
+            }
+            if (this.props.currentImage.currentSymbol === each.name) {
+                name += "selected-landmark";
+            }
+            return name;
+        }
+
         return (
                 <div>
                     <Accordion>
@@ -603,8 +642,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                         <Accordion.Toggle
                                             as={Card.Header}
                                             eventKey={idx.toString()}
-                                            className={this.props.currentImage.landmark.find((item) => item.name === each.name) !== undefined
-                                                ? 'labelled-landmark' : ''}
+                                            className={getClassName(each)}
                                             key={idx}
                                             onClick={() => setLandmark(each.name)}>
                                                 {DatabaseUtil.beautifyWord(each.name)}
@@ -701,6 +739,24 @@ class ControlPanel extends React.Component<IProps, IState> {
         // }
         let ocrs = this.props.currentImage.ocr;
 
+        const getClassNameLandmark = (each: any) => {
+            if (this.props.currentImage.currentSymbol === each.name) {
+                return "selected-landmark";
+            }
+            return "";
+        }
+
+        const getClassNameOcr = (each: any, label: any) => {
+            let name = "";
+            if (label.position !== undefined) {
+                name += "ocr-details ";
+            }
+            if (this.props.currentImage.currentWord !== undefined && this.props.currentImage.currentWord!.id === label.id) {
+                name += " selected-ocr";
+            }
+            return name;
+        }
+
         return (
             <div>
                 <Accordion>
@@ -709,7 +765,12 @@ class ControlPanel extends React.Component<IProps, IState> {
                             if (each.count <= 1) return <div key={index} />;
                             return (
                                 <Card key={index}>
-                                    <Accordion.Toggle as={Card.Header} eventKey={index.toString()} key={index} onClick={() => this.props.setCurrentSymbol(each.name, each.mapToLandmark)}>
+                                    <Accordion.Toggle
+                                        as={Card.Header}
+                                        eventKey={index.toString()}
+                                        key={index}
+                                        className={getClassNameLandmark(each)}
+                                        onClick={() => this.props.setCurrentSymbol(each.name, each.mapToLandmark)}>
                                         {each.name}
                                     </Accordion.Toggle>
                                     <Accordion.Collapse eventKey={index.toString()}>
@@ -719,8 +780,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                                             each.labels.map((label, idx) => {
                                                 return (
                                                     <Button 
-                                                        className={label.position !== undefined ? "ocr-details" : ""}
-                                                        variant="secondary"
+                                                        className={getClassNameOcr(each, label)}
+                                                        variant="light"
                                                         key={idx}
                                                         value={label.value}
                                                         onClick={() => {
@@ -843,7 +904,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <Button variant="secondary" className="common-button" onClick={() => this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK)}>
                     Back
                 </Button>
-                <Button className="common-button" onClick={submitFaceCompareResults}>
+                <Button className="common-button" onClick={submitFaceCompareResults} disabled={this.props.currentImage.faceCompareMatch === undefined}>
                     Done
                 </Button>
             </div>
@@ -876,10 +937,10 @@ class ControlPanel extends React.Component<IProps, IState> {
             loadedSegCheckImage: false,
             showAddDocTypeModal: false,
             documentTypes: [],
-            docType: '',
+            singleDocumentType: '',
+            selectedDocumentTypes: [],
             passesCrop: false,
             cropDirty: false,
-            segCheckValidation: false,
 
             showAddLandmarkModal: false,
             landmarksLoaded: false,

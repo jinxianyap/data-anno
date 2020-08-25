@@ -482,6 +482,8 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
     }
 
     handleMouseUp = (e: any) => {
+        if (e.originalEvent.which !== 1 || e.originalEvent.detail > 1) return;
+
         if (this.state.isMoving) {
             this.confirmMoveBox(e, this.props.currentStage === CurrentStage.LANDMARK_EDIT);
             this.state.map!.dragging.enable();
@@ -596,6 +598,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
     }
 
     handleContextMenu = (e: any) => {
+        if (this.state.isDrawing || this.state.isMoving || this.state.isResizing) return;
         if (this.props.currentStage === CurrentStage.LANDMARK_EDIT) {
             this.deleteLandmarkBox(e);
         } else if (this.props.currentStage === CurrentStage.OCR_EDIT) {
