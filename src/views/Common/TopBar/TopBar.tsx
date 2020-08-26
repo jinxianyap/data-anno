@@ -11,9 +11,35 @@ interface IProps {
 
 const TopBar: React.FC<IProps> = ({currentStage}) => {
 
+    const getNavbarItems = () => {
+        let id = 100;
+        let values = Object.values(CurrentStage);
+        values = values.slice(0, values.length - 1);
+
+        return (
+            <div style={{width: "100%"}}>
+                {
+                    values.map((each, idx) => {
+                        let name = "topbar-nav topbar-inactive";
+                        if (each === currentStage) {
+                            name = "topbar-nav";
+                            id = idx;
+                        }
+                        if (idx > id) {
+                            name += " topbar-hidden";
+                        }
+                        return (
+                            <Navbar.Brand className={name} key={idx} style={{width: (each.length / 101 * 100) + "%"}}>{each}</Navbar.Brand>
+                        )
+                    })
+                }
+            </div>
+        )
+    }
+
     return (
         <Navbar>
-            <Navbar.Brand>{currentStage}</Navbar.Brand>
+            {getNavbarItems()}
             <Navbar.Toggle />
             <Navbar.Collapse className="justify-content-end">
             </Navbar.Collapse>

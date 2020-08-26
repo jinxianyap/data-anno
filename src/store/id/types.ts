@@ -11,7 +11,7 @@ export type IDState = {
     croppedID?: ImageState;
     backID?: ImageState;
     selfieVideo?: File;
-    jsonData?: File;
+    jsonData?: any;
 
     originalIDProcessed: boolean;
     backIDProcessed: boolean;

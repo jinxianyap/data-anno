@@ -3,3 +3,16 @@
     border-left: 0;
     border-right: 0;
 }
+
+.topbar-nav {
+    margin: 0;
+    text-align: center;
+}
+
+.topbar-inactive {
+    color: #808080 !important;
+}
+
+.topbar-hidden {
+    opacity: 0;
+}

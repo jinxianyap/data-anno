@@ -4,13 +4,14 @@ import { connect } from 'react-redux';
 import { IDBox, ImageState } from '../../../store/image/types';
 // import { setIDBox } from '../../../store/image/actionCreators';
 import { AppState } from '../../../store';
-import { CurrentStage } from '../../../utils/enums';
+import { CurrentStage, IDProcess } from '../../../utils/enums';
 import { createNewID, setIDBox } from '../../../store/id/actionCreators';
-import { IDActionTypes, InternalIDState } from '../../../store/id/types';
+import { IDActionTypes, InternalIDState, IDState } from '../../../store/id/types';
 
 interface IProps {
     currentStage: CurrentStage,
     originalProcessed: boolean,
+    currentID: IDState,
     internalIDs: InternalIDState[],
     IDImage: ImageState,
     committedBoxes: IDBox[],
@@ -257,6 +258,11 @@ class SegLabeller extends React.Component<IProps, IState> {
                 }
             }
         }
+
+        let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
+        if (internalID !== undefined
+            && internalID.processStage === IDProcess.MYKAD_BACK
+            && internalID.backID!.IDBox !== undefined) return; 
 
         this.addCircle(e);
     }
@@ -556,6 +562,7 @@ const mapStateToProps = (state: AppState, ownProps: any) => {
     })
     return {
         currentStage: state.general.currentStage,
+        currentID: state.id,
         internalIDs: state.id.internalIDs,
         originalProcessed: state.id.originalIDProcessed,
         IDImage: state.id.originalIDProcessed ? state.id.backID! : state.id.originalID!,

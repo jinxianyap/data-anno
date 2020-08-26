@@ -108,18 +108,13 @@ export function IDReducer(
         }
         case Action.DELETE_ID_BOX: {
             if (state.originalIDProcessed) {
-                let internalIDs = state.internalIDs;
-                let id = undefined;
-                if (action.payload.index === -1) {
-                    id = internalIDs.slice(-1)[0];
-                } else {
-                    id = internalIDs[action.payload.index];
-                }
+                let ids = state.internalIDs;
+                let id = ids[state.internalIndex];
                 id.backID!.IDBox = undefined;
-                internalIDs.splice(action.payload.index, 1, id);
+                ids.splice(state.internalIndex, 1, id);
                 return {
                     ...state,
-                    internalIDs: internalIDs
+                    internalIDs: ids
                 }
             } else {
                 let internalIDs = state.internalIDs;

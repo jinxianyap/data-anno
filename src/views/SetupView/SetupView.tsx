@@ -62,7 +62,6 @@ class SetupView extends React.Component<IProps, IState> {
         if (this.state.user === '' || this.state.database === '') {
             this.setState({incomplete: true});
         } else {
-            // console.log('submitted');
             let st = this.state;
             let setup: SetupOptions = {
                 user: st.user,
@@ -72,17 +71,32 @@ class SetupView extends React.Component<IProps, IState> {
                 processType: st.processType
             }
             this.props.saveSetupOptions(setup);
-            // console.log(setup);
-            //temp to simulate loading fileobjects from database
-            let folders = [];
-            let IDFolder1 = DatabaseUtil.loadIntoIDFolder(st.files, 0);
-            folders.push(IDFolder1);
-            let IDFolder2 = DatabaseUtil.loadIntoIDFolder(st.files, 1);
-            folders.push(IDFolder2);
-
-            this.props.loadFromDatabase(folders);
-
-            this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+            var reader = new FileReader();
+            reader.onload = (event: any) => {
+                //temp to simulate loading fileobjects from database
+                let json: any;
+                try {
+                    json = JSON.parse(event.target!.result!);
+                } catch (err) {
+                    console.error(err);
+                    let folders = [];
+                    let IDFolder1 = DatabaseUtil.loadIntoIDFolder(st.files, 0);
+                    folders.push(IDFolder1);
+                    let IDFolder2 = DatabaseUtil.loadIntoIDFolder(st.files, 1);
+                    folders.push(IDFolder2);
+                    this.props.loadFromDatabase(folders);
+                    this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+                } finally {
+                    let folders = [];
+                    let IDFolder1 = DatabaseUtil.loadIntoIDFolder(st.files, 0, json);
+                    folders.push(IDFolder1);
+                    let IDFolder2 = DatabaseUtil.loadIntoIDFolder(st.files, 1, json);
+                    folders.push(IDFolder2);
+                    this.props.loadFromDatabase(folders);
+                    this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+                }
+            }
+            reader.readAsText(st.files[3]);
         }
     }
 
@@ -164,13 +178,13 @@ class SetupView extends React.Component<IProps, IState> {
                             label="Selfie Video"
                             onChange={(e: any) => this.handleUpload(e)}
                             />
-                        {/* <Form.File
+                        <Form.File
                             className="position-relative"
                             required
                             name="file"
                             label="JSON"
                             onChange={(e: any) => this.handleUpload(e)}
-                            /> */}
+                            />
                         </Form.Group>
 
                         { this.state.incomplete

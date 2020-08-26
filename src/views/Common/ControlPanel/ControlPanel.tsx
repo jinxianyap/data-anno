@@ -336,13 +336,17 @@ class ControlPanel extends React.Component<IProps, IState> {
     loadOCRDetails = () => {
         let docOCR: {docType: string, details: {name: string, mapToLandmark: string, value?: string}[]}[] = [];
         let currentOCR: {name: string, mapToLandmark: string, value?: string}[] = [];
-
         options.ocr.keys.forEach((each, idx) => {
             let ocr: {name: string, mapToLandmark: string, value?: string}[] = [];
             for (var i = 0; i < options.ocr.values[idx].length; i++) {
+                let value = this.props.currentID.jsonData !== undefined ? this.props.currentID.jsonData[options.ocr.values[idx][i]] : undefined;
+                if (this.props.currentID.jsonData !== undefined && options.ocr.values[idx][i] === "birthDate") {
+                    value = this.props.currentID.jsonData[options.ocr.values[idx][i]].originalString;
+                }
                 ocr.push({
                     name: options.ocr.values[idx][i],
-                    mapToLandmark: options.ocr.mapToLandmark[idx][i]
+                    mapToLandmark: options.ocr.mapToLandmark[idx][i],
+                    value: value
                 });
             }
             docOCR.push({
@@ -410,7 +414,7 @@ class ControlPanel extends React.Component<IProps, IState> {
             };
 
             if (this.state.passesCrop) {
-                if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
+                if (this.props.internalID !== undefined && this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
                     this.props.setIDBox(box, this.props.internalID.backID!.image);
                     this.props.loadImageState(this.props.internalID.backID!, this.state.passesCrop);
                     this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
@@ -510,7 +514,11 @@ class ControlPanel extends React.Component<IProps, IState> {
 
         return (
             <div>
-                <h5>Please draw bounding boxes around any number of IDs in the image.</h5>
+                {   
+                    this.props.internalID !== undefined && this.props.internalID.processStage === IDProcess.MYKAD_BACK
+                    ? <h5>Please draw the corresponding bounds for the current ID</h5>
+                    : <h5>Please draw bounding boxes around any number of IDs in the image.</h5>
+                }
                 <h6>Boxes Drawn</h6>
                     <Accordion>
                         {
@@ -717,10 +725,9 @@ class ControlPanel extends React.Component<IProps, IState> {
                             break;
                         }
                     }
-
                     this.setState({ currentOCR: currentOCR });
-                    this.props.addOCRData(ocr);
                 }
+                this.props.addOCRData(ocr);
             }, this.props.progressNextStage(CurrentStage.OCR_EDIT));
         }
 
@@ -1033,9 +1040,20 @@ class ControlPanel extends React.Component<IProps, IState> {
                 case (CurrentStage.FR_COMPARE_CHECK): {
                     return (
                         <div className="internalIDIndex">
-                            <p>{(this.props.currentID.internalIndex + 1).toString() + " of " + this.props.currentID.internalIDs.length.toString()}</p>
+                            <p>Internal ID {(this.props.currentID.internalIndex + 1).toString() + " of " + this.props.currentID.internalIDs.length.toString()}</p>
                         </div>
                     );
+                }
+                case (CurrentStage.SEGMENTATION_CHECK):
+                case (CurrentStage.SEGMENTATION_EDIT): {
+                    if (this.props.internalID !== undefined && this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
+                        return (
+                            <div className="internalIDIndex">
+                                <p>Internal ID {(this.props.currentID.internalIndex + 1).toString() + " of " + this.props.currentID.internalIDs.length.toString()}</p>
+                                <p>MyKad Back</p>
+                            </div>
+                        ); 
+                    }
                 }
             }
         }

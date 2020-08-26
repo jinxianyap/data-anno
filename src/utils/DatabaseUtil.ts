@@ -1,7 +1,7 @@
 import { IDState } from '../store/id/types';
 export class DatabaseUtil {
 
-    public static loadIntoIDFolder(files: File[], index: number): IDState {
+    public static loadIntoIDFolder(files: File[], index: number, json?: any): IDState {
         return {
             originalID: {
                 image: files[0],
@@ -9,7 +9,7 @@ export class DatabaseUtil {
                 ocr: [],
             },
             croppedID: {
-                image: files[3],
+                image: files[4],
                 landmark: [],
                 ocr: [],
             },
@@ -19,7 +19,7 @@ export class DatabaseUtil {
                 ocr: [],
             },
             selfieVideo: files[2],
-            jsonData: files[4],
+            jsonData: json !== undefined ? json : undefined,
             processed: false,
             // for testing need to fix!!!
             index: index,
