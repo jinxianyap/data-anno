@@ -169,13 +169,15 @@ class ControlPanel extends React.Component<IProps, IState> {
                     break;
                 }
                 if (previousProps.internalID === undefined && this.props.internalID !== undefined) {
-                    this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
+                    if (this.props.internalID.processStage !== IDProcess.MYKAD_BACK) {
+                        this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
+                    }
                     this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
                     break;
                 }
                 if (!this.props.currentID.originalIDProcessed && this.props.currentID.internalIDs.length > 0) {
                     this.props.refreshIDs(false);
-                } else if (this.props.currentID.originalIDProcessed && this.props.currentID.internalIDs.filter((each) => each.backID!.IDBox !== undefined).length > 0) {
+                } else if (this.props.currentID.originalIDProcessed && this.props.internalID.backID!.IDBox !== undefined) {
                     this.props.refreshIDs(true);
                 }
                 break;
@@ -227,6 +229,11 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
                 break;
             }
+            // case (CurrentStage.OCR_EDIT): {
+            //     if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
+            //         this.props.progressNextStage(CurrentStage.END_STAGE);
+            //     }
+            // }
             case (CurrentStage.FR_LIVENESS_CHECK): {
                 if (!this.state.videoFlagsLoaded) {
                     this.loadVideoFlags();
@@ -242,16 +249,13 @@ class ControlPanel extends React.Component<IProps, IState> {
                         console.log('next id');
                         this.loadNextID();
                     } else if (this.props.currentID.internalIndex < this.props.currentID.internalIDs.length) {
-                        if (this.props.internalID.processStage === IDProcess.MYKAD_FRONT) {
+                        if (previousProps.internalID.originalID!.faceCompareMatch !== undefined && !this.props.internalID.processed) {
+                            console.log('next internal id');
+                            this.loadNextInternalId();
+                        } else if (this.props.internalID.processStage === IDProcess.MYKAD_FRONT) {
                             console.log('liveness and match');
                             this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
                             this.props.loadImageState(this.props.internalID.originalID!);
-                        } else if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
-                            console.log('back id');
-                            this.loadBackId();
-                        } else if (previousProps.internalID.originalID!.faceCompareMatch !== undefined) {
-                            console.log('next internal id');
-                            this.loadNextInternalId();
                         }
                     }
                 }
@@ -406,8 +410,8 @@ class ControlPanel extends React.Component<IProps, IState> {
             };
 
             if (this.state.passesCrop) {
-                if (this.props.currentID.originalIDProcessed) {
-                    this.props.setIDBox(box, this.props.currentID.backID!.image);
+                if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
+                    this.props.setIDBox(box, this.props.internalID.backID!.image);
                     this.props.loadImageState(this.props.internalID.backID!, this.state.passesCrop);
                     this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
                 } else {
@@ -498,10 +502,10 @@ class ControlPanel extends React.Component<IProps, IState> {
             submitDocTypes();
             if (this.props.internalID.processStage !== IDProcess.MYKAD_BACK) {
                 this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
+                this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
             } else {
-                this.props.loadImageState(this.props.internalID.backID!, this.state.passesCrop);
+                this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
             }
-            this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
         }
 
         return (
@@ -827,8 +831,11 @@ class ControlPanel extends React.Component<IProps, IState> {
             <Button variant="secondary" className="common-button" onClick={() => this.props.progressNextStage(CurrentStage.OCR_DETAILS)}>Back</Button>
             <Button className="common-button" onClick={() => {
                 if (this.props.internalID.documentType === 'MyKad') {
+                    let status = this.props.internalID.processStage;
                     this.props.saveToInternalID(this.props.currentImage, false);
-                    this.props.progressNextStage(CurrentStage.END_STAGE);
+                    if (status === IDProcess.MYKAD_FRONT) {
+                        this.loadBackId();
+                    }
                 } else {
                     this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
                 }
@@ -914,6 +921,7 @@ class ControlPanel extends React.Component<IProps, IState> {
     frCompareCheck = () => {
         const submitFaceCompareResults = () => {
             this.props.saveToInternalID(this.props.currentImage, true);
+            this.resetState();
             this.props.progressNextStage(CurrentStage.END_STAGE);
         }
 
@@ -940,13 +948,10 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     loadBackId = () => {
         this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
-        this.props.loadImageState(this.props.internalID.backID!);
-
-        this.setState({loadedSegCheckImage: true});
+        this.setState({loadedSegCheckImage: true}, () => this.props.loadImageState(this.props.internalID.backID!));
     }
 
     loadNextInternalId = () => {
-        this.resetState();
         this.props.loadImageState(this.props.internalID.originalID!);
         this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
     }

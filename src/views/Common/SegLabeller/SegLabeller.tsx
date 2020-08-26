@@ -533,7 +533,6 @@ class SegLabeller extends React.Component<IProps, IState> {
         }
         if (update) {
             this.props.setIDBox(IDBox, this.props.IDImage.image);
-
         } else {
             this.props.createNewID(IDBox, this.props.IDImage.image);
         }

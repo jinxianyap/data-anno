@@ -63,41 +63,37 @@ export function IDReducer(
             }
         }
         case Action.REFRESH_IDS: {
-            return {
-                ...state,
-                originalIDProcessed: action.payload.originalIDProcessed,
-                backIDProcessed: false,
-                internalIndex: 0,
-                internalIDs: action.payload.originalIDProcessed ? state.internalIDs.map((each) => {each.backID!.IDBox = undefined; return each;}) : []
+            if (!action.payload.originalIDProcessed) {
+                return {
+                    ...state,
+                    originalIDProcessed: action.payload.originalIDProcessed,
+                    backIDProcessed: false,
+                    internalIndex: 0,
+                    internalIDs: action.payload.originalIDProcessed ? state.internalIDs.map((each) => {each.backID!.IDBox = undefined; return each;}) : []
+                }
+            } else {
+                let ids = state.internalIDs;
+                let internalID = state.internalIDs[state.internalIndex];
+                internalID.backID!.IDBox = undefined;
+                ids.splice(state.internalIndex, 1, internalID);
+                return {
+                    ...state,
+                    originalIDProcessed: action.payload.originalIDProcessed,
+                    backIDProcessed: false,
+                    internalIDs: ids
+                }
             }
         }
         case Action.SET_ID_BOX: {
-            if (state.originalIDProcessed) {
+            if (state.internalIDs[state.internalIndex].processStage === IDProcess.MYKAD_BACK) {
                 let IDs = state.internalIDs;
-                let idx = state.internalIDs.findIndex((each) => {
-                    if (each.backID!.IDBox !== undefined) {
-                        return each.backID!.IDBox!.id === action.payload.IDBox.id;
-                    }
-                    return false;
-                });
-                if (idx >= 0 && idx !== undefined) {
-                    let internalID = IDs[idx];
-                    internalID.backID!.IDBox = action.payload.IDBox;
-                    internalID.backID!.croppedImage = action.payload.croppedImage;
-                    IDs.splice(idx, 1, internalID);
-                    return {
-                        ...state,
-                        internalIDs: IDs
-                    }
-                } else {
-                    let internalID = IDs[state.internalIndex];
-                    internalID.backID!.IDBox = action.payload.IDBox;
-                    internalID.backID!.croppedImage = action.payload.croppedImage;
-                    IDs.splice(state.internalIndex, 1, internalID);
-                    return {
-                        ...state,
-                        internalIDs: IDs
-                    }
+                let internalID = IDs[state.internalIndex];
+                internalID.backID!.IDBox = action.payload.IDBox;
+                internalID.backID!.croppedImage = action.payload.croppedImage;
+                IDs.splice(state.internalIndex, 1, internalID);
+                return {
+                    ...state,
+                    internalIDs: IDs
                 }
             } else {
                 let IDs = state.internalIDs;
@@ -139,7 +135,7 @@ export function IDReducer(
             let internalID = state.internalIDs[action.payload.internalIndex];
             let stage = IDProcess.OTHER;
             if (action.payload.documentType === 'MyKad') {
-                stage = IDProcess.MYKAD_FRONT;
+                stage = internalID.processStage === IDProcess.MYKAD_BACK ? IDProcess.MYKAD_BACK : IDProcess.MYKAD_FRONT;
             } else if (action.payload.documentType === 'Passport') {
                 stage = IDProcess.PASSPORT;
             }
@@ -180,13 +176,23 @@ export function IDReducer(
                 }
             }
             IDs.splice(state.internalIndex, 1, internalID);
-            return {
-                ...state,
-                internalIDs: IDs,
-                internalIndex: action.payload.next ? state.internalIndex + 1 : state.internalIndex,
-                originalIDProcessed: true,
-                backIDProcessed: internalID.processed
-            }
+
+            if (action.payload.next) {
+                return {
+                    ...state,
+                    internalIDs: IDs,
+                    internalIndex: state.internalIndex + 1,
+                    originalIDProcessed: true,
+                    backIDProcessed: internalID.processed
+                }
+            } else {
+                return {
+                    ...state,
+                    internalIDs: IDs,
+                    originalIDProcessed: true,
+                    backIDProcessed: internalID.processed
+                }
+            }   
         }
         case Action.RESTORE_ID: {
             return {
