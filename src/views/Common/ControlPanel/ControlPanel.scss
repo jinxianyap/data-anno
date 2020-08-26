@@ -30,22 +30,24 @@
         }
     }
 
-    .labelled-landmark {
-        background-color: #d3d3d3;
+    .landmark-tab, .ocr-tab {
+        color: grey;
     }
 
-    .selected-landmark {
+    .labelled-landmark.landmark-tab {
+        background-color: #d3d3d3;
+        color: black;
+    }
+
+    .selected-landmark, .selected-ocr {
         border: 2px solid #007bff;
     }
 
-    .ocr-details {
-        background-color: #bababa;
+    .ocr-details.ocr-tab {
+        background-color: #d3d3d3;
+        color: black;
     }
     
-    .selected-ocr {
-        border: 2px solid #007bff;
-    }
-
     .block-button {
         margin: 0.1rem 0;
         width: calc(100% - 0.1rem - 0.1rem);

@@ -139,6 +139,7 @@ interface AddOCRData {
 interface SetCurrentWord {
     type: typeof Action.SET_CURRENT_VALUE;
     payload: {
+        mapToLandmark?: string,
         word: OCRWord
     }
 }

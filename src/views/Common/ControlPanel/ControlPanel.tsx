@@ -188,7 +188,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                         if (doc === undefined) {
                             docTypes.push({
                                 id: idx,
-                                value: this.state.documentTypes[0]
+                                value: each.documentType === undefined ? this.state.documentTypes[0] : each.documentType
                             });
                         }
                     })
@@ -482,6 +482,12 @@ class ControlPanel extends React.Component<IProps, IState> {
             this.state.selectedDocumentTypes.forEach((each) => {
                 this.props.saveDocumentType(each.id, each.value);
             });
+            this.setState({selectedDocumentTypes: []});
+        }
+
+        const undoBox = () => {
+            this.props.deleteIDBox(-1);
+            this.setState({selectedDocumentTypes: this.state.selectedDocumentTypes.slice(0, this.state.selectedDocumentTypes.length - 1)});
         }
 
         const loadImageAndProgress = () => {
@@ -528,7 +534,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                             })
                         }
                     </Accordion>
-                <Button variant="secondary" style={{width: '100%'}} onClick={() => this.props.deleteIDBox(-1)}>Undo Box</Button>
+                <Button variant="secondary" style={{width: '100%'}} onClick={undoBox}>Undo Box</Button>
                 <Button variant="secondary" className="common-button" onClick={backStage}>Back</Button>
                 <Button disabled={this.props.currentID.internalIDs.length === 0}  className="common-button" onClick={loadImageAndProgress}>
                     Next
@@ -621,7 +627,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
 
         const getClassName = (each: any) => {
-            let name = "";
+            let name = "landmark-tab ";
             let landmark = this.props.currentImage.landmark.find((item) => item.name === each.name);
             if (landmark !== undefined) {
                 name += "labelled-landmark ";
@@ -662,11 +668,11 @@ class ControlPanel extends React.Component<IProps, IState> {
                     value="0"
                     className="block-button" 
                     onClick={() => this.setState({showAddLandmarkModal: true})}>+</Button>
-                <Button
+                {/* <Button
                     style={{width: "100%"}}
                     value="0"
                     className="block-button" 
-                    onClick={() => this.props.setCurrentSymbol()}>Pan</Button>
+                    onClick={() => this.props.setCurrentSymbol()}>Pan</Button> */}
                 <AddTypeModal showModal={this.state.showAddLandmarkModal} item='landmarks' add={addLandmark} closeModal={() => this.setState({showAddLandmarkModal: false})}/>
                 <Button variant="secondary" className="common-button" onClick={backStage}>Back</Button>
                 <Button className="common-button" onClick={submitLandmark}>Done</Button>
@@ -747,19 +753,27 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
 
         const getClassNameOcr = (each: any, label: any) => {
-            let name = "";
+            let name = "ocr-tab ";
             if (label.position !== undefined) {
                 name += "ocr-details ";
             }
             if (this.props.currentImage.currentWord !== undefined && this.props.currentImage.currentWord!.id === label.id) {
-                name += " selected-ocr";
+                name += "selected-ocr";
             }
             return name;
         }
 
+        const getActiveKey = () => {
+            if (this.props.currentImage.currentSymbol !== undefined && this.props.currentImage.ocrToLandmark !== undefined) {
+                return this.props.currentImage.currentSymbol + " " + this.props.currentImage.ocrToLandmark;
+            } else {
+                return '';
+            }
+        }
+
         return (
             <div>
-                <Accordion>
+                <Accordion activeKey={getActiveKey()}>
                     {
                         ocrs.map((each, index) => {
                             if (each.count <= 1) return <div key={index} />;
@@ -767,13 +781,15 @@ class ControlPanel extends React.Component<IProps, IState> {
                                 <Card key={index}>
                                     <Accordion.Toggle
                                         as={Card.Header}
-                                        eventKey={index.toString()}
+                                        eventKey={each.name + " " + each.mapToLandmark}
                                         key={index}
                                         className={getClassNameLandmark(each)}
-                                        onClick={() => this.props.setCurrentSymbol(each.name, each.mapToLandmark)}>
+                                        onClick={() => {
+                                            this.props.setCurrentSymbol(each.name, each.mapToLandmark);
+                                            this.props.setCurrentWord(each.labels[0]);}}>
                                         {each.name}
                                     </Accordion.Toggle>
-                                    <Accordion.Collapse eventKey={index.toString()}>
+                                    <Accordion.Collapse eventKey={each.name + " " + each.mapToLandmark}>
                                     <Card.Body>
                                     <ButtonGroup vertical>
                                         {
@@ -799,11 +815,11 @@ class ControlPanel extends React.Component<IProps, IState> {
                         })
                     }
                 </Accordion>
-            <Button
+            {/* <Button
                     style={{width: "100%"}}
                     value="0"
                     className="block-button" 
-                    onClick={() => this.props.setCurrentSymbol()}>Pan</Button>
+                    onClick={() => this.props.setCurrentSymbol()}>Pan</Button> */}
             <Button variant="secondary" className="common-button" onClick={() => this.props.progressNextStage(CurrentStage.OCR_DETAILS)}>Back</Button>
             <Button className="common-button" onClick={() => this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK)}>Done</Button>
         </div>);
