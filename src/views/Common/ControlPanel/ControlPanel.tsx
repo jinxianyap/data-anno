@@ -194,6 +194,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     })
                     this.setState({selectedDocumentTypes: docTypes});
                 }        
+                break;
             }
             case (CurrentStage.LANDMARK_EDIT): {
                 if (this.props.internalID === undefined) return;

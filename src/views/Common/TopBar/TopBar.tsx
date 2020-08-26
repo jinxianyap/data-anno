@@ -13,7 +13,7 @@ const TopBar: React.FC<IProps> = ({currentStage}) => {
 
     return (
         <Navbar>
-            <Navbar.Brand href="#home">{currentStage}</Navbar.Brand>
+            <Navbar.Brand>{currentStage}</Navbar.Brand>
             <Navbar.Toggle />
             <Navbar.Collapse className="justify-content-end">
             </Navbar.Collapse>

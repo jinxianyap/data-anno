@@ -15,7 +15,7 @@ const BottomBar: React.FC<IProps> = ({index, numberOfIDs, currentIDSource, datab
 
     return (
         <Navbar fixed="bottom">
-            <Navbar.Brand href="#home">{database}</Navbar.Brand>
+            <Navbar.Brand>{database}</Navbar.Brand>
             <Navbar.Toggle />
             <Navbar.Collapse className="justify-content-end">
                 <Navbar.Text style={{marginRight: "3rem"}}>Source:   {currentIDSource}</Navbar.Text>

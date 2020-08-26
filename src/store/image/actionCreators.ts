@@ -1,5 +1,5 @@
 import { Action } from "../Actions";
-import { ImageState, ImageActionTypes, IDBox, ImageProps, LandmarkData, OCRData, Position, OCRWord } from "./types";
+import { ImageState, ImageActionTypes, ImageProps, LandmarkData, OCRData, Position, OCRWord } from "./types";
 
 export function loadImageState(currentImage: ImageState, passesCrop?: boolean): ImageActionTypes {
     return {

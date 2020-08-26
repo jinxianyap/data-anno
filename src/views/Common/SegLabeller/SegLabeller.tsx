@@ -1,7 +1,7 @@
 import L from 'leaflet';
 import React from 'react';
 import { connect } from 'react-redux'; 
-import { ImageActionTypes, IDBox, ImageState } from '../../../store/image/types';
+import { IDBox, ImageState } from '../../../store/image/types';
 // import { setIDBox } from '../../../store/image/actionCreators';
 import { AppState } from '../../../store';
 import { CurrentStage } from '../../../utils/enums';

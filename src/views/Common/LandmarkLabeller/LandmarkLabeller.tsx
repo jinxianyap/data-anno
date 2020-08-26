@@ -429,12 +429,8 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
     handleNextOCR = () => {
         let ocr = this.props.currentImageState.ocr.find((each) => each.name === this.props.currentSymbol);
-        console.log(ocr);
         if (ocr === undefined) return false;
-        // if (this.props.currentWord.id === ocr.count - 1) return false;
         let word = ocr.labels.filter((each) => each.position === undefined).sort((a, b) => a.id - b.id);
-        // let word = ocr.labels.find((each) => each.id === this.props.currentWord.id + 1);s
-        console.log(word);
         if (word === undefined || word.length === 0) return false;
         this.props.setCurrentWord(word[0]);
         return true;
@@ -624,10 +620,9 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
     }
 
     handleContextMenu = (e: any) => {
-        console.log(this.state.isDrawing);
-        console.log(this.state.isMoving);
-        console.log(this.state.isResizing);
-
+        // console.log(this.state.isDrawing);
+        // console.log(this.state.isMoving);
+        // console.log(this.state.isResizing);
         if (this.state.isDrawing || this.state.isMoving || this.state.isResizing) return;
         if (this.props.currentStage === CurrentStage.LANDMARK_EDIT) {
             this.deleteLandmarkBox(e);
@@ -878,16 +873,16 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
             let ob = this.outOfBounds(bounds);
             if (!isLandmark && ob.includes(true)) {
-                if (ob[0] && ob[1] && !ob[2] && !ob[3]
-                    || ob[2] && ob[3] && !ob[0] && !ob[1]) {
+                if ((ob[0] && ob[1] && !ob[2] && !ob[3])
+                    || (ob[2] && ob[3] && !ob[0] && !ob[1])) {
                     bounds[0][0] = position.y1! / this.state.ratio;
                     bounds[1][0] = position.y3! / this.state.ratio;
                     prevCoords = {
                         lat: this.state.prevCoords.lat,
                         lng: e.latlng.lng
                     };
-                } else if (ob[1] && ob[2] && !ob[0] && !ob[3]
-                    || ob[0] && ob[3] && !ob[1] && !ob[2]) {
+                } else if ((ob[1] && ob[2] && !ob[0] && !ob[3])
+                    || (ob[0] && ob[3] && !ob[1] && !ob[2])) {
                     bounds[0][1] = position.x1! / this.state.ratio;
                     bounds[1][1] = position.x3! / this.state.ratio;
                     prevCoords = {
@@ -1012,7 +1007,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                         position: {}
                     },
                     landmarkBoxes: boxes,
-                }, () => {this.submitLandmarkData(newBox); console.log(this.state.isMoving)});
+                }, () => this.submitLandmarkData(newBox));
             } else {
                 let lat1 = pos.y1! / this.state.ratio + e.latlng.lat - this.state.prevCoords.lat;
                 let lng1 = pos.x1! / this.state.ratio + e.latlng.lng - this.state.prevCoords.lng;
@@ -1038,9 +1033,9 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     box.id
                 );
                 let boxes = this.state.ocrBoxes;
-                for (var i = 0; i < boxes.length; i++) {
-                    if (boxes[i].id === box.id && boxes[i].name === box.name && boxes[i].value === box.value) {
-                        boxes.splice(i, 1, newBox);
+                for (var j = 0; j < boxes.length; j++) {
+                    if (boxes[j].id === box.id && boxes[j].name === box.name && boxes[j].value === box.value) {
+                        boxes.splice(j, 1, newBox);
                         break;
                     }
                 }
@@ -1124,9 +1119,9 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     box.id
                 );
                 let boxes = this.state.ocrBoxes;
-                for (var i = 0; i < boxes.length; i++) {
-                    if (boxes[i].id === box.id && boxes[i].name === box.name && boxes[i].value === box.value) {
-                        boxes.splice(i, 1, newBox);
+                for (var j = 0; j < boxes.length; j++) {
+                    if (boxes[j].id === box.id && boxes[j].name === box.name && boxes[j].value === box.value) {
+                        boxes.splice(j, 1, newBox);
                         break;
                     }
                 }

@@ -1,6 +1,6 @@
 import { IDActionTypes, IDState } from "./types";
 import { Action } from "../Actions";
-import { IDBox, ImageState } from "../image/types";
+import { ImageState, IDBox } from "../image/types";
 
 export function loadNextID(ID: IDState): IDActionTypes {
     return {
