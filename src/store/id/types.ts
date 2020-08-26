@@ -90,7 +90,8 @@ interface UpdateVideoData {
 interface SaveToInternalID {
     type: typeof Action.SAVE_TO_INTERNAL_ID;
     payload: {
-        imageState: ImageState
+        imageState: ImageState,
+        next: boolean,
     }
 }
 

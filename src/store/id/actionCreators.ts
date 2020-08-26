@@ -69,11 +69,12 @@ export function updateVideoData(liveness: boolean, flags: string[]): IDActionTyp
     }
 }
 
-export function saveToInternalID(image: ImageState): IDActionTypes {
+export function saveToInternalID(image: ImageState, next: boolean): IDActionTypes {
     return {
         type: Action.SAVE_TO_INTERNAL_ID,
         payload: {
-            imageState: image
+            imageState: image,
+            next: next
         }
     }
 }

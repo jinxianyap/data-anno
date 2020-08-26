@@ -50,7 +50,7 @@ interface IProps {
     setFaceCompareMatch: (match: boolean) => ImageActionTypes;
 
     // Saving to store
-    saveToInternalID: (imageState: ImageState) => IDActionTypes;
+    saveToInternalID: (imageState: ImageState, next: boolean) => IDActionTypes;
     saveToLibrary: (id: IDState) => GeneralActionTypes;
     restoreID: () => IDActionTypes;
     restoreImage: () => ImageActionTypes;
@@ -237,16 +237,19 @@ class ControlPanel extends React.Component<IProps, IState> {
                 break;
             }
             case (CurrentStage.END_STAGE): {
-                if (previousProps.internalID && 
-                    (previousProps.internalID.originalID!.faceCompareMatch !== undefined || previousProps.internalID.backID!.faceCompareMatch !== undefined)) {
+                if (previousProps.internalID) {
                     if (this.props.currentID.internalIndex >= this.props.currentID.internalIDs.length) {
                         console.log('next id');
                         this.loadNextID();
                     } else if (this.props.currentID.internalIndex < this.props.currentID.internalIDs.length) {
-                        if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
+                        if (this.props.internalID.processStage === IDProcess.MYKAD_FRONT) {
+                            console.log('liveness and match');
+                            this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
+                            this.props.loadImageState(this.props.internalID.originalID!);
+                        } else if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
                             console.log('back id');
                             this.loadBackId();
-                        } else {
+                        } else if (previousProps.internalID.originalID!.faceCompareMatch !== undefined) {
                             console.log('next internal id');
                             this.loadNextInternalId();
                         }
@@ -620,7 +623,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 this.props.updateLandmarkFlags(each.name, each.flags);
             });
             if (this.props.internalID.documentType === "MyKad" && this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
-                this.props.saveToInternalID(this.props.currentImage);
+                this.props.saveToInternalID(this.props.currentImage, false);
                 this.props.progressNextStage(CurrentStage.END_STAGE);
             } else {
                 this.props.progressNextStage(CurrentStage.OCR_DETAILS);
@@ -822,7 +825,14 @@ class ControlPanel extends React.Component<IProps, IState> {
                     className="block-button" 
                     onClick={() => this.props.setCurrentSymbol()}>Pan</Button> */}
             <Button variant="secondary" className="common-button" onClick={() => this.props.progressNextStage(CurrentStage.OCR_DETAILS)}>Back</Button>
-            <Button className="common-button" onClick={() => this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK)}>Done</Button>
+            <Button className="common-button" onClick={() => {
+                if (this.props.internalID.documentType === 'MyKad') {
+                    this.props.saveToInternalID(this.props.currentImage, false);
+                    this.props.progressNextStage(CurrentStage.END_STAGE);
+                } else {
+                    this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
+                }
+                }}>Done</Button>
         </div>);
     }
 
@@ -903,7 +913,7 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     frCompareCheck = () => {
         const submitFaceCompareResults = () => {
-            this.props.saveToInternalID(this.props.currentImage);
+            this.props.saveToInternalID(this.props.currentImage, true);
             this.props.progressNextStage(CurrentStage.END_STAGE);
         }
 
@@ -929,9 +939,10 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     loadBackId = () => {
+        this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
         this.props.loadImageState(this.props.internalID.backID!);
 
-        this.setState({loadedSegCheckImage: false}, () => this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK));
+        this.setState({loadedSegCheckImage: true});
     }
 
     loadNextInternalId = () => {

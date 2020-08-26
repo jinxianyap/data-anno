@@ -366,7 +366,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                         return;
                     }
                 }
-                if (!this.props.currentSymbol) return;
+                if (!this.props.currentSymbol || this.state.drawnLandmarks.includes(this.props.currentSymbol)) return;
                 break;
             }
             case (CurrentStage.OCR_EDIT): {
@@ -402,7 +402,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             }
         }
 
-        if (this.state.isDrawing || this.state.drawnLandmarks.includes(this.props.currentSymbol)) return;
+        if (this.state.isDrawing) return;
 
         this.state.map!.dragging.disable();
 

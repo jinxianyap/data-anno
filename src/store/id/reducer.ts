@@ -161,9 +161,9 @@ export function IDReducer(
         case Action.SAVE_TO_INTERNAL_ID: {
             let IDs = state.internalIDs;
             let internalID = state.internalIDs[state.internalIndex];
-            let index = state.internalIndex + 1;
             if (internalID.processStage === IDProcess.MYKAD_BACK) {
                 internalID.backID = action.payload.imageState;
+                internalID.processStage = IDProcess.MYKAD_FRONT;
                 state.backIDProcessed = true;
                 state.processed = true;
                 internalID.processed = true;
@@ -171,8 +171,7 @@ export function IDReducer(
                 internalID.originalID = action.payload.imageState;
                 if (internalID.processStage === IDProcess.MYKAD_FRONT) {
                     internalID.processStage = IDProcess.MYKAD_BACK;
-                    internalID.processed = false;
-                    index--;
+                    // internalID.processed = false;
                 } else {
                     internalID.processed = true;
                     state.processed = true;
@@ -184,7 +183,7 @@ export function IDReducer(
             return {
                 ...state,
                 internalIDs: IDs,
-                internalIndex: index,
+                internalIndex: action.payload.next ? state.internalIndex + 1 : state.internalIndex,
                 originalIDProcessed: true,
                 backIDProcessed: internalID.processed
             }
