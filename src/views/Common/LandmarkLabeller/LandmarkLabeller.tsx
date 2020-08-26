@@ -3,7 +3,7 @@ import 'leaflet-easybutton/src/easy-button';
 import React from 'react';
 import { connect } from 'react-redux'; 
 import { ImageActionTypes, ImageState, LandmarkData, Position, OCRData, OCRWord } from '../../../store/image/types';
-import { addLandmarkData, deleteLandmarkData, updateOCRData, setCurrentSymbol } from '../../../store/image/actionCreators';
+import { addLandmarkData, deleteLandmarkData, updateOCRData, setCurrentSymbol, setCurrentWord } from '../../../store/image/actionCreators';
 import { AppState } from '../../../store';
 import { CurrentStage } from '../../../utils/enums';
 import './LandmarkLabeller.scss';
@@ -20,7 +20,8 @@ interface IProps {
     addLandmarkData: (landmark: LandmarkData) => ImageActionTypes,
     deleteLandmarkData: (landmark: string) => ImageActionTypes,
     updateOCRData: (id: number, name: string, value: string, position?: Position) => ImageActionTypes,
-    setCurrentSymbol: (symbol?: string, landmark?: string) => ImageActionTypes
+    setCurrentSymbol: (symbol?: string, landmark?: string) => ImageActionTypes,
+    setCurrentWord: (word: OCRWord) => ImageActionTypes
 }
 
 interface IState {
@@ -67,7 +68,7 @@ type Box = {
         y4?: number,
     },
     rectangle?: L.Rectangle,
-    wrapper?: L.Rectangle,
+    // wrapper?: L.Rectangle,
     descriptor?: L.Marker,
     display?: boolean,
     resizeBox?: L.Rectangle
@@ -264,7 +265,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     y4: landmark.position.y4,
                 },
                 rectangle: createdBox.rectangle,
-                wrapper: createdBox.wrapper,
+                // wrapper: createdBox.wrapper,
                 descriptor: createdBox.descriptor,
                 display: createdBox.display,
                 resizeBox: createdBox.resizeBox
@@ -314,7 +315,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                             y4: pos.y4,
                         },
                         rectangle: createdBox.rectangle,
-                        wrapper: createdBox.wrapper,
+                        // wrapper: createdBox.wrapper,
                         descriptor: createdBox.descriptor,
                         display: createdBox.display,
                         resizeBox: createdBox.resizeBox
@@ -395,12 +396,13 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                         }
                     }
                 }
-                if (!this.props.currentSymbol || !this.props.currentWord || this.ocrWordDrawn()) return;
+                if (!this.props.currentSymbol || !this.props.currentWord) return;
+                if (this.ocrWordDrawn() && !this.handleNextOCR()) return;
                 break;
             }
         }
 
-        if (this.state.isDrawing) return;
+        if (this.state.isDrawing || this.state.drawnLandmarks.includes(this.props.currentSymbol)) return;
 
         this.state.map!.dragging.disable();
 
@@ -423,6 +425,19 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 }
             }
         });
+    }
+
+    handleNextOCR = () => {
+        let ocr = this.props.currentImageState.ocr.find((each) => each.name === this.props.currentSymbol);
+        console.log(ocr);
+        if (ocr === undefined) return false;
+        // if (this.props.currentWord.id === ocr.count - 1) return false;
+        let word = ocr.labels.filter((each) => each.position === undefined).sort((a, b) => a.id - b.id);
+        // let word = ocr.labels.find((each) => each.id === this.props.currentWord.id + 1);s
+        console.log(word);
+        if (word === undefined || word.length === 0) return false;
+        this.props.setCurrentWord(word[0]);
+        return true;
     }
 
     getLandmarkFromOCR = (name: string)  => {
@@ -532,6 +547,8 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
     
             this.setState({
                 isDrawing: false,
+                isResizing: false,
+                isMoving: false,
                 currentBox: {
                     id: this.state.drawnLandmarks.length,
                     name: '',
@@ -562,6 +579,8 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
             this.setState({
                 isDrawing: false,
+                isResizing: false,
+                isMoving: false,
                 currentBox: {
                     id: 0,
                     name: '',
@@ -605,6 +624,10 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
     }
 
     handleContextMenu = (e: any) => {
+        console.log(this.state.isDrawing);
+        console.log(this.state.isMoving);
+        console.log(this.state.isResizing);
+
         if (this.state.isDrawing || this.state.isMoving || this.state.isResizing) return;
         if (this.props.currentStage === CurrentStage.LANDMARK_EDIT) {
             this.deleteLandmarkBox(e);
@@ -616,9 +639,9 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
     createRectangle = (lat1: number, lng1: number, lat2: number, lng2: number, name: string, value: string, display?: boolean, isLandmark?: boolean, id?: number) => {
         let boxBounds: [number, number][] = this.reorderCoords(lat1, lng1, lat2, lng2);
-        let wrapperBounds: [number, number][] = [[boxBounds[0][0] + 10, boxBounds[0][1] - 10], [boxBounds[1][0] - 10, boxBounds[1][1] + 10]];
+        // let wrapperBounds: [number, number][] = [[boxBounds[0][0] + 10, boxBounds[0][1] - 10], [boxBounds[1][0] - 10, boxBounds[1][1] + 10]];
         let rectangle = L.rectangle(boxBounds, {color: "red", weight: 1, className: 'bounding-box'}).addTo(this.state.map!);
-        let wrapper = L.rectangle(wrapperBounds, {stroke: false, fillOpacity: 0.0}).addTo(this.state.map!);
+        // let wrapper = L.rectangle(wrapperBounds, {stroke: false, fillOpacity: 0.0}).addTo(this.state.map!);
 
         let resizeBox = L.rectangle([[boxBounds[1][0] + 10, boxBounds[1][1] - 10], boxBounds[1]],
             {color: 'red', fillColor: 'red', fillOpacity: 0, weight: 0, className: 'resize-box'});
@@ -644,12 +667,12 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 })
                 rectangle.bringToFront();
 
-                wrapper.on('mouseover', (e: any) => {
-                    let index = this.withinLandmarkRectangleBounds(e);
+                // wrapper.on('mouseover', (e: any) => {
+                //     let index = this.withinLandmarkRectangleBounds(e);
     
-                    if (index === undefined) return;
-                    this.state.landmarkBoxes[index].resizeBox!.remove();
-                })
+                //     if (index === undefined) return;
+                //     this.state.landmarkBoxes[index].resizeBox!.remove();
+                // })
             } else if (this.props.currentStage === CurrentStage.OCR_EDIT) {
                 rectangle.on('mouseover', (e: any) => {
                     let index = this.withinOcrRectangleBounds(e);
@@ -659,12 +682,12 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 })
                 rectangle.bringToFront();
 
-                wrapper.on('mouseover', (e: any) => {
-                    let index = this.withinOcrRectangleBounds(e);
+                // wrapper.on('mouseover', (e: any) => {
+                //     let index = this.withinOcrRectangleBounds(e);
 
-                    if (index === undefined) return;
-                    this.state.ocrBoxes[index].resizeBox!.remove();
-                })
+                //     if (index === undefined) return;
+                //     this.state.ocrBoxes[index].resizeBox!.remove();
+                // })
             }
         }
 
@@ -683,7 +706,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 y4: boxBounds[0][0] * this.state.ratio
             },
             rectangle: rectangle,
-            wrapper: wrapper,
+            // wrapper: wrapper,
             descriptor: textMarker,
             display: display,
             resizeBox: resizeBox,
@@ -723,8 +746,8 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
     withinLandmarkRectangleBounds = (e: any, symbol?: string) => {
         if (symbol !== undefined) {
             for (let i = 0; i < this.state.landmarkBoxes.length; i++) {
-                if ((this.state.landmarkBoxes[i].rectangle!.getBounds().contains(e.latlng)
-                || this.state.landmarkBoxes[i].wrapper!.getBounds().contains(e.latlng))
+                if ((this.state.landmarkBoxes[i].rectangle!.getBounds().contains(e.latlng))
+                // || this.state.landmarkBoxes[i].wrapper!.getBounds().contains(e.latlng))
                 && this.state.landmarkBoxes[i].name === symbol) {
                     return i;
                 }
@@ -733,7 +756,8 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         } else {
             for (let i = 0; i < this.state.landmarkBoxes.length; i++) {
                 if (this.state.landmarkBoxes[i].rectangle!.getBounds().contains(e.latlng)
-                || this.state.landmarkBoxes[i].wrapper!.getBounds().contains(e.latlng)) {
+                // || this.state.landmarkBoxes[i].wrapper!.getBounds().contains(e.latlng)
+                ) {
                     return i;
                 }
             }
@@ -774,8 +798,8 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
     withinOcrRectangleBounds = (e: any, symbol?: string, value?: string) => {
         if (symbol !== undefined && value !== undefined) {
             for (let i = 0; i < this.state.ocrBoxes.length; i++) {
-                if ((this.state.ocrBoxes[i].rectangle!.getBounds().contains(e.latlng)
-                || this.state.ocrBoxes[i].wrapper!.getBounds().contains(e.latlng))
+                if ((this.state.ocrBoxes[i].rectangle!.getBounds().contains(e.latlng))
+                // || this.state.ocrBoxes[i].wrapper!.getBounds().contains(e.latlng))
                 && this.state.ocrBoxes[i].name === symbol
                 && this.state.ocrBoxes[i].value === value) {
                     return i;
@@ -785,7 +809,8 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         } else {
             for (let i = 0; i < this.state.ocrBoxes.length; i++) {
                 if (this.state.ocrBoxes[i].rectangle!.getBounds().contains(e.latlng)
-                || this.state.ocrBoxes[i].wrapper!.getBounds().contains(e.latlng)) {
+                // || this.state.ocrBoxes[i].wrapper!.getBounds().contains(e.latlng)
+                ) {
                     return i;
                 }
             }
@@ -977,6 +1002,8 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     }
                 }
                 this.setState({
+                    isDrawing: false,
+                    isResizing: false,
                     isMoving: false,
                     prevCoords: undefined,
                     currentBox: {
@@ -1018,6 +1045,8 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     }
                 }
                 this.setState({
+                    isDrawing: false,
+                    isResizing: false,
                     isMoving: false,
                     prevCoords: undefined,
                     currentBox: {
@@ -1068,7 +1097,9 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     }
                 }
                 this.setState({
+                    isDrawing: false,
                     isResizing: false,
+                    isMoving: false,
                     currentBox: {
                         id: this.state.drawnLandmarks.length,
                         name: '',
@@ -1100,7 +1131,9 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     }
                 }
                 this.setState({
+                    isDrawing: false,
                     isResizing: false,
+                    isMoving: false,
                     currentBox: {
                         id: 0,
                         name: '',
@@ -1156,12 +1189,13 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         boxes.splice(boxIndex, 1);
         this.setState({ocrBoxes: boxes, drawnOCRs: drawn, isDrawing: false, isMoving: false, isResizing: false}, () => {
             this.props.updateOCRData(id, name, value);
+            this.handleNextOCR();
         });
     }
 
     removeMapElements = (box: Box) => {
         box.rectangle!.remove();
-        box.wrapper!.remove();
+        // box.wrapper!.remove();
         box.descriptor!.remove();
         box.resizeBox!.remove();
     }
@@ -1188,7 +1222,8 @@ const mapDispatchToProps = {
     addLandmarkData,
     deleteLandmarkData,
     updateOCRData,
-    setCurrentSymbol
+    setCurrentSymbol,
+    setCurrentWord
 }
     
 export default connect(

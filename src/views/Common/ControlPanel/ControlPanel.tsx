@@ -875,7 +875,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                                         className="video-flags"
                                                         key={i}
                                                         value={flag}
-                                                        variant="secondary"
+                                                        variant="light"
                                                         checked={this.state.selectedVideoFlags.includes(flag)}
                                                         onClick={() => setFlag(flag)}>
                                                         {flag}
