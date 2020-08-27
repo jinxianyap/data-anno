@@ -54,7 +54,7 @@ export function IDReducer(
                 processStage: IDProcess.MYKAD_FRONT
             }
             ID.originalID!.IDBox = action.payload.IDBox;
-            // ID.originalID!.croppedImage = action.payload.croppedImage;
+            ID.originalID!.passesCrop = action.payload.passesCrop;
             let IDs = state.internalIDs;
             IDs.push(ID);
             return {
@@ -69,12 +69,15 @@ export function IDReducer(
                     originalIDProcessed: action.payload.originalIDProcessed,
                     backIDProcessed: false,
                     internalIndex: 0,
-                    internalIDs: action.payload.originalIDProcessed ? state.internalIDs.map((each) => {each.backID!.IDBox = undefined; return each;}) : []
+                    internalIDs: []
                 }
             } else {
                 let ids = state.internalIDs;
                 let internalID = state.internalIDs[state.internalIndex];
                 internalID.backID!.IDBox = undefined;
+                internalID.backID!.landmark = [];
+                internalID.backID!.ocr = [];
+                internalID.backID!.passesCrop = undefined;
                 ids.splice(state.internalIndex, 1, internalID);
                 return {
                     ...state,
@@ -84,7 +87,7 @@ export function IDReducer(
                 }
             }
         }
-        case Action.SAVE_CROPPED_IMAGES: {
+        case Action.SAVE_CROPPED_IMAGE: {
             let ids = state.internalIDs;
 
             if (!state.originalIDProcessed) {

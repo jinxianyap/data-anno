@@ -53,6 +53,7 @@ interface CreateNewID {
     type: typeof Action.CREATE_NEW_ID;
     payload: {
         IDBox: IDBox,
+        passesCrop?: boolean
     }
 }
 
@@ -79,7 +80,7 @@ interface DeleteIDBox {
 }
 
 interface SaveCroppedImages {
-    type: typeof Action.SAVE_CROPPED_IMAGES;
+    type: typeof Action.SAVE_CROPPED_IMAGE;
     payload: {
         index?: number,
         croppedImage: File

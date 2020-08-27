@@ -153,8 +153,9 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
     loadImageData = () => {
         let image = new Image();
         image.onload = () => {
+            let area = document!.getElementById("paint-area")!;
             let fitHeight = 800;
-            let fitWidth = 800;
+            let fitWidth = area !== undefined ? area.offsetWidth / 12 * 9 : 800;
             let height = 0;
             let width = 0;
             let ratio = 0;
@@ -364,7 +365,8 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                         return;
                     }
                 }
-                if (!this.props.currentSymbol || this.state.drawnLandmarks.includes(this.props.currentSymbol)) return;
+                if (!this.props.currentSymbol) return;
+                if (this.state.drawnLandmarks.includes(this.props.currentSymbol) && !this.handleNextLandmark()) return;
                 break;
             }
             case (CurrentStage.OCR_EDIT): {
@@ -423,6 +425,13 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 }
             }
         });
+    }
+
+    handleNextLandmark = () => {
+        let landmark = this.props.currentImageState.landmark.filter((each) => each.position === undefined).sort((a, b) => a.id - b.id);
+        if (landmark === undefined || landmark.length === 0) return false;
+        this.props.setCurrentSymbol(landmark[0].name);
+        return true;
     }
 
     handleNextOCR = () => {

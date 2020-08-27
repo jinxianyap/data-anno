@@ -45,7 +45,7 @@ const App: React.FC<IProps> = ({state, currentStage}) => {
             {currentStage !== CurrentStage.SETUP ?
               (
                 <Row style={{height: "100%", width: "100%", margin: 0}}>
-                  <Col md={7} lg={9}>
+                  <Col md={7} lg={9} id="paint-area">
                     {paintContent()}
                   </Col>
                   <Col style={{padding: 0}}>

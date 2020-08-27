@@ -12,11 +12,12 @@ export function loadNextID(ID: IDState): IDActionTypes {
     }
 }
 
-export function createNewID(IDBox: IDBox): IDActionTypes {
+export function createNewID(IDBox: IDBox, passesCrop?: boolean): IDActionTypes {
     return {
         type: Action.CREATE_NEW_ID,
         payload: {
-            IDBox: IDBox
+            IDBox: IDBox,
+            passesCrop: passesCrop
         }
     }
 }
@@ -32,7 +33,7 @@ export function deleteIDBox(index: number): IDActionTypes {
 
 export function saveCroppedImage(image: File, index?: number): IDActionTypes {
     return {
-        type: Action.SAVE_CROPPED_IMAGES,
+        type: Action.SAVE_CROPPED_IMAGE,
         payload: {
             index: index,
             croppedImage: image

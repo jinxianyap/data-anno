@@ -15,7 +15,7 @@ interface IProps {
     internalIDs: InternalIDState[],
     IDImage: ImageState,
     committedBoxes: IDBox[],
-    createNewID: (box: IDBox) => IDActionTypes,
+    createNewID: (box: IDBox, passesCrop?: boolean) => IDActionTypes,
     setIDBox: (box: IDBox, croppedImage?: File) => IDActionTypes,
 }
 
@@ -116,8 +116,9 @@ class SegLabeller extends React.Component<IProps, IState> {
     loadImageData = () => {
         let image = new Image();
         image.onload = () => {
+            let area = document!.getElementById("paint-area")!;
             let fitHeight = 800;
-            let fitWidth = 800;
+            let fitWidth = area !== undefined ? area.offsetWidth / 12 * 9 : 800;
             let height = 0;
             let width = 0;
             let ratio = 0;
@@ -540,7 +541,7 @@ class SegLabeller extends React.Component<IProps, IState> {
         if (update) {
             this.props.setIDBox(IDBox, this.props.IDImage.image);
         } else {
-            this.props.createNewID(IDBox);
+            this.props.createNewID(IDBox, false);
         }
     }
 
