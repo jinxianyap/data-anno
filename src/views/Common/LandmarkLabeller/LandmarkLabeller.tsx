@@ -36,6 +36,7 @@ interface IState {
 
     isDrawing: boolean,
     isResizing: boolean,
+    resizingBox?: number,
     isMoving: boolean,
     prevCoords?: {
         lat: number,
@@ -68,10 +69,9 @@ type Box = {
         y4?: number,
     },
     rectangle?: L.Rectangle,
-    // wrapper?: L.Rectangle,
     descriptor?: L.Marker,
     display?: boolean,
-    resizeBox?: L.Rectangle
+    resizeBoxes?: L.Rectangle[]
 }
 
 class LandmarkLabeller extends React.Component<IProps, IState> {
@@ -210,7 +210,6 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         map.on('mousemove', this.handleMouseMove);
         map.on('mouseup', this.handleMouseUp);
         map.on('contextmenu', this.handleContextMenu);
-        // map.on('mouseout', () =>);
         this.setState({map: map}, () => {this.renderCommittedLandmarks(); this.renderCommittedOCRs();});
     }
 
@@ -264,10 +263,9 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     y4: landmark.position.y4,
                 },
                 rectangle: createdBox.rectangle,
-                // wrapper: createdBox.wrapper,
                 descriptor: createdBox.descriptor,
                 display: createdBox.display,
-                resizeBox: createdBox.resizeBox
+                resizeBoxes: createdBox.resizeBoxes
             };
 
             newBoxes.push(box);
@@ -314,10 +312,9 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                             y4: pos.y4,
                         },
                         rectangle: createdBox.rectangle,
-                        // wrapper: createdBox.wrapper,
                         descriptor: createdBox.descriptor,
                         display: createdBox.display,
-                        resizeBox: createdBox.resizeBox
+                        resizeBoxes: createdBox.resizeBoxes
                     };
                     newBoxes.push(box);
                     drawnOCRs.push({name: ocr.name, word: label});
@@ -641,12 +638,17 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
     createRectangle = (lat1: number, lng1: number, lat2: number, lng2: number, name: string, value: string, display?: boolean, isLandmark?: boolean, id?: number) => {
         let boxBounds: [number, number][] = this.reorderCoords(lat1, lng1, lat2, lng2);
-        // let wrapperBounds: [number, number][] = [[boxBounds[0][0] + 10, boxBounds[0][1] - 10], [boxBounds[1][0] - 10, boxBounds[1][1] + 10]];
         let rectangle = L.rectangle(boxBounds, {color: "red", weight: 1, className: 'bounding-box'}).addTo(this.state.map!);
-        // let wrapper = L.rectangle(wrapperBounds, {stroke: false, fillOpacity: 0.0}).addTo(this.state.map!);
-
-        let resizeBox = L.rectangle([[boxBounds[1][0] + 10, boxBounds[1][1] - 10], boxBounds[1]],
-            {color: 'red', fillColor: 'red', fillOpacity: 0, weight: 0, className: 'resize-box'});
+       
+        let resizeBoxes: L.Rectangle[] = [];
+        resizeBoxes.push(L.rectangle([boxBounds[0], [boxBounds[0][0] - 10, boxBounds[0][1] + 10]],
+            {color: 'red', fillColor: 'red', fillOpacity: 0, weight: 0, className: 'resize-box'}));
+        resizeBoxes.push(L.rectangle([[boxBounds[0][0], boxBounds[1][1] - 10], [boxBounds[0][0] - 10, boxBounds[1][1]]],
+            {color: 'red', fillColor: 'red', fillOpacity: 0, weight: 0, className: 'resize-box'}));
+        resizeBoxes.push(L.rectangle([[boxBounds[1][0] + 10, boxBounds[1][1] - 10], boxBounds[1]],
+            {color: 'red', fillColor: 'red', fillOpacity: 0, weight: 0, className: 'resize-box'}));
+        resizeBoxes.push(L.rectangle([[boxBounds[1][0] + 10, boxBounds[0][1]], [boxBounds[1][0], boxBounds[0][1] + 10]],
+            {color: 'red', fillColor: 'red', fillOpacity: 0, weight: 0, className: 'resize-box'}));
 
         let htmlText = '<p>' + value + '</p>';
         if (!isLandmark) {
@@ -665,31 +667,17 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     let index = this.withinLandmarkRectangleBounds(e);
                     if (index === undefined) return;
     
-                    this.state.landmarkBoxes[index].resizeBox!.addTo(this.state.map!);
+                    this.state.landmarkBoxes[index].resizeBoxes!.forEach((each) => each.addTo(this.state.map!));
                 })
                 rectangle.bringToFront();
-
-                // wrapper.on('mouseover', (e: any) => {
-                //     let index = this.withinLandmarkRectangleBounds(e);
-    
-                //     if (index === undefined) return;
-                //     this.state.landmarkBoxes[index].resizeBox!.remove();
-                // })
             } else if (this.props.currentStage === CurrentStage.OCR_EDIT) {
                 rectangle.on('mouseover', (e: any) => {
                     let index = this.withinOcrRectangleBounds(e);
                     if (index === undefined) return;
     
-                    this.state.ocrBoxes[index].resizeBox!.addTo(this.state.map!);
+                    this.state.ocrBoxes[index].resizeBoxes!.forEach((each) => each.addTo(this.state.map!));
                 })
                 rectangle.bringToFront();
-
-                // wrapper.on('mouseover', (e: any) => {
-                //     let index = this.withinOcrRectangleBounds(e);
-
-                //     if (index === undefined) return;
-                //     this.state.ocrBoxes[index].resizeBox!.remove();
-                // })
             }
         }
 
@@ -711,7 +699,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             // wrapper: wrapper,
             descriptor: textMarker,
             display: display,
-            resizeBox: resizeBox,
+            resizeBoxes: resizeBoxes
         }
         return resultBox;
     }
@@ -769,30 +757,38 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
     withinLandmarkResizeBounds = (e: any) => {
         for (let i = 0; i < this.state.landmarkBoxes.length; i++) {
-            try {
-                let bounds = this.state.landmarkBoxes[i].resizeBox!.getBounds();
-                if (this.state.map && bounds.contains(e.latlng)) {
-                    return i;
-                }
-            } catch (err) {
-                console.error(err);
-                return undefined;
-            }
+            let index = this.state.landmarkBoxes[i].resizeBoxes!.findIndex((each) => {
+                            try {
+                                let bounds = each.getBounds();
+                                if (this.state.map && bounds.contains(e.latlng)) {
+                                    return true;
+                                }
+                            } catch (err) {
+                                console.error(err);
+                                return false;
+                            }
+                            return false;
+                        });
+            if (index !== undefined && index !== -1) return [i, index];
         }
         return undefined;
     }   
 
     withinOcrResizeBounds = (e: any) => {
         for (let i = 0; i < this.state.ocrBoxes.length; i++) {
-            try {
-                let bounds = this.state.ocrBoxes[i].resizeBox!.getBounds();
-                if (this.state.map && bounds.contains(e.latlng)) {
-                    return i;
+            let index = this.state.ocrBoxes[i].resizeBoxes!.findIndex((each) => {
+                try {
+                    let bounds = each.getBounds();
+                    if (this.state.map && bounds.contains(e.latlng)) {
+                        return true;
+                    }
+                } catch (err) {
+                    console.error(err);
+                    return false;
                 }
-            } catch (err) {
-                console.error(err);
-                return undefined;
-            }
+                return false;
+            });
+            if (index !== undefined && index !== -1) return [i, index];
         }
         return undefined;
     }   
@@ -842,8 +838,8 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         });
     }
 
-    setResizeBox = (index: number, isLandmark: boolean) => {
-        let box = isLandmark ? this.state.landmarkBoxes[index] : this.state.ocrBoxes[index];
+    setResizeBox = (index: number[], isLandmark: boolean) => {
+        let box = isLandmark ? this.state.landmarkBoxes[index[0]] : this.state.ocrBoxes[index[0]];
         if (box.descriptor) {
             this.removeMapElements(box);
         }    
@@ -859,6 +855,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         this.setState({
             currentBox: box,
             isResizing: true,
+            resizingBox: index[1]
         });
     }
 
@@ -901,7 +898,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 }
             }
 
-            if (this.state.currentBox.descriptor || this.state.currentBox.resizeBox) {
+            if (this.state.currentBox.descriptor) {
                 this.removeMapElements(box);
             }    
             if (this.state.currentBox.rectangle) {
@@ -942,6 +939,53 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         return points.map((point) => !landmark!.rectangle!.getBounds().contains(point));
     }
 
+    getResizedPositions = (lat: number, lng: number) => {
+        let newPosition: any = {};
+        switch (this.state.resizingBox) {
+            case (0): {
+                newPosition = {
+                    ...this.state.currentBox.position,
+                    x1: lng * this.state.ratio,
+                    y1: lat * this.state.ratio,
+                    x4: lng * this.state.ratio,
+                    y2: lat * this.state.ratio
+                }
+                break;
+            }
+            case (1): {
+                newPosition = {
+                    ...this.state.currentBox.position,
+                    x3: lng * this.state.ratio,
+                    y1: lat * this.state.ratio,
+                    x2: lng * this.state.ratio,
+                    y2: lat * this.state.ratio
+                }
+                break;
+            }
+            case (2): {
+                newPosition = {
+                    ...this.state.currentBox.position,
+                    x2: lng * this.state.ratio,
+                    y3: lat * this.state.ratio,
+                    x3: lng * this.state.ratio,
+                    y4: lat * this.state.ratio
+                }
+                break;
+            }
+            case (3): {
+                newPosition = {
+                    ...this.state.currentBox.position,
+                    x1: lng * this.state.ratio,
+                    y3: lat * this.state.ratio,
+                    x4: lng * this.state.ratio,
+                    y4: lat * this.state.ratio
+                }
+                break;
+            }
+        }
+        return newPosition;
+    }
+
     moveResizeBox = (e: any) => {
         if (this.state.isResizing) {
             let box = this.state.currentBox;
@@ -954,21 +998,15 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 this.state.currentBox.rectangle!.remove();
             }
 
-            let position = this.state.currentBox.position;
-            let bounds: [number, number][] = [[position.y1! / this.state.ratio, position.x1! / this.state.ratio], [e.latlng.lat, e.latlng.lng]];
+            let pos: any = this.getResizedPositions(e.latlng.lat, e.latlng.lng);
+            let bounds: [number, number][] = [[pos.y1 / this.state.ratio, pos.x1 / this.state.ratio], [pos.y3 / this.state.ratio, pos.x3 / this.state.ratio]];
             let rectangle = L.rectangle(bounds, {color: "yellow", weight: 1}).addTo(this.state.map!);
     
             this.setState({
                 isResizing: true,
                 currentBox: {
                     ...box,
-                    position: {
-                        ...this.state.currentBox.position,
-                        x2: e.latlng.lng * this.state.ratio,
-                        x3: e.latlng.lng * this.state.ratio,
-                        y3: e.latlng.lat * this.state.ratio,
-                        y4: e.latlng.lat * this.state.ratio
-                    },
+                    position: pos,
                     rectangle: rectangle,
                 }
             });
@@ -1074,17 +1112,18 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
     confirmResizeBox = (e: any, isLandmark: boolean) => {
         if (this.state.isResizing) {
             let box = this.state.currentBox;
-            let pos = box.position;
+
             if (box.rectangle) {
                 box.rectangle!.remove();
             }
 
             if (isLandmark) {
+                let pos = this.getResizedPositions(e.latlng.lat, e.latlng.lng);
                 let newBox = this.createRectangle(
                     pos.y1! / this.state.ratio, 
                     pos.x1! / this.state.ratio, 
-                    e.latlng.lat, 
-                    e.latlng.lng, 
+                    pos.y3! / this.state.ratio, 
+                    pos.x3! / this.state.ratio, 
                     box.name,
                     box.value!,
                     false,
@@ -1101,6 +1140,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 this.setState({
                     isDrawing: false,
                     isResizing: false,
+                    resizingBox: undefined,
                     isMoving: false,
                     currentBox: {
                         id: this.state.drawnLandmarks.length,
@@ -1113,12 +1153,13 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 let landmark = this.getLandmarkFromOCR(this.props.ocrToLandmark);
                 if (landmark === undefined) return;
                 let latlng: [number, number] = this.getConstrainedBounds(landmark, e.latlng.lat, e.latlng.lng);
+                let pos = this.getResizedPositions(latlng[0], latlng[1]);
 
                 let newBox = this.createRectangle(
                     pos.y1! / this.state.ratio, 
                     pos.x1! / this.state.ratio, 
-                    latlng[0], 
-                    latlng[1], 
+                    pos.y3! / this.state.ratio, 
+                    pos.x3! / this.state.ratio, 
                     box.name,
                     box.value!,
                     false,
@@ -1197,9 +1238,8 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
     removeMapElements = (box: Box) => {
         box.rectangle!.remove();
-        // box.wrapper!.remove();
         box.descriptor!.remove();
-        box.resizeBox!.remove();
+        box.resizeBoxes!.forEach((each) => each.remove());
     }
 
     render() {
