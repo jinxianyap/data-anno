@@ -202,8 +202,6 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
         let overlay = L.imageOverlay(st.source, imageBounds);
 
-        // let moveButton = L.easyButton('<span>&target;</span>', () => this.setState({isMoving: !this.state.isMoving})).addTo(map);
-
         map.addLayer(layer);
         overlay.addTo(map);
         map.fitBounds(imageBounds);

@@ -34,10 +34,11 @@ class SegCheck extends React.Component<IProps> {
         if (this.props.noMoreIDs) return;
         if (this.props.originalProcessed) {
             ImageUtil.loadImage("segCheckID", this.props.backID!.image);
+            ImageUtil.loadImage("segCheckCropped", this.props.backID!.croppedImage!);
         } else {
             ImageUtil.loadImage("segCheckID", this.props.originalID!.image);
+            ImageUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!);
         }
-        ImageUtil.loadImage("segCheckCropped", this.props.croppedID!.image);
     }
 
 
@@ -46,9 +47,11 @@ class SegCheck extends React.Component<IProps> {
             <Container style={{height: "100%"}}>
                 <Row style={{height: "100%", padding: "6rem 0"}}>
                     <Col xs={6}>
+                        <p>Original</p>
                         <div id="segCheckID" className="pairDisplay"></div>
                     </Col>
                     <Col xs={6}>
+                        <p>Cropped</p>
                         <div id="segCheckCropped" className="pairDisplay"></div>
                     </Col>
                 </Row>
@@ -80,7 +83,7 @@ const mapStateToProps = (state: AppState) => {
         originalID: ID.originalID!,
         backID: ID.backID!,
         // need to change later
-        croppedID: ID.originalID!
+        // croppedID: ID.croppedID!
     };
 };
 

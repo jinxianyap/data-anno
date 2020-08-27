@@ -1,6 +1,7 @@
 import { IDActionTypes, IDState } from "./types";
 import { Action } from "../Actions";
 import { ImageState, IDBox } from "../image/types";
+import { number } from "prop-types";
 
 export function loadNextID(ID: IDState): IDActionTypes {
     return {
@@ -11,12 +12,11 @@ export function loadNextID(ID: IDState): IDActionTypes {
     }
 }
 
-export function createNewID(IDBox: IDBox, croppedImage: File): IDActionTypes {
+export function createNewID(IDBox: IDBox): IDActionTypes {
     return {
         type: Action.CREATE_NEW_ID,
         payload: {
-            IDBox: IDBox,
-            croppedImage: croppedImage
+            IDBox: IDBox
         }
     }
 }
@@ -26,6 +26,16 @@ export function deleteIDBox(index: number): IDActionTypes {
         type: Action.DELETE_ID_BOX,
         payload: {
             index: index
+        }
+    }
+}
+
+export function saveCroppedImage(image: File, index?: number): IDActionTypes {
+    return {
+        type: Action.SAVE_CROPPED_IMAGES,
+        payload: {
+            index: index,
+            croppedImage: image
         }
     }
 }

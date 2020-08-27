@@ -15,7 +15,7 @@ interface IProps {
     internalIDs: InternalIDState[],
     IDImage: ImageState,
     committedBoxes: IDBox[],
-    createNewID: (box: IDBox, croppedImage: File) => IDActionTypes,
+    createNewID: (box: IDBox) => IDActionTypes,
     setIDBox: (box: IDBox, croppedImage?: File) => IDActionTypes,
 }
 
@@ -540,7 +540,7 @@ class SegLabeller extends React.Component<IProps, IState> {
         if (update) {
             this.props.setIDBox(IDBox, this.props.IDImage.image);
         } else {
-            this.props.createNewID(IDBox, this.props.IDImage.image);
+            this.props.createNewID(IDBox);
         }
     }
 

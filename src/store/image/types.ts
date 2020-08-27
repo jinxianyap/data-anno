@@ -18,6 +18,7 @@ export type ImageState = {
     currentWord?: OCRWord;
 
     // FR Compare (for each cropped internal ID)
+    croppedFace?: File;
     faceCompareMatch?: boolean
 }
 

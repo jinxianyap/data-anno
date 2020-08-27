@@ -96,7 +96,7 @@ class SetupView extends React.Component<IProps, IState> {
                     this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
                 }
             }
-            reader.readAsText(st.files[3]);
+            reader.readAsText(st.files[4]);
         }
     }
 
@@ -157,13 +157,13 @@ class SetupView extends React.Component<IProps, IState> {
                             label="IC Front"
                             onChange={(e: any) => this.handleUpload(e)}
                             />
-                        {/* <Form.File
+                        <Form.File
                             className="position-relative"
                             required
                             name="file"
                             label="IC cropped"
                             onChange={(e: any) => this.handleUpload(e)}
-                            /> */}
+                            />
                         <Form.File
                             className="position-relative"
                             required

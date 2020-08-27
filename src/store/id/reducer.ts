@@ -49,12 +49,12 @@ export function IDReducer(
                 source: state.source,
                 originalID: cloneImageState(state.originalID!),
                 backID: cloneImageState(state.backID!),
-                croppedID: state.croppedID!.image === undefined ? undefined : cloneImageState(state.croppedID!),
+                // croppedID: state.croppedID!.image === undefined ? undefined : cloneImageState(state.croppedID!),
                 documentType: 'MyKad',
                 processStage: IDProcess.MYKAD_FRONT
             }
             ID.originalID!.IDBox = action.payload.IDBox;
-            ID.originalID!.croppedImage = action.payload.croppedImage;
+            // ID.originalID!.croppedImage = action.payload.croppedImage;
             let IDs = state.internalIDs;
             IDs.push(ID);
             return {
@@ -82,6 +82,23 @@ export function IDReducer(
                     backIDProcessed: false,
                     internalIDs: ids
                 }
+            }
+        }
+        case Action.SAVE_CROPPED_IMAGES: {
+            let ids = state.internalIDs;
+
+            if (!state.originalIDProcessed) {
+                let id = ids[action.payload.index!];
+                id.originalID!.croppedImage = action.payload.croppedImage;
+            } else {
+                let id = ids[state.internalIndex];
+                id.backID!.croppedImage = action.payload.croppedImage;
+                ids.splice(state.internalIndex, 1, id);
+            }
+
+            return {
+                ...state,
+                internalIDs: ids
             }
         }
         case Action.SET_ID_BOX: {

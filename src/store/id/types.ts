@@ -8,7 +8,7 @@ export type IDState = {
     index: number;
 
     originalID?: ImageState;
-    croppedID?: ImageState;
+    // croppedID?: ImageState;
     backID?: ImageState;
     selfieVideo?: File;
     jsonData?: any;
@@ -30,7 +30,7 @@ export type InternalIDState = {
     processStage?: IDProcess,
 
     originalID?: ImageState;
-    croppedID?: ImageState;
+    // croppedID?: ImageState;
     backID?: ImageState;
 }
 
@@ -53,7 +53,6 @@ interface CreateNewID {
     type: typeof Action.CREATE_NEW_ID;
     payload: {
         IDBox: IDBox,
-        croppedImage: File
     }
 }
 
@@ -76,6 +75,14 @@ interface DeleteIDBox {
     type: typeof Action.DELETE_ID_BOX;
     payload: {
         index: number
+    }
+}
+
+interface SaveCroppedImages {
+    type: typeof Action.SAVE_CROPPED_IMAGES;
+    payload: {
+        index?: number,
+        croppedImage: File
     }
 }
 
@@ -105,6 +112,7 @@ export type IDActionTypes = SaveDocumentType
     | DeleteIDBox
     | RefreshIDs
     | SetIDBox
+    | SaveCroppedImages
     | UpdateVideoData
     | SaveToInternalID
     | RestoreID

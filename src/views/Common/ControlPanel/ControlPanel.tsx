@@ -2,17 +2,19 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { CurrentStage, IDProcess } from '../../../utils/enums';
 import { AppState } from '../../../store';
-import { Form, Button, ButtonGroup, ToggleButton, ToggleButtonGroup, Card, Accordion } from 'react-bootstrap';
+import { Form, Button, ButtonGroup, ToggleButton, ToggleButtonGroup, Card, Accordion, Spinner } from 'react-bootstrap';
 import options from '../../../options.json';
 import './ControlPanel.scss';
 import { GeneralActionTypes } from '../../../store/general/types';
 import { IDActionTypes, IDState, InternalIDState } from '../../../store/id/types';
 import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord } from '../../../store/image/types';
 import { progressNextStage, getNextID, saveToLibrary } from '../../../store/general/actionCreators';
-import { loadNextID, createNewID, setIDBox, deleteIDBox, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, restoreID } from '../../../store/id/actionCreators';
+import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, restoreID } from '../../../store/id/actionCreators';
 import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, updateLandmarkFlags, addOCRData, setFaceCompareMatch, restoreImage } from '../../../store/image/actionCreators';
 import AddTypeModal from '../AddTypeModal/AddTypeModal';
 import { DatabaseUtil } from '../../../utils/DatabaseUtil';
+import { HOST, PORT, TRANSFORM } from '../../../config';
+const axios = require('axios');
 
 var fs = require('browserify-fs');
 
@@ -30,9 +32,10 @@ interface IProps {
 
     // Seg Check
     loadNextID: (ID: IDState) => IDActionTypes;
-    createNewID: (IDBox: IDBox, croppedImage: File) => IDActionTypes;
+    createNewID: (IDBox: IDBox) => IDActionTypes;
     setIDBox: (IDBox: IDBox, croppedImage?: File) => IDActionTypes;
     deleteIDBox: (index: number) => IDActionTypes;
+    saveCroppedImage: (croppedImage: File, index?: number) => IDActionTypes;
     refreshIDs: (originalProcessed: boolean) => IDActionTypes;
     saveDocumentType: (internalIndex: number, documentType: string) => IDActionTypes;
     saveSegCheck: (passesCrop: boolean) => ImageActionTypes;
@@ -69,6 +72,7 @@ interface IState {
     }[];
     passesCrop: boolean;
     cropDirty: boolean;
+    isCropping: boolean;
 
     // Landmark
     showAddLandmarkModal: boolean;
@@ -135,6 +139,7 @@ class ControlPanel extends React.Component<IProps, IState> {
             selectedDocumentTypes: [],
             passesCrop: false,
             cropDirty: false,
+            isCropping: false,
 
             showAddLandmarkModal: false,
             landmarksLoaded: false,
@@ -243,6 +248,30 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
                 break;
             }
+            // case (CurrentStage.FR_COMPARE_CHECK): {
+                // send image and get cropped face
+                // if (previousProps.currentStage !== CurrentStage.FR_COMPARE_CHECK) {
+                //     axios.post(
+                //         HOST + ":" + PORT + TRANSFORM,
+                //         this.createFormData(this.props.internalID.originalID!.croppedImage!, facePosition),
+                //         {
+                //             headers: {
+                //                 'Content-Type': 'multipart/form-data'
+                //             }
+                //         }
+                //     ).catch((err: any) => {
+                //         console.error(err);
+                //     }).then((res: any) => {
+                //         if (res.status === 200) {
+                //             let image: File = this.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename);
+                //             this.props.saveCroppedImage(image);
+                //             this.setState({isCropping: false});
+                //             this.props.loadImageState(this.props.internalID.backID!, this.state.passesCrop);
+                //             this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                //         }                
+                //     });
+                // }
+            // }
             case (CurrentStage.END_STAGE): {
                 if (previousProps.internalID) {
                     if (this.props.currentID.internalIndex >= this.props.currentID.internalIDs.length) {
@@ -415,11 +444,11 @@ class ControlPanel extends React.Component<IProps, IState> {
 
             if (this.state.passesCrop) {
                 if (this.props.internalID !== undefined && this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
-                    this.props.setIDBox(box, this.props.internalID.backID!.image);
+                    this.props.setIDBox(box, this.props.currentID.backID!.croppedImage!);
                     this.props.loadImageState(this.props.internalID.backID!, this.state.passesCrop);
                     this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
                 } else {
-                    this.props.createNewID(box, this.props.currentID.originalID!.image);
+                    this.props.createNewID(box);
                     this.props.saveDocumentType(0, this.state.singleDocumentType);
                 }
             } else {
@@ -455,6 +484,33 @@ class ControlPanel extends React.Component<IProps, IState> {
                 </Button>
             </Form>
         )
+    }
+
+    dataURLtoFile = (dataurl: string, filename: string) => {
+        let arr = dataurl.split(','),
+            mime = arr[0].match(/:(.*?);/)![1],
+            bstr = atob(arr[1]), 
+            n = bstr.length, 
+            u8arr = new Uint8Array(n);
+
+        while(n--){
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new File([u8arr], filename, {type:mime});
+    }
+
+    createFormData = (image: File, points: any) => {
+        const data = new FormData();
+        data.append("image", image);
+        data.append("x1", points.x1.toString());
+        data.append("x2", points.x2.toString());
+        data.append("x3", points.x3.toString());
+        data.append("x4", points.x4.toString());
+        data.append("y1", points.y1.toString());
+        data.append("y2", points.y2.toString());
+        data.append("y3", points.y3.toString());
+        data.append("y4", points.y4.toString());
+        return data;
     }
 
     segEdit = () => {
@@ -504,11 +560,54 @@ class ControlPanel extends React.Component<IProps, IState> {
 
         const loadImageAndProgress = () => {
             submitDocTypes();
+
+            const header = {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            };
+            let cropsDone = 0;
+
             if (this.props.internalID.processStage !== IDProcess.MYKAD_BACK) {
-                this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
-                this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                for (let i = 0; i < this.props.currentID.internalIDs.length; i++) {
+                    let each = this.props.currentID.internalIDs[i];
+                // this.props.currentID.internalIDs.forEach((each) => {
+                    let points = each.originalID!.IDBox!.position;
+                    axios.post(
+                        HOST + ":" + PORT + TRANSFORM,
+                        this.createFormData(each.originalID!.image, points),
+                        header
+                    ).catch((err: any) => {
+                        console.error(err);
+                    }).then((res: any) => {
+                        if (res.status === 200) {
+                            let image: File = this.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename);
+                            this.props.saveCroppedImage(image, i);
+                            cropsDone++;
+                            if (cropsDone === this.props.currentID.internalIDs.length) {
+                                this.setState({isCropping: false});
+                                this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
+                                this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                            }
+                        }                
+                    });
+                }
             } else {
-                this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                axios.post(
+                    HOST + ":" + PORT + TRANSFORM,
+                    this.createFormData(this.props.internalID.backID!.image, this.props.internalID.backID!.IDBox!.position),
+                    header
+                ).catch((err: any) => {
+                    console.error(err);
+                }).then((res: any) => {
+                    if (res.status === 200) {
+                        let image: File = this.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename);
+                        this.props.saveCroppedImage(image);
+                        this.setState({isCropping: false});
+                        this.props.loadImageState(this.props.internalID.backID!, this.state.passesCrop);
+                        this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                    }                
+                });
             }
         }
 
@@ -552,8 +651,13 @@ class ControlPanel extends React.Component<IProps, IState> {
                     </Accordion>
                 <Button variant="secondary" style={{width: '100%'}} onClick={undoBox}>Undo Box</Button>
                 <Button variant="secondary" className="common-button" onClick={backStage}>Back</Button>
-                <Button disabled={this.props.currentID.internalIDs.length === 0}  className="common-button" onClick={loadImageAndProgress}>
-                    Next
+                <Button disabled={this.props.currentID.internalIDs.length === 0 || this.state.isCropping} 
+                    className="common-button" onClick={() => this.setState({isCropping: true}, loadImageAndProgress)}>
+                    { this.state.isCropping
+                        ? <Spinner animation="border" role="status" size="sm">
+                            <span className="sr-only">Loading...</span>
+                        </Spinner>
+                        : "Next"}
                 </Button>
             </div>
         );
@@ -1075,6 +1179,7 @@ const mapDispatchToProps = {
     createNewID,
     setIDBox,
     deleteIDBox,
+    saveCroppedImage,
     refreshIDs,
     saveDocumentType,
     saveSegCheck,
