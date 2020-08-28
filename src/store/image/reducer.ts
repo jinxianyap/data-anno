@@ -118,14 +118,55 @@ export function imageReducer(
 
         case Action.ADD_OCR_DATA: {
             let ocr = state.ocr;
-            
-            for (var d = 0; d < ocr.length; d++) {
-                if (ocr[d].name === action.payload.ocr.name) {
-                    ocr.splice(d, 1);
-                }
-            } 
 
-            ocr.push(action.payload.ocr);
+            let index = ocr.findIndex((each) => each.name === action.payload.ocr.name);
+            if (index === undefined || index == -1) {
+                ocr.push(action.payload.ocr);
+            } else {
+                let ocrData = ocr[index];
+                let labels = ocrData.labels;
+
+                if (ocrData.count < action.payload.ocr.count) {
+                    action.payload.ocr.labels.forEach((each, idx) => {
+                        let oldLabel = labels.find((label) => label.id === each.id);
+                        if (oldLabel === undefined) {
+                            labels.push(each);
+                        } else {
+                            if (each.value !== oldLabel.value) {
+                                each.position = oldLabel.position;
+                                labels.splice(idx, 1, each);
+                            }
+                        }
+                    });
+                } else if (ocrData.count > action.payload.ocr.count) {
+                    labels = labels.filter((each) => each.id < action.payload.ocr.count);
+                    for (let i = 0; i < labels.length; i++) {
+                        let each = labels[i];
+                        let newLabel = action.payload.ocr.labels.find((label) => label.id === each.id);
+                        if (newLabel !== undefined) {
+                            if (each.value !== newLabel.value) {
+                                each.value = newLabel.value;
+                                labels.splice(i, 1, each);
+                            }
+                        }
+                    }
+                } else {
+                    labels.forEach((each, idx) => {
+                        let newLabel = action.payload.ocr.labels.find((label) => label.id === each.id);
+                        if (newLabel === undefined) {
+                            labels.splice(idx, 1);
+                        } else {
+                            if (each.value !== newLabel.value) {
+                                newLabel.position = each.position;
+                                labels.splice(idx, 1, newLabel);
+                            }
+                        }
+                    })
+                }
+                ocrData.count = action.payload.ocr.count;
+                ocrData.labels = labels;
+                ocr.splice(index, 1, ocrData);
+            }
 
             return {
                 ...state,
