@@ -1033,6 +1033,13 @@ class ControlPanel extends React.Component<IProps, IState> {
             }
         }
 
+        const backStage = () => {
+            if (this.props.internalID.documentType === 'MyKad') {
+                this.props.loadImageState(this.props.internalID.backID!);
+            }
+            this.props.progressNextStage(CurrentStage.OCR_EDIT);
+        }
+
         const submitLiveness = () => {
             this.props.updateVideoData(this.state.passesLiveness!, this.state.selectedVideoFlags);
             this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
@@ -1081,7 +1088,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                         }
                     </Card.Body>
                 </Card>
-                <Button variant="secondary" className="common-button" onClick={() => this.props.progressNextStage(CurrentStage.OCR_EDIT)}>
+                <Button variant="secondary" className="common-button" onClick={backStage}>
                     Back
                 </Button>
                 <Button className="common-button" onClick={submitLiveness} disabled={!this.state.livenessValidation}>
