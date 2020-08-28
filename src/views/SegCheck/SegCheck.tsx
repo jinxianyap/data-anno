@@ -72,11 +72,12 @@ class SegCheck extends React.Component<IProps, IState> {
 
     disableControls = (cropped: boolean) => {
         let button: HTMLButtonElement = document.getElementById('segcheck-submit-btn')! as HTMLButtonElement;
+        let initial = button.disabled;
         button.disabled = true;
-        this.rotateCropped(cropped);
+        this.rotateCropped(cropped, initial);
     }
 
-    rotateCropped = (cropped: boolean) => {
+    rotateCropped = (cropped: boolean, buttonDisabled: boolean) => {
         let newRotation = Rotation.ROT0;
         switch (cropped ? this.state.croppedImageRotation : this.state.originalImageRotation) {
             case (Rotation.ROT0): {

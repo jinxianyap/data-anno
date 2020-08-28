@@ -27,6 +27,8 @@ interface IState {
     naturalHeight: number,
     width: number,
     height: number,
+    xmargin: number,
+    ymargin: number,
     ratio: number,
 
     stage: number,
@@ -70,6 +72,8 @@ class SegLabeller extends React.Component<IProps, IState> {
             naturalHeight: 0,
             width: 0,
             height: 0,
+            xmargin: 0,
+            ymargin: 0,
             ratio: 0,
             stage: 0,
             currentBox: {
@@ -132,12 +136,19 @@ class SegLabeller extends React.Component<IProps, IState> {
                 width = fitWidth;
                 height = image.naturalHeight / ratio;
             }
+
+            let wrapper: HTMLElement = document.getElementById('seg-edit')!;
+            let xmargin = (wrapper.clientWidth - width) / 2;
+            let ymargin = (wrapper.clientHeight - height) / 2;
+
             this.setState({
                 source: image.src,
                 naturalWidth: image.naturalWidth,
                 naturalHeight: image.naturalHeight,
                 width: width,
                 height: height,
+                xmargin: xmargin,
+                ymargin: ymargin,
                 ratio: ratio,
             }, this.initializeMap);
         }
@@ -147,8 +158,9 @@ class SegLabeller extends React.Component<IProps, IState> {
     initializeMap = () => {
         let st = this.state;
         let top: [number, number] = [0, 0];
-        let mapBounds: [number, number][] = [[0, 0], [1000, 1000]];
-        let imageBounds: [number, number][] = [[0, 0], [st.height, st.width]];
+        let wrapper: HTMLElement = document.getElementById('seg-edit')!;
+        let mapBounds: [number, number][] = [[wrapper.clientHeight - st.ymargin, -st.xmargin], [- st.ymargin, wrapper.clientWidth - st.xmargin]];
+        let imageBounds: [number, number][] = [[st.height, 0], [0, st.width]];
 
         let map = L.map('segLabeller', {
             center: top,

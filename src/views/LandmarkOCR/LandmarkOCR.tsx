@@ -43,7 +43,7 @@ class Landmark extends React.Component<IProps, IState> {
                 <Row style={{height: "100%"}}>
                     <Col xs={1}>
                     </Col>
-                    <Col xs={10}>
+                    <Col xs={10} id="landmark-ocr">
                         {/* <LabelView /> */}
                         <LandmarkLabeller />
                     </Col>

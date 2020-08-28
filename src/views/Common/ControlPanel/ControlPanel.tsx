@@ -535,10 +535,10 @@ class ControlPanel extends React.Component<IProps, IState> {
 
                 <Form.Group controlId="passesCrop">
                     <Form.Label>Cropping</Form.Label>
-                    <ButtonGroup aria-label="passesCropButtons" style={{display: "block", width: "100%"}}>
-                        <Button variant="secondary" className="common-button" onClick={this.handleCropFail} value="true">Fail</Button>
-                        <Button variant="secondary" className="common-button" onClick={this.handlePassesCrop}>Pass</Button>
-                    </ButtonGroup>
+                    <ToggleButtonGroup type="radio" name="passesCropButtons" style={{display: "block", width: "100%"}}>
+                        <ToggleButton variant="light" className="common-button" onClick={this.handleCropFail} value="true">Fail</ToggleButton>
+                        <ToggleButton variant="light" className="common-button" onClick={this.handlePassesCrop} value="false">Pass</ToggleButton>
+                    </ToggleButtonGroup>
                 </Form.Group>
 
                 <Button type="submit" className="block-button" id="segcheck-submit-btn" disabled={!this.state.cropDirty}>
@@ -1050,6 +1050,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <Card className="individual-card">
                     <Card.Title>Liveness</Card.Title>
                     <Card.Body>
+                        <p>Initial Result: {this.props.currentID.jsonData !== undefined
+                            ? (this.props.currentID.jsonData!.criteria.liveness ? 'Pass' : 'Fail') : 'none'}</p>
                         <ButtonGroup aria-label="passesLivenessButtons" style={{display: "block", width: "100%"}}>
                             <Button variant="secondary" className="common-button"  onClick={() => this.setState({passesLiveness: false}, validate)} value="true">Fail</Button>
                             <Button variant="secondary" className="common-button"  onClick={() => this.setState({passesLiveness: true}, validate)} value="false">Pass</Button>
@@ -1110,6 +1112,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <Card className="individual-card">
                     <Card.Title>Match</Card.Title>
                     <Card.Body>
+                        <p>Initial Result: {this.props.currentID.jsonData !== undefined
+                            ? (this.props.currentID.jsonData!.criteria.match ? 'Pass' : 'Fail') : 'none'}</p>
                         <ButtonGroup aria-label="passessFRMatchButtons" style={{display: "block", width: "100%"}}>
                             <Button variant="secondary" className="common-button" onClick={() => this.props.setFaceCompareMatch(false)} value="true">Fail</Button>
                             <Button variant="secondary" className="common-button" onClick={() => this.props.setFaceCompareMatch(true)} value="false">Pass</Button>

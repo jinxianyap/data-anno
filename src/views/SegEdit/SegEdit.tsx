@@ -40,7 +40,7 @@ class SegEdit extends React.Component<IProps, IState> {
                 <Row style={{height: "100%"}}>
                     <Col xs={1}>
                     </Col>
-                    <Col xs={10}>
+                    <Col xs={10} id='seg-edit'>
                         <SegLabeller />
                     </Col>
                     <Col xs={1}>

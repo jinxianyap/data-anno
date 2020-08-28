@@ -18,7 +18,7 @@ interface IState {
     croppedImageLoaded: boolean
 }
 
-class FaceComparison extends React.Component<IProps, IState> {
+class LivenessAndMatch extends React.Component<IProps, IState> {
 
     constructor(props: IProps) {
         super(props);
@@ -92,4 +92,4 @@ const mapStateToProps = (state: AppState) => {
 export default connect(
     mapStateToProps,
     mapDispatchToProps
-)(FaceComparison);
+)(LivenessAndMatch);
