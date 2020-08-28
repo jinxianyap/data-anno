@@ -11,7 +11,7 @@ import ControlPanel from './views/Common/ControlPanel/ControlPanel';
 import { Container, Row, Col } from 'react-bootstrap';
 import SegEdit from './views/SegEdit/SegEdit';
 import Landmark from './views/LandmarkOCR/LandmarkOCR';
-import FaceRecognition from './views/FaceRecognition/FaceRecognition';
+import FaceComparison from './views/FaceComparison/FaceComparison';
 
 interface IProps {
   state: AppState,
@@ -32,7 +32,7 @@ const App: React.FC<IProps> = ({state, currentStage}) => {
         return <Landmark />;
       case (CurrentStage.FR_LIVENESS_CHECK):
       case (CurrentStage.FR_COMPARE_CHECK):
-        return <FaceRecognition />;
+        return <FaceComparison />;
       default:
        return <h4>ERROR</h4>;
     }

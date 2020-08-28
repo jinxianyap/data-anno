@@ -18,7 +18,7 @@ interface IState {
     croppedImageLoaded: boolean
 }
 
-class FaceRecognition extends React.Component<IProps, IState> {
+class FaceComparison extends React.Component<IProps, IState> {
 
     constructor(props: IProps) {
         super(props);
@@ -29,7 +29,7 @@ class FaceRecognition extends React.Component<IProps, IState> {
 
     componentDidUpdate() {
         if (this.props.currentStage === CurrentStage.FR_COMPARE_CHECK && !this.state.croppedImageLoaded) {
-            ImageUtil.loadImage("frCompareID", this.props.image);
+            ImageUtil.loadImage("frCompare", this.props.image, "frCompareID");
             this.setState({croppedImageLoaded: true});
         }
     }
@@ -56,7 +56,7 @@ class FaceRecognition extends React.Component<IProps, IState> {
                 <Container style={{height: "100%"}}>
                     <Row style={{height: "100%"}}>
                         <Col xs={6}>
-                            <div id="frCompareID" className="pairDisplay"></div>
+                            <div id="frCompare" className="pairDisplay"></div>
                         </Col>
                         <Col xs={6}>
                         {
@@ -92,4 +92,4 @@ const mapStateToProps = (state: AppState) => {
 export default connect(
     mapStateToProps,
     mapDispatchToProps
-)(FaceRecognition);
+)(FaceComparison);

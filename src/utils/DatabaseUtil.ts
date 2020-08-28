@@ -1,4 +1,5 @@
 import { IDState } from '../store/id/types';
+import { Rotation } from './enums';
 export class DatabaseUtil {
 
     public static loadIntoIDFolder(files: File[], index: number, json?: any): IDState {
@@ -28,6 +29,9 @@ export class DatabaseUtil {
             source: 'sessionId/0001',
             originalIDProcessed: false,
             backIDProcessed: false,
+            originalIDRotation: Rotation.ROT0,
+            croppedIDRotation: Rotation.ROT0,
+            backIDRotation: Rotation.ROT0,
             internalIDs: [],
             internalIndex: 0
         }

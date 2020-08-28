@@ -17,6 +17,13 @@ export enum IDProcess {
     OTHER
 }
 
+export enum Rotation {
+    ROT0 = 0,
+    ROT90 = 90,
+    ROT180 = 180,
+    ROT270 = 270
+}
+
 export enum ProcessType {
     WHOLE,
     SEGMENTATION,

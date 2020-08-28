@@ -2,6 +2,7 @@ import { IDActionTypes, IDState } from "./types";
 import { Action } from "../Actions";
 import { ImageState, IDBox } from "../image/types";
 import { number } from "prop-types";
+import { Rotation } from "../../utils/enums";
 
 export function loadNextID(ID: IDState): IDActionTypes {
     return {
@@ -66,6 +67,17 @@ export function saveDocumentType(internalIndex: number, documentType: string): I
         payload: {
             internalIndex: internalIndex,
             documentType: documentType
+        }
+    }
+}
+
+export function setImageRotation(croppedId: boolean, id: File, idRotation: Rotation): IDActionTypes {
+    return {
+        type: Action.SET_IMAGE_ROTATION,
+        payload: {
+            croppedId: croppedId,
+            id: id,
+            idRotation: idRotation
         }
     }
 }

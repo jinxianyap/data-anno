@@ -471,6 +471,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                         return;
                     } else {
                         if (this.state.passesCrop) {
+                            this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
                             this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
                         } else {
                             this.props.progressNextStage(CurrentStage.SEGMENTATION_EDIT);
@@ -540,7 +541,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     </ButtonGroup>
                 </Form.Group>
 
-                <Button type="submit" className="block-button" disabled={!this.state.cropDirty}>
+                <Button type="submit" className="block-button" id="segcheck-submit-btn" disabled={!this.state.cropDirty}>
                     Next
                 </Button>
             </Form>

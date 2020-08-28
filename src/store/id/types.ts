@@ -1,5 +1,5 @@
 import { Action } from '../Actions';
-import { IDProcess } from '../../utils/enums';
+import { IDProcess, Rotation } from '../../utils/enums';
 import { ImageState, IDBox } from '../image/types';
 
 export type IDState = {
@@ -15,6 +15,10 @@ export type IDState = {
 
     originalIDProcessed: boolean;
     backIDProcessed: boolean;
+
+    originalIDRotation: Rotation;
+    backIDRotation: Rotation;
+    croppedIDRotation: Rotation;
 
     videoLiveness?: boolean;
     videoFlags?: string[];
@@ -39,6 +43,15 @@ interface SaveDocumentType {
     payload: {
         internalIndex: number,
         documentType: string
+    }
+}
+
+interface SetImageRotation {
+    type: typeof Action.SET_IMAGE_ROTATION;
+    payload: {
+        croppedId: boolean,
+        id: File,
+        idRotation: Rotation
     }
 }
 
@@ -108,6 +121,7 @@ interface RestoreID {
 }
 
 export type IDActionTypes = SaveDocumentType
+    | SetImageRotation
     | LoadNextID
     | CreateNewID
     | DeleteIDBox

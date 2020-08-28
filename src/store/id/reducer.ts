@@ -1,6 +1,6 @@
 import { IDState, IDActionTypes, InternalIDState } from './types';
 import { Action } from '../Actions';
-import { IDProcess } from '../../utils/enums';
+import { IDProcess, Rotation } from '../../utils/enums';
 import { ImageState } from '../image/types';
 
 const initialState: IDState = {
@@ -8,6 +8,9 @@ const initialState: IDState = {
     source: '',
     originalIDProcessed: false,
     backIDProcessed: false,
+    originalIDRotation: Rotation.ROT0,
+    backIDRotation: Rotation.ROT0,
+    croppedIDRotation: Rotation.ROT0,
     index: 0,
     internalIndex: 0,
     internalIDs: [],
@@ -161,6 +164,57 @@ export function IDReducer(
                 ...state,
                 internalIDs: IDs
             }
+        }
+        case Action.SET_IMAGE_ROTATION: {
+            if (state.originalIDProcessed && state.internalIDs[state.internalIndex].processStage === IDProcess.MYKAD_BACK) {
+                if (action.payload.croppedId) {
+                    state.croppedIDRotation = action.payload.idRotation;
+                    state.backID!.croppedImage = action.payload.id;
+                    if (state.internalIDs.length > 0) {
+                        let ids = state.internalIDs;
+                        return {
+                            ...state,
+                            internalIDs: ids.map((each) => {each.backID!.croppedImage = action.payload.id; return each})
+                        }
+                    }
+                } else {
+                    state.backIDRotation = action.payload.idRotation;
+                    state.backID!.image = action.payload.id;
+                    if (state.internalIDs.length > 0) {
+                        let ids = state.internalIDs;
+                        return {
+                            ...state,
+                            internalIDs: ids.map((each) => {each.backID!.image = action.payload.id; return each})
+                        }
+                    }
+                }
+            } else if (!state.originalIDProcessed ||
+                (state.internalIDs[state.internalIndex] !== undefined && state.internalIDs[state.internalIndex].processStage !== IDProcess.MYKAD_BACK)) {
+                if (action.payload.croppedId) {
+                    console.log('saving rotated cropped');
+                    state.croppedIDRotation = action.payload.idRotation;
+                    state.originalID!.croppedImage = action.payload.id;
+                    if (state.internalIDs.length > 0) {
+                        let ids = state.internalIDs;
+                        return {
+                            ...state,
+                            internalIDs: ids.map((each) => {each.originalID!.croppedImage = action.payload.id; return each})
+                        }
+                    }
+                } else {
+                    console.log('saving rotated ori');
+                    state.originalIDRotation = action.payload.idRotation;
+                    state.originalID!.image = action.payload.id;
+                    if (state.internalIDs.length > 0) {
+                        let ids = state.internalIDs;
+                        return {
+                            ...state,
+                            internalIDs: ids.map((each) => {each.originalID!.image = action.payload.id; return each})
+                        }
+                    }
+                }
+            }
+            return state;
         }
         case Action.UPDATE_VIDEO_DATA: {
             return {
