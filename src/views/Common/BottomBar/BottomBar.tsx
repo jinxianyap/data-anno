@@ -19,7 +19,6 @@ const BottomBar: React.FC<IProps> = ({index, numberOfIDs, currentIDSource, datab
             <Navbar.Toggle />
             <Navbar.Collapse className="justify-content-end">
                 <Navbar.Text style={{marginRight: "3rem"}}>Source:   {currentIDSource}</Navbar.Text>
-                <Navbar.Text style={{marginRight: "2rem"}}>Folder:   {index + 1}/{numberOfIDs}</Navbar.Text>
             </Navbar.Collapse>
         </Navbar>
     );

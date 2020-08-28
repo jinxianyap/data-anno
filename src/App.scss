@@ -6,7 +6,10 @@
   height: 100%;
 }
 
-html, body, #root, .app-wrapper {
+html,
+body,
+#root,
+.app-wrapper {
   height: 100%;
   color: #4a4a4a;
 }
@@ -48,6 +51,7 @@ html, body, #root, .app-wrapper {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -64,4 +68,13 @@ html, body, #root, .app-wrapper {
 
 p {
   margin-bottom: 0.7rem;
+}
+
+#folder-number {
+  padding: 1rem;
+  padding-bottom: 0;
+  text-align: center;
+  border: 1px solid lightgrey;
+  border-top: 0;
+  border-right: 0;
 }

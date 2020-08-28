@@ -25,9 +25,9 @@ const TopBar: React.FC<IProps> = ({currentStage}) => {
                             name = "topbar-nav";
                             id = idx;
                         }
-                        if (idx > id) {
-                            name += " topbar-hidden";
-                        }
+                        // if (idx > id) {
+                        //     name += " topbar-hidden";
+                        // }
                         return (
                             <Navbar.Brand className={name} key={idx} style={{width: (each.length / 101 * 100) + "%"}}>{each}</Navbar.Brand>
                         )

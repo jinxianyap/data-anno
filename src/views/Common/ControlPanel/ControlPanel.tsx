@@ -898,6 +898,22 @@ class ControlPanel extends React.Component<IProps, IState> {
             }
         }
 
+        const submitOcrBoxes = () => {
+            if (this.props.internalID.processStage === IDProcess.MYKAD_FRONT) {
+                this.props.saveToInternalID(this.props.currentImage, false);
+                this.loadBackId();
+            } else if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
+                this.props.saveToInternalID(this.props.currentImage, false);
+                this.props.progressNextStage(CurrentStage.END_STAGE);
+            } else {
+                this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
+            }
+        }
+
+        // if (ocrs.filter((each) => each.count > 1).length === 0) {
+        //     submitOcrBoxes();
+        // }
+
         return (
             <div>
                 <Accordion activeKey={getActiveKey()}>
@@ -943,17 +959,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     }
                 </Accordion>
             <Button variant="secondary" className="common-button" onClick={() => this.props.progressNextStage(CurrentStage.OCR_DETAILS)}>Back</Button>
-            <Button className="common-button" onClick={() => {
-                if (this.props.internalID.processStage === IDProcess.MYKAD_FRONT) {
-                    this.props.saveToInternalID(this.props.currentImage, false);
-                    this.loadBackId();
-                } else if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
-                    this.props.saveToInternalID(this.props.currentImage, false);
-                    this.props.progressNextStage(CurrentStage.END_STAGE);
-                } else {
-                    this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
-                }
-                }}>Done</Button>
+            <Button className="common-button" onClick={submitOcrBoxes}>Done</Button>
         </div>);
     }
 
@@ -991,12 +997,12 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <Card className="individual-card">
                     <Card.Title>Liveness</Card.Title>
                     <Card.Body>
-                        <p>Initial Result: {this.props.currentID.jsonData !== undefined
-                            ? (this.props.currentID.jsonData!.criteria.liveness ? 'Pass' : 'Fail') : 'none'}</p>
-                        <ButtonGroup aria-label="passesLivenessButtons" style={{display: "block", width: "100%"}}>
-                            <Button variant="secondary" className="common-button"  onClick={() => this.setState({passesLiveness: false}, validate)} value="true">Fail</Button>
-                            <Button variant="secondary" className="common-button"  onClick={() => this.setState({passesLiveness: true}, validate)} value="false">Pass</Button>
-                        </ButtonGroup>
+                        <p>Result: {this.props.currentID.jsonData !== undefined
+                            ? (this.props.currentID.jsonData!.criteria.liveness ? 'True' : 'False') : 'none'}</p>
+                        <ToggleButtonGroup type="radio" name="passesLivenessButtons" style={{display: "block", width: "100%"}}>
+                            <ToggleButton variant="light" className="common-button"  onClick={() => this.setState({passesLiveness: false}, validate)} value="livenessFalse">Fail</ToggleButton>
+                            <ToggleButton variant="light" className="common-button"  onClick={() => this.setState({passesLiveness: true}, validate)} value="livenessTrue">Pass</ToggleButton>
+                        </ToggleButtonGroup>
                     </Card.Body>
                 </Card>
 
@@ -1053,12 +1059,12 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <Card className="individual-card">
                     <Card.Title>Match</Card.Title>
                     <Card.Body>
-                        <p>Initial Result: {this.props.currentID.jsonData !== undefined
-                            ? (this.props.currentID.jsonData!.criteria.match ? 'Pass' : 'Fail') : 'none'}</p>
-                        <ButtonGroup aria-label="passessFRMatchButtons" style={{display: "block", width: "100%"}}>
-                            <Button variant="secondary" className="common-button" onClick={() => this.props.setFaceCompareMatch(false)} value="true">Fail</Button>
-                            <Button variant="secondary" className="common-button" onClick={() => this.props.setFaceCompareMatch(true)} value="false">Pass</Button>
-                        </ButtonGroup>
+                        <p>Confidence: {this.props.currentID.jsonData !== undefined && this.props.currentID.jsonData!.criteria.match !== undefined
+                            ? this.props.currentID.jsonData!.criteria.match : 'none'}</p>
+                        <ToggleButtonGroup type="radio" name="passessFRMatchButtons" style={{display: "block", width: "100%"}}>
+                            <ToggleButton variant="light" className="common-button" onClick={() => this.props.setFaceCompareMatch(false)} value="matchFalse">Fail</ToggleButton>
+                            <ToggleButton variant="light" className="common-button" onClick={() => this.props.setFaceCompareMatch(true)} value="matchTrue">Pass</ToggleButton>
+                        </ToggleButtonGroup>
                     </Card.Body>
                 </Card>
                 <Button variant="secondary" className="common-button" onClick={() => this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK)}>
@@ -1183,7 +1189,6 @@ class ControlPanel extends React.Component<IProps, IState> {
             </div>
         );
     }
-
 }
 
 const mapDispatchToProps = {

@@ -320,7 +320,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                         false,
                         label.id,
                         this.props.currentStage !== CurrentStage.OCR_EDIT ? false :
-                        this.props.currentSymbol === ocr.name && this.props.currentWord.value === label.value);
+                        this.props.currentSymbol === ocr.name && this.props.currentWord.id === label.id);
                     let box: Box = {
                         id: label.id,
                         name: ocr.name,
@@ -356,7 +356,6 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
     }
 
     handleMouseDown = (e: any) => {
-        console.log(e.latlng);
         if (e.originalEvent.which !== 1 || e.originalEvent.detail > 1) return;
         switch (this.props.currentStage) {
             case (CurrentStage.OCR_DETAILS): {
@@ -1192,7 +1191,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     false,
                     isLandmark,
                     box.id,
-                    this.props.currentSymbol === box.name
+                    this.props.currentSymbol === box.name && this.props.currentWord.id === box.id
                 );
                 let boxes = this.state.ocrBoxes;
                 for (var j = 0; j < boxes.length; j++) {
