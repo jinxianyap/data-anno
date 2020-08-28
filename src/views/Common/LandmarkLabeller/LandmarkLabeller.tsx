@@ -217,6 +217,10 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             noWrap: true
         });
 
+        let easyButton = L.easyButton('<span>&hercon;</span>', () => {
+            map.fitBounds(imageBounds);
+        }).addTo(map);
+
         let overlay = L.imageOverlay(st.source, imageBounds);
 
         map.addLayer(layer);

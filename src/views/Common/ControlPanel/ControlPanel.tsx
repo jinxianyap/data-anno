@@ -222,14 +222,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                 if (!this.state.landmarksLoaded) {
                     this.loadLandmarkData();
                 } else {
-                    let criterion = '';
-                    if (this.props.internalID.documentType === "MyKad") {
-                        criterion = (this.props.internalID.processStage === IDProcess.MYKAD_FRONT) ? 'MyKadFront' : 'MyKadBack';
-                    } else {
-                        criterion = this.props.internalID.documentType!;
-                    }
                     this.state.landmarks.forEach((each) => {
-                        if (each.docType === criterion && each.landmarks !== this.state.currentLandmarks) {
+                        if (each.docType === this.props.internalID.processStage && each.landmarks !== this.state.currentLandmarks) {
                             this.setState({currentLandmarks: each.landmarks});
                         }
                     });
@@ -241,18 +235,13 @@ class ControlPanel extends React.Component<IProps, IState> {
                     this.loadOCRDetails();
                 } else {
                     this.state.OCR.forEach((each) => {
-                        if (each.docType === this.props.internalID.documentType && each.details !== this.state.currentOCR) {
+                        if (each.docType === this.props.internalID.processStage && each.details !== this.state.currentOCR) {
                             this.setState({currentOCR: each.details});
                         }
                     })
                 }
                 break;
             }
-            // case (CurrentStage.OCR_EDIT): {
-            //     if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
-            //         this.props.progressNextStage(CurrentStage.END_STAGE);
-            //     }
-            // }
             case (CurrentStage.FR_LIVENESS_CHECK): {
                 if (!this.state.videoFlagsLoaded) {
                     this.loadVideoFlags();
@@ -262,30 +251,6 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
                 break;
             }
-            // case (CurrentStage.FR_COMPARE_CHECK): {
-                // send image and get cropped face
-                // if (previousProps.currentStage !== CurrentStage.FR_COMPARE_CHECK) {
-                //     axios.post(
-                //         HOST + ":" + PORT + TRANSFORM,
-                //         this.createFormData(this.props.internalID.originalID!.croppedImage!, facePosition),
-                //         {
-                //             headers: {
-                //                 'Content-Type': 'multipart/form-data'
-                //             }
-                //         }
-                //     ).catch((err: any) => {
-                //         console.error(err);
-                //     }).then((res: any) => {
-                //         if (res.status === 200) {
-                //             let image: File = this.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename);
-                //             this.props.saveCroppedImage(image);
-                //             this.setState({isCropping: false});
-                //             this.props.loadImageState(this.props.internalID.backID!, this.state.passesCrop);
-                //             this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
-                //         }                
-                //     });
-                // }
-            // }
             case (CurrentStage.END_STAGE): {
                 if (previousProps.internalID) {
                     if (this.props.currentID.internalIndex >= this.props.currentID.internalIDs.length) {
@@ -337,13 +302,6 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     loadLandmarkData = () => {
-        let criterion = '';
-        if (this.props.internalID.documentType! === "MyKad") {
-            criterion = (this.props.internalID.processStage === IDProcess.MYKAD_FRONT) ? 'MyKadFront' : 'MyKadBack';
-        } else {
-            criterion = this.props.internalID.documentType!;
-        }
-
         let docLandmarks: {docType: string, landmarks: {name: string, flags: string[]}[]}[] = [];
         let currentLandmarks: {name: string, flags: string[]}[] = [];
         let flags: {category: string, flags: string[]}[] = [];
@@ -361,7 +319,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 landmarks: landmarks
             });
 
-            if (criterion === each) {
+            if (this.props.internalID.processStage === each) {
                 currentLandmarks = landmarks;
             }
         });
@@ -383,6 +341,7 @@ class ControlPanel extends React.Component<IProps, IState> {
             let ocr: {name: string, mapToLandmark: string, value?: string}[] = [];
             for (var i = 0; i < options.ocr.values[idx].length; i++) {
                 let value = this.props.currentID.jsonData !== undefined ? this.props.currentID.jsonData[options.ocr.values[idx][i]] : undefined;
+                // special case for birthdate
                 if (this.props.currentID.jsonData !== undefined && options.ocr.values[idx][i] === "birthDate") {
                     value = this.props.currentID.jsonData[options.ocr.values[idx][i]].originalString;
                 }
@@ -397,7 +356,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 details: ocr
             });
 
-            if (this.props.internalID.documentType === each) {
+            if (this.props.internalID.processStage === each) {
                 currentOCR = ocr;
             }
         });
@@ -524,14 +483,14 @@ class ControlPanel extends React.Component<IProps, IState> {
                     this.props.currentID.originalIDProcessed ? <div /> :
                     <Form.Group controlId="docType">
                         <Form.Label>Document Type</Form.Label>
-                        <Button onClick={() => {this.setState({showAddDocTypeModal: true})}} style={{padding: "0 0.5rem", margin: "0.5rem 1rem"}}>+</Button>
+                        {/* <Button onClick={() => {this.setState({showAddDocTypeModal: true})}} style={{padding: "0 0.5rem", margin: "0.5rem 1rem"}}>+</Button> */}
                         <Form.Control as="select" value={this.state.singleDocumentType} onChange={(e: any) => setSingleDocType(e)}>
                             {Object.entries(this.state.documentTypes).map(([key, value]) => <option key={key} value={value}>{value}</option>)}
                         </Form.Control>
                     </Form.Group>
                 }
 
-                <AddTypeModal showModal={this.state.showAddDocTypeModal} item='documentTypes' add={addDocType} closeModal={() => this.setState({showAddDocTypeModal: false})}/>
+                {/* <AddTypeModal showModal={this.state.showAddDocTypeModal} item='documentTypes' add={addDocType} closeModal={() => this.setState({showAddDocTypeModal: false})}/> */}
 
                 <Form.Group controlId="passesCrop">
                     <Form.Label>Cropping</Form.Label>
@@ -698,7 +657,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                                 <Card.Body>
                                                     <Form.Group controlId="docType">
                                                         <Form.Label>Document Type</Form.Label>
-                                                        <Button onClick={() => {this.setState({showAddDocTypeModal: true})}} style={{padding: "0 0.5rem", margin: "0.5rem 1rem"}}>+</Button>
+                                                        {/* <Button onClick={() => {this.setState({showAddDocTypeModal: true})}} style={{padding: "0 0.5rem", margin: "0.5rem 1rem"}}>+</Button> */}
                                                         <Form.Control as="select" value={getValue(idx)} onChange={(e: any) => setDocType(e, idx)}>
                                                             {Object.entries(this.state.documentTypes).map(([key, value]) => <option key={key} value={value}>{value}</option>)}
                                                         </Form.Control>
@@ -800,12 +759,7 @@ class ControlPanel extends React.Component<IProps, IState> {
             this.state.currentLandmarks.forEach((each) => {
                 this.props.updateLandmarkFlags(each.name, each.flags);
             });
-            if (this.props.internalID.documentType === "MyKad" && this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
-                this.props.saveToInternalID(this.props.currentImage, false);
-                this.props.progressNextStage(CurrentStage.END_STAGE);
-            } else {
-                this.props.progressNextStage(CurrentStage.OCR_DETAILS);
-            }
+            this.props.progressNextStage(CurrentStage.OCR_DETAILS);
         }
 
         const getClassName = (each: any) => {
@@ -845,17 +799,12 @@ class ControlPanel extends React.Component<IProps, IState> {
                             })
                         }
                 </Accordion>
-                <Button
-                    style={{width: "100%"}}
-                    value="0"
-                    className="block-button" 
-                    onClick={() => this.setState({showAddLandmarkModal: true})}>+</Button>
                 {/* <Button
                     style={{width: "100%"}}
                     value="0"
                     className="block-button" 
-                    onClick={() => this.props.setCurrentSymbol()}>Pan</Button> */}
-                <AddTypeModal showModal={this.state.showAddLandmarkModal} item='landmarks' add={addLandmark} closeModal={() => this.setState({showAddLandmarkModal: false})}/>
+                    onClick={() => this.setState({showAddLandmarkModal: true})}>+</Button> */}
+                {/* <AddTypeModal showModal={this.state.showAddLandmarkModal} item='landmarks' add={addLandmark} closeModal={() => this.setState({showAddLandmarkModal: false})}/> */}
                 <Button variant="secondary" className="common-button" onClick={backStage}>Back</Button>
                 <Button className="common-button" onClick={submitLandmark}>Done</Button>
             </div>
@@ -921,9 +870,6 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     ocrEdit = () => {
-        // const setSymbol = (item: string) => {
-        //     this.setState({selectedLandmark: item}, () => this.props.setCurrentSymbol(item));
-        // }
         let ocrs = this.props.currentImage.ocr;
 
         const getClassNameLandmark = (each: any) => {
@@ -996,19 +942,14 @@ class ControlPanel extends React.Component<IProps, IState> {
                         })
                     }
                 </Accordion>
-            {/* <Button
-                    style={{width: "100%"}}
-                    value="0"
-                    className="block-button" 
-                    onClick={() => this.props.setCurrentSymbol()}>Pan</Button> */}
             <Button variant="secondary" className="common-button" onClick={() => this.props.progressNextStage(CurrentStage.OCR_DETAILS)}>Back</Button>
             <Button className="common-button" onClick={() => {
-                if (this.props.internalID.documentType === 'MyKad') {
-                    let status = this.props.internalID.processStage;
+                if (this.props.internalID.processStage === IDProcess.MYKAD_FRONT) {
                     this.props.saveToInternalID(this.props.currentImage, false);
-                    if (status === IDProcess.MYKAD_FRONT) {
-                        this.loadBackId();
-                    }
+                    this.loadBackId();
+                } else if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
+                    this.props.saveToInternalID(this.props.currentImage, false);
+                    this.props.progressNextStage(CurrentStage.END_STAGE);
                 } else {
                     this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
                 }

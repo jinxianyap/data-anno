@@ -4,20 +4,22 @@
         "keys": ["MyKadFront", "MyKadBack", "Passport", "Other"],
         "values": [
             ["kPMLandmark", "securityChip", "mscLogo", "ghostImage", "gender", "citizen", "name", "address", "facialImage", "myKadLogo", "myKadNumber", "hibiscusLogo", "malaysiaFlag"],
-            ["coatOfArmLandmark", "klccTower", "signature"],
+            ["coatOfArmLandmark", "klccTower", "signature", "myKadNumber"],
             ["passportNumber", "name"],
             ["IDNumber", "name"]
         ]
     },
     "ocr": {
-        "keys": ["MyKad", "Passport", "Other"],
+        "keys": ["MyKadFront", "MyKadBack", "Passport", "Other"],
         "values": [
             ["icNumber", "name", "birthDate", "street", "city", "state", "zipCode", "fullAddress", "gender"],
+            ["icNumber"],
             ["passportNumber", "name"],
             ["IDNumber"]
         ],
         "mapToLandmark": [
             ["myKadNumber", "name", "myKadNumber", "address", "address", "address", "address", "address", "gender"],
+            ["myKadNumber"],
             ["passportNumber", "name"],
             ["IDNumber"]
         ]

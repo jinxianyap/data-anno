@@ -45,10 +45,10 @@ const App: React.FC<IProps> = ({state, currentStage}) => {
             {currentStage !== CurrentStage.SETUP ?
               (
                 <Row style={{height: "100%", width: "100%", margin: 0}}>
-                  <Col md={7} lg={9} id="paint-area">
+                  <Col md={7} lg={9} id="paint-area" style={{ maxHeight: "100%", overflowY: "auto" }}>
                     {paintContent()}
                   </Col>
-                  <Col style={{padding: 0}}>
+                  <Col style={{padding: 0, height: "100%"}}>
                     <ControlPanel />
                   </Col>
                 </Row>)
