@@ -211,26 +211,27 @@ class ControlPanel extends React.Component<IProps, IState> {
                             this.loadNextID();
                         }
                     // coming from seg edit of front id
-                    } else if (this.props.currentID.internalIDs.length > 0 
-                        && previousProps.currentID.internalIndex === this.props.currentID.internalIndex
-                        && this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
-                            console.log(this.props.internalID);
-                        this.props.loadImageState(this.props.internalID.backID!);
-                        if (this.props.currentID.internalIndex < this.props.currentID.internalIDs.length) {
-                            if (this.props.internalID.documentType !== 'MyKad') {
-                                this.props.saveToInternalID(this.props.internalID.originalID!, true);
-                            } else {
-                                this.props.saveToInternalID(this.props.internalID.originalID!, false);
-                                this.loadBackId();
-                            }
-                        }
+                    } 
+                    // else if (this.props.currentID.internalIDs.length > 0 
+                    //     && previousProps.currentID.internalIndex === this.props.currentID.internalIndex
+                    //     && this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
+                    //         console.log(this.props.internalID);
+                    //     this.props.loadImageState(this.props.internalID.backID!);
+                    //     if (this.props.currentID.internalIndex < this.props.currentID.internalIDs.length) {
+                    //         if (this.props.internalID.documentType !== 'MyKad') {
+                    //             this.props.saveToInternalID(this.props.internalID.originalID!, true);
+                    //         } else {
+                    //             this.props.saveToInternalID(this.props.internalID.originalID!, false);
+                    //             this.loadBackId();
+                    //         }
+                    //     }
 
-                        if (this.props.currentID.internalIndex >= this.props.currentID.internalIDs.length
-                            || this.props.currentID.backIDsProcessed === this.props.currentID.internalIDs.length) {
-                            // next ID
-                            this.loadNextID();
-                        }
-                    }
+                    //     if (this.props.currentID.internalIndex >= this.props.currentID.internalIDs.length
+                    //         || this.props.currentID.backIDsProcessed === this.props.currentID.internalIDs.length) {
+                    //         // next ID
+                    //         this.loadNextID();
+                    //     }
+                    // }
                 }
                 break;
             }
@@ -303,6 +304,31 @@ class ControlPanel extends React.Component<IProps, IState> {
                             console.log('liveness and match');
                             this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
                             this.props.loadImageState(this.props.internalID.originalID!);
+                        }
+                    }
+                }
+                break;
+            }
+            case (CurrentStage.INTER_SEGMENTATION): {
+                console.log('interseg updated');
+                if (previousProps.currentStage !== CurrentStage.INTER_SEGMENTATION
+                    || previousProps.currentID.internalIndex !== this.props.currentID.internalIndex) {
+                        console.log('in');
+                    switch (this.props.internalID.processStage) {
+                        case (IDProcess.MYKAD_FRONT): {
+                            this.props.saveToInternalID(this.props.internalID.originalID!, false);
+                            this.loadBackId();
+                            break;
+                        }
+                        case (IDProcess.MYKAD_BACK): {
+                            break;
+                        }
+                        case (IDProcess.OTHER):
+                        default: {
+                            console.log(previousProps.currentID.internalIndex);
+                            this.props.saveToInternalID(this.props.internalID.originalID!, true);
+                            console.log(this.props.currentID.internalIndex);
+                            break;
                         }
                     }
                 }
@@ -660,13 +686,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                             if (cropsDone === this.props.currentID.internalIDs.length) {
                                 this.setState({isCropping: false});
                                 if (this.props.processType === ProcessType.SEGMENTATION) {
-                                    let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
-                                    if (internalID !== undefined) {
-                                        console.log(internalID);
-                                        console.log(this.props.saveToInternalID(internalID.originalID!, internalID.documentType !== 'MyKad'));
-                                        console.log(this.props.currentID.internalIDs[this.props.currentID.internalIndex]);
-                                        this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
-                                    }
+                                    this.props.progressNextStage(CurrentStage.INTER_SEGMENTATION);
                                 } else {
                                     this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
                                     this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
@@ -971,10 +991,6 @@ class ControlPanel extends React.Component<IProps, IState> {
                 this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
             }
         }
-
-        // if (ocrs.filter((each) => each.count > 1).length === 0) {
-        //     submitOcrBoxes();
-        // }
 
         return (
             <div>

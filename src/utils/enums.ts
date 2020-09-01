@@ -7,7 +7,9 @@ export enum CurrentStage {
     OCR_EDIT = "OCR Edit",
     FR_LIVENESS_CHECK = "Face Liveness",
     FR_COMPARE_CHECK = "Face Comparison",
-    END_STAGE = "End Stage"
+    END_STAGE = "End Stage",
+
+    INTER_SEGMENTATION = "Inter Segmentation"
 }
 
 export enum IDProcess {

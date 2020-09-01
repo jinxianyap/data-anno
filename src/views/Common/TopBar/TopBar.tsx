@@ -14,7 +14,7 @@ const TopBar: React.FC<IProps> = ({currentStage}) => {
     const getNavbarItems = () => {
         let id = 100;
         let values = Object.values(CurrentStage);
-        values = values.slice(0, values.length - 1);
+        values = values.slice(0, values.length - 2);
 
         return (
             <div style={{width: "100%"}}>
