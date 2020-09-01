@@ -159,6 +159,16 @@ export function IDReducer(
             }
             internalID.documentType = action.payload.documentType;
             internalID.processStage = stage;
+            internalID.originalID!.landmark = [];
+            internalID.originalID!.ocr = [];
+            internalID.originalID!.currentSymbol = undefined;
+            internalID.originalID!.currentWord = undefined;
+            internalID.originalID!.faceCompareMatch = undefined;
+            internalID.backID!.landmark = [];
+            internalID.backID!.ocr = [];
+            internalID.backID!.currentSymbol = undefined;
+            internalID.backID!.currentWord = undefined;
+            internalID.backID!.faceCompareMatch = undefined;
             IDs.splice(action.payload.internalIndex, 1, internalID);
             return {
                 ...state,
@@ -191,7 +201,6 @@ export function IDReducer(
             } else if (!state.originalIDProcessed ||
                 (state.internalIDs[state.internalIndex] !== undefined && state.internalIDs[state.internalIndex].processStage !== IDProcess.MYKAD_BACK)) {
                 if (action.payload.croppedId) {
-                    console.log('saving rotated cropped');
                     state.croppedIDRotation = action.payload.idRotation;
                     state.originalID!.croppedImage = action.payload.id;
                     if (state.internalIDs.length > 0) {
@@ -202,7 +211,6 @@ export function IDReducer(
                         }
                     }
                 } else {
-                    console.log('saving rotated ori');
                     state.originalIDRotation = action.payload.idRotation;
                     state.originalID!.image = action.payload.id;
                     if (state.internalIDs.length > 0) {

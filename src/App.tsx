@@ -8,7 +8,7 @@ import SegCheck from './views/SegCheck/SegCheck';
 import TopBar from './views/Common/TopBar/TopBar';
 import BottomBar from './views/Common/BottomBar/BottomBar';
 import ControlPanel from './views/Common/ControlPanel/ControlPanel';
-import { Container, Row, Col } from 'react-bootstrap';
+import { Container, Row, Col, Spinner } from 'react-bootstrap';
 import SegEdit from './views/SegEdit/SegEdit';
 import Landmark from './views/LandmarkOCR/LandmarkOCR';
 import LivenessAndMatch from './views/LivenessAndMatch/LivenessAndMatch';
@@ -40,6 +40,11 @@ const App: React.FC<IProps> = ({state, currentStage}) => {
   console.log(state);
   return (
     <div className="app-wrapper">
+      <div id="overlay">
+        <div id="spinner">
+          <Spinner animation="border" variant="light" />
+        </div>
+      </div>
       <TopBar />
         <Container className="content-container">
             {currentStage !== CurrentStage.SETUP ?

@@ -9,7 +9,7 @@ import { CurrentStage, Rotation } from '../../utils/enums';
 import { GeneralActionTypes } from '../../store/general/types';
 import { progressNextStage } from '../../store/general/actionCreators';
 import { setImageRotation } from '../../store/id/actionCreators';
-import { FiRotateCw } from 'react-icons/fi';
+import { FiRotateCw, FiRotateCcw } from 'react-icons/fi';
 import { IDActionTypes, IDState } from '../../store/id/types';
 
 interface IProps {
@@ -28,6 +28,8 @@ interface IState {
     croppedImageRotation: Rotation;
     originalImage?: HTMLImageElement;
     croppedImage?: HTMLImageElement;
+    isRotating: boolean;
+    ccw: boolean;
 }
 
 class SegCheck extends React.Component<IProps, IState> {
@@ -37,6 +39,8 @@ class SegCheck extends React.Component<IProps, IState> {
         this.state = {
             originalImageRotation: Rotation.ROT0,
             croppedImageRotation: Rotation.ROT0,
+            isRotating: false,
+            ccw: false
         }
     }
 
@@ -68,69 +72,75 @@ class SegCheck extends React.Component<IProps, IState> {
                 croppedImage: ImageUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID")
             })
         }
+
+        if (this.state.isRotating) {
+            setTimeout(() => this.rotateCropped(false, this.state.ccw), 1);
+        }
     }
 
-    disableControls = (cropped: boolean) => {
-        let button: HTMLButtonElement = document.getElementById('segcheck-submit-btn')! as HTMLButtonElement;
-        let initial = button.disabled;
-        button.disabled = true;
-        this.rotateCropped(cropped, initial);
+    disableControls = (cropped: boolean, ccw: boolean) => {
+        document.getElementById('overlay')!.classList.add('show');
+        this.setState({isRotating: true, ccw: ccw});
     }
 
-    rotateCropped = (cropped: boolean, buttonDisabled: boolean) => {
+    rotateCropped = (cropped: boolean, ccw: boolean) => {
         let newRotation = Rotation.ROT0;
         switch (cropped ? this.state.croppedImageRotation : this.state.originalImageRotation) {
             case (Rotation.ROT0): {
-                newRotation = Rotation.ROT90;
+                newRotation = ccw ? Rotation.ROT270 : Rotation.ROT90;
                 break;
             }
             case (Rotation.ROT90): {
-                newRotation = Rotation.ROT180;
+                newRotation = ccw ? Rotation.ROT0 : Rotation.ROT180;
                 break;
             }
             case (Rotation.ROT180): {
-                newRotation = Rotation.ROT270;
+                newRotation = ccw ? Rotation.ROT90 : Rotation.ROT270;
                 break;
             }
             case (Rotation.ROT270): {
-                newRotation = Rotation.ROT0;
+                newRotation = ccw ? Rotation.ROT180 : Rotation.ROT0;
                 break;
             }
         }
-        this.setState({
-            originalImageRotation: cropped ? this.state.originalImageRotation : newRotation,
-            croppedImageRotation: cropped ? newRotation : this.state.croppedImageRotation
-        }, () => {
-            let parent: HTMLElement = document.getElementById(cropped ? "segCheckCropped" : "segCheckID")!;
-            let img: HTMLImageElement = cropped ? this.state.croppedImage! : this.state.originalImage!;
-            parent.removeChild(img);
-            
-            let width = img.naturalWidth;
-            let height = img.naturalHeight;
-            let canvas = document.createElement('canvas');
-            let ctx = canvas.getContext("2d")!;
-            
-            canvas.width = height;
-            canvas.height = width;
 
-            // transform context before drawing image
-            ctx.transform(0, 1, -1, 0, height, 0)
-            ctx.drawImage(img, 0, 0);
-            img.src = canvas.toDataURL();
-            canvas.toBlob((blob) => {
-                let filename = this.props.originalProcessed ? 
-                    (cropped ? this.props.backID!.croppedImage!.name : this.props.backID!.image.name) : 
-                    (cropped ? this.props.originalID!.croppedImage!.name : this.props.originalID!.image.name);
-                filename += "_" + newRotation;
-                this.props.setImageRotation(cropped, new File([blob!], filename), newRotation);
-            }, "image/jpeg", 1);
-            parent.appendChild(img);
+    let parent: HTMLElement = document.getElementById(cropped ? "segCheckCropped" : "segCheckID")!;
+        let img: HTMLImageElement = cropped ? this.state.croppedImage! : this.state.originalImage!;
+        parent.removeChild(img);
+        
+        let width = img.naturalWidth;
+        let height = img.naturalHeight;
+        let canvas = document.createElement('canvas');
+        let ctx = canvas.getContext("2d")!;
+        
+        canvas.width = height;
+        canvas.height = width;
 
-            setTimeout(() => {
-                let button: HTMLButtonElement = document.getElementById('segcheck-submit-btn')! as HTMLButtonElement;
-                button.disabled = false;
-            }, 2000);
-        })
+        // transform context before drawing image
+        if (ccw) {
+            ctx.transform(0, -1, 1, 0, 0, width);
+        } else {
+            ctx.transform(0, 1, -1, 0, height, 0);
+        }
+        ctx.drawImage(img, 0, 0);
+        img.src = canvas.toDataURL();
+        canvas.toBlob((blob) => {
+            let filename = this.props.originalProcessed ? 
+                (cropped ? this.props.backID!.croppedImage!.name : this.props.backID!.image.name) : 
+                (cropped ? this.props.originalID!.croppedImage!.name : this.props.originalID!.image.name);
+            filename += "_" + newRotation;
+            this.props.setImageRotation(cropped, new File([blob!], filename), newRotation);
+        }, "image/jpeg", 1);
+        parent.appendChild(img);
+
+        setTimeout(() => {
+            document.getElementById('overlay')!.classList.remove('show');
+            this.setState({
+                originalImageRotation: cropped ? this.state.originalImageRotation : newRotation,
+                croppedImageRotation: cropped ? newRotation : this.state.croppedImageRotation,
+                isRotating: false
+            });
+        }, 1000);
     }
 
     render() {
@@ -138,13 +148,19 @@ class SegCheck extends React.Component<IProps, IState> {
             <Container style={{height: "100%"}}>
                 <Row style={{height: "100%", padding: "4rem 0"}}>
                     <Col xs={6} style={{maxHeight: "100%"}}>
-                        <p>Original</p>
-                        <Button variant="light" onClick={() => this.disableControls(false)}><FiRotateCw /></Button>
+                        <div className="segCheckTools">
+                            <p>Original</p>
+                            <Button variant="light" disabled={this.state.isRotating} onClick={() => this.disableControls(false, false)}><FiRotateCw /></Button>
+                            <Button variant="light" disabled={this.state.isRotating} onClick={() => this.disableControls(false, true)}><FiRotateCcw /></Button>
+                        </div>
                         <div id="segCheckID" className="pairDisplay"  style={{maxHeight: "100%"}}></div>
                     </Col>
                     <Col xs={6} style={{maxHeight: "100%"}}>
-                        <p>Cropped</p>
-                        <Button variant="light" onClick={() => this.disableControls(true)}><FiRotateCw /></Button>
+                        <div className="segCheckTools">
+                            <p>Cropped</p>
+                            {/* <Button variant="light" onClick={() => this.disableControls(true, true)}><FiRotateCcw /></Button>
+                            <Button variant="light" onClick={() => this.disableControls(true, false)}><FiRotateCw /></Button> */}
+                        </div>
                         <div id="segCheckCropped" className="pairDisplay"  style={{maxHeight: "100%"}}></div>
                     </Col>
                 </Row>

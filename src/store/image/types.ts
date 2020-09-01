@@ -31,7 +31,7 @@ export type LandmarkData = {
     id: number,
     type: 'landmark',
     name: string,
-    position: Position,
+    position?: Position,
     flags: string[]
 }
 

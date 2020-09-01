@@ -10,7 +10,7 @@ import { IDActionTypes, IDState, InternalIDState } from '../../../store/id/types
 import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord, LandmarkData } from '../../../store/image/types';
 import { progressNextStage, getNextID, saveToLibrary } from '../../../store/general/actionCreators';
 import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, restoreID } from '../../../store/id/actionCreators';
-import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, updateLandmarkFlags, addOCRData, setFaceCompareMatch, restoreImage } from '../../../store/image/actionCreators';
+import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, addLandmarkData, updateLandmarkFlags, addOCRData, setFaceCompareMatch, restoreImage } from '../../../store/image/actionCreators';
 import AddTypeModal from '../AddTypeModal/AddTypeModal';
 import { DatabaseUtil } from '../../../utils/DatabaseUtil';
 import { HOST, PORT, TRANSFORM } from '../../../config';
@@ -42,6 +42,7 @@ interface IProps {
 
     // Landmark
     setCurrentSymbol: (symbol?: string, landmark?: string) => ImageActionTypes;
+    addLandmarkData: (landmark: LandmarkData) => ImageActionTypes;
     updateLandmarkFlags: (name: string, flags: string[]) => ImageActionTypes;
 
     // OCR
@@ -223,8 +224,14 @@ class ControlPanel extends React.Component<IProps, IState> {
                     this.loadLandmarkData();
                 } else {
                     this.state.landmarks.forEach((each) => {
+                        // current set of landmarks is incorrect for the doctype
                         if (each.docType === this.props.internalID.processStage && each.landmarks !== this.state.currentLandmarks) {
+                            this.initializeLandmarkData(each.landmarks);
                             this.setState({currentLandmarks: each.landmarks});
+                        } else if (each.docType === this.props.internalID.processStage && each.landmarks === this.state.currentLandmarks
+                            && this.props.currentImage.landmark.length === 0) {
+                            // initial landmark names not added to image state
+                            this.initializeLandmarkData(this.state.currentLandmarks);
                         }
                     });
                 }
@@ -321,6 +328,7 @@ class ControlPanel extends React.Component<IProps, IState> {
 
             if (this.props.internalID.processStage === each) {
                 currentLandmarks = landmarks;
+                this.initializeLandmarkData(landmarks);
             }
         });
 
@@ -332,6 +340,18 @@ class ControlPanel extends React.Component<IProps, IState> {
         })
 
         this.setState({landmarks: docLandmarks, currentLandmarks: currentLandmarks, landmarkFlags: flags, landmarksLoaded: true});
+    }
+
+    initializeLandmarkData = (landmarks: {name: string, flags: string[]}[]) => {
+        landmarks.forEach((each, idx) => {
+            let landmark: LandmarkData = {
+                id: idx,
+                name: each.name,
+                flags: each.flags,
+                type: 'landmark'
+            };
+            this.props.addLandmarkData(landmark);
+        })
     }
     
     loadOCRDetails = () => {
@@ -430,6 +450,9 @@ class ControlPanel extends React.Component<IProps, IState> {
                         return;
                     } else {
                         if (this.state.passesCrop) {
+                            if (this.props.internalID.documentType !== this.state.singleDocumentType) {
+                                this.props.saveDocumentType(0, this.state.singleDocumentType);
+                            }
                             this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
                             this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
                         } else {
@@ -495,8 +518,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <Form.Group controlId="passesCrop">
                     <Form.Label>Cropping</Form.Label>
                     <ToggleButtonGroup type="radio" name="passesCropButtons" style={{display: "block", width: "100%"}}>
-                        <ToggleButton variant="light" className="common-button" onClick={this.handleCropFail} value="true">Fail</ToggleButton>
-                        <ToggleButton variant="light" className="common-button" onClick={this.handlePassesCrop} value="false">Pass</ToggleButton>
+                        <ToggleButton variant="light" id="segcheck-fail-btn" className="common-button" onClick={this.handleCropFail} value="true">Fail</ToggleButton>
+                        <ToggleButton variant="light" id="segcheck-pass-btn" className="common-button" onClick={this.handlePassesCrop} value="false">Pass</ToggleButton>
                     </ToggleButtonGroup>
                 </Form.Group>
 
@@ -764,7 +787,7 @@ class ControlPanel extends React.Component<IProps, IState> {
 
         const getClassName = (each: any) => {
             let name = "landmark-tab ";
-            let landmark = this.props.currentImage.landmark.find((item) => item.name === each.name);
+            let landmark = this.props.currentImage.landmark.find((item) => item.name === each.name && item.position !== undefined);
             if (landmark !== undefined) {
                 name += "labelled-landmark ";
             }
@@ -1205,6 +1228,7 @@ const mapDispatchToProps = {
     loadImageState,
     setCurrentSymbol,
     setCurrentWord,
+    addLandmarkData,
     updateLandmarkFlags,
     addOCRData,
     updateVideoData,

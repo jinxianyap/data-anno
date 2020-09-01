@@ -259,39 +259,41 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
         let landmarks = this.props.committedLandmarks;
         landmarks.forEach((landmark: LandmarkData) => {
-            let createdBox = this.createRectangle(
-                landmark.position.y1 / this.state.ratio,
-                landmark.position.x1 / this.state.ratio,
-                landmark.position.y3 / this.state.ratio,
-                landmark.position.x3 / this.state.ratio,
-                landmark.name,
-                landmark.name,
-                this.props.currentStage !== CurrentStage.LANDMARK_EDIT,
-                true,
-                undefined,
-                this.props.currentStage !== CurrentStage.LANDMARK_EDIT ? false : this.props.currentSymbol === landmark.name);
-            let box: Box = {
-                id: landmark.id,
-                name: landmark.name,
-                value: landmark.name,
-                position: {
-                    x1: landmark.position.x1,
-                    x2: landmark.position.x2,
-                    x3: landmark.position.x3,
-                    x4: landmark.position.x4,
-                    y1: landmark.position.y1,
-                    y2: landmark.position.y2,
-                    y3: landmark.position.y3,
-                    y4: landmark.position.y4,
-                },
-                rectangle: createdBox.rectangle,
-                descriptor: createdBox.descriptor,
-                display: createdBox.display,
-                resizeBoxes: createdBox.resizeBoxes
-            };
+            if (landmark.position !== undefined) {
+                let createdBox = this.createRectangle(
+                    landmark.position.y1 / this.state.ratio,
+                    landmark.position.x1 / this.state.ratio,
+                    landmark.position.y3 / this.state.ratio,
+                    landmark.position.x3 / this.state.ratio,
+                    landmark.name,
+                    landmark.name,
+                    this.props.currentStage !== CurrentStage.LANDMARK_EDIT,
+                    true,
+                    undefined,
+                    this.props.currentStage !== CurrentStage.LANDMARK_EDIT ? false : this.props.currentSymbol === landmark.name);
+                let box: Box = {
+                    id: landmark.id,
+                    name: landmark.name,
+                    value: landmark.name,
+                    position: {
+                        x1: landmark.position.x1,
+                        x2: landmark.position.x2,
+                        x3: landmark.position.x3,
+                        x4: landmark.position.x4,
+                        y1: landmark.position.y1,
+                        y2: landmark.position.y2,
+                        y3: landmark.position.y3,
+                        y4: landmark.position.y4,
+                    },
+                    rectangle: createdBox.rectangle,
+                    descriptor: createdBox.descriptor,
+                    display: createdBox.display,
+                    resizeBoxes: createdBox.resizeBoxes
+                };
 
-            newBoxes.push(box);
-            drawnLandmarks.push(box.name);
+                newBoxes.push(box);
+                drawnLandmarks.push(box.name);
+            }
         });
         this.setState({landmarkBoxes: newBoxes, drawnLandmarks: drawnLandmarks});
     }
@@ -386,7 +388,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                         return;
                     }
                 }
-                if (!this.props.currentSymbol) return;
+                if (!this.props.currentSymbol && !this.handleNextLandmark()) return;
                 if (this.state.drawnLandmarks.includes(this.props.currentSymbol) && !this.handleNextLandmark()) return;
                 break;
             }
@@ -436,7 +438,8 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         this.setState({
             isDrawing: true,
             currentBox: {
-                id: this.props.currentStage === CurrentStage.OCR_EDIT ? this.props.currentWord.id : this.state.drawnLandmarks.length,
+                id: this.props.currentStage === CurrentStage.OCR_EDIT ? this.props.currentWord.id
+                : this.props.currentImageState.landmark.find((each) => each.name === this.props.currentSymbol)!.id,
                 name: this.props.currentSymbol,
                 position: {
                     x1: e.latlng.lng * this.state.ratio,
@@ -513,7 +516,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         this.setState({
             isDrawing: true,
             currentBox: {
-                id: this.props.currentStage === CurrentStage.OCR_EDIT ? this.props.currentWord.id : this.state.drawnLandmarks.length,
+                id: this.state.currentBox.id,
                 name: this.props.currentSymbol,
                 position: {
                     ...this.state.currentBox.position,
@@ -564,7 +567,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 this.props.currentSymbol,
                 false,
                 true,
-                undefined,
+                this.state.currentBox.id,
                 true);
             let boxes = this.state.landmarkBoxes;
             boxes.push(newBox);
