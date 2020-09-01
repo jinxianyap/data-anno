@@ -44,7 +44,7 @@ class SetupView extends React.Component<IProps, IState> {
             database: DatabasesTemp.DB2,
             startDate: new Date(),
             endDate:new Date(),
-            processType: ProcessType.WHOLE,
+            processType: ProcessType.SEGMENTATION,
             incomplete: false,
             loadedIDs: false,
             files: []
@@ -104,7 +104,6 @@ class SetupView extends React.Component<IProps, IState> {
         let files = this.state.files;
         files.push(e.target.files[0]);
         this.setState({files: files});
-        // console.log(this.state.files);
     }
 
     render() {

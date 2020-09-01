@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { CurrentStage, IDProcess } from '../../../utils/enums';
+import { CurrentStage, IDProcess, ProcessType } from '../../../utils/enums';
 import { AppState } from '../../../store';
 import { Form, Button, ButtonGroup, ToggleButton, ToggleButtonGroup, Card, Accordion, Spinner } from 'react-bootstrap';
 import options from '../../../options.json';
@@ -11,7 +11,7 @@ import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord, LandmarkData } f
 import { progressNextStage, getNextID, saveToLibrary } from '../../../store/general/actionCreators';
 import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, restoreID } from '../../../store/id/actionCreators';
 import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, addLandmarkData, updateLandmarkFlags, addOCRData, setFaceCompareMatch, restoreImage } from '../../../store/image/actionCreators';
-import AddTypeModal from '../AddTypeModal/AddTypeModal';
+// import AddTypeModal from '../AddTypeModal/AddTypeModal';
 import { DatabaseUtil } from '../../../utils/DatabaseUtil';
 import { HOST, PORT, TRANSFORM } from '../../../config';
 const axios = require('axios');
@@ -19,6 +19,7 @@ const axios = require('axios');
 var fs = require('browserify-fs');
 
 interface IProps {
+    processType: ProcessType;
     currentStage: CurrentStage;
     currentID: IDState;
     indexedID: IDState;
@@ -174,35 +175,46 @@ class ControlPanel extends React.Component<IProps, IState> {
                     this.setState({loadedSegCheckImage: true});
                     break;
                 }
-                // first time
-                if (previousProps.internalID === undefined && this.props.internalID !== undefined) {
-                    if (this.props.internalID.processStage !== IDProcess.MYKAD_BACK) {
-                        this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
+                if (this.props.processType !== ProcessType.SEGMENTATION) {
+                    // first time
+                    if (previousProps.internalID === undefined && this.props.internalID !== undefined) {
+                        if (this.props.internalID.processStage !== IDProcess.MYKAD_BACK) {
+                            this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
+                        }
+                        this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                        break;
                     }
-                    this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
-                    break;
-                }
-                // repeated
-                if (previousProps.internalID !== undefined && this.props.internalID !== undefined
-                    && previousProps.internalID.originalID!.croppedImage!.lastModified !== this.props.internalID.originalID!.croppedImage!.lastModified) {
-                    if (this.props.internalID.processStage !== IDProcess.MYKAD_BACK) {
-                        this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
+                    // repeated
+                    if (previousProps.internalID !== undefined && this.props.internalID !== undefined
+                        && previousProps.internalID.originalID!.croppedImage!.lastModified !== this.props.internalID.originalID!.croppedImage!.lastModified) {
+                        if (this.props.internalID.processStage !== IDProcess.MYKAD_BACK) {
+                            this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
+                        }
+                        this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                        break;
                     }
-                    this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
-                    break;
+                } else {
+                    // get mykadback of next internal id OR skip over
+                    if (previousProps.currentID.internalIndex < this.props.currentID.internalIndex) {
+                        if (this.props.currentID.internalIndex < this.props.currentID.internalIDs.length) {
+                            if (this.props.internalID.documentType !== 'MyKad') {
+                                this.props.saveToInternalID(this.props.internalID.originalID!, true);
+                            } else {
+                                this.props.saveToInternalID(this.props.internalID.originalID!, false);
+                                this.loadBackId();
+                            }
+                        }
+
+                        if (this.props.currentID.internalIndex >= this.props.currentID.internalIDs.length
+                            || this.props.currentID.backIDsProcessed === this.props.currentID.internalIDs.length) {
+                            // next ID
+                            this.loadNextID();
+                        }
+                    }
                 }
                 break;
             }
             case (CurrentStage.SEGMENTATION_EDIT): {
-                // if (!this.props.currentID.originalIDProcessed) {
-                //     if (this.props.currentID.internalIDs.length > 0 && this.props.currentID.internalIDs[0].originalID!.passesCrop) {
-                //         this.props.refreshIDs(false);
-                //     }
-                // } else {
-                //     if (this.props.internalID.backID!.passesCrop) {
-                //         this.props.refreshIDs(true);
-                //     }
-                // }
                 let docTypes = this.state.selectedDocumentTypes;
                 if (docTypes.length < this.props.currentID.internalIDs.length) {
                     this.props.currentID.internalIDs.forEach((each, idx) => {
@@ -408,16 +420,6 @@ class ControlPanel extends React.Component<IProps, IState> {
             }
         }
 
-        const addDocType = (doc: string) => {
-            options.documentTypes.push(doc);
-            options.landmark.keys.push(doc);
-            options.landmark.values.push([]);
-            options.ocr.keys.push(doc);
-            options.ocr.values.push([]);
-            fs.writeFile('../../../options.json', JSON.stringify(options));
-            this.setState({showAddDocTypeModal: false}, () => this.loadDocumentTypes());
-        }
-
         const submitSegCheck = (e: any) => {
             e.preventDefault();
 
@@ -435,8 +437,9 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
             };
 
-            // repeat
+            // repeat / first time mykadback
             if (this.props.currentID.internalIDs.length > 0) {
+                // front ID
                 if (this.props.internalID.processStage !== IDProcess.MYKAD_BACK) {
                     if (this.state.passesCrop !== this.props.internalID.originalID!.passesCrop) {
                         console.log('refresh front');
@@ -460,13 +463,19 @@ class ControlPanel extends React.Component<IProps, IState> {
                         }
                     }
                 } else {
+                // back ID
                     if (this.state.passesCrop !== this.props.internalID.backID!.passesCrop) {
                         console.log('refresh back');
                         this.props.refreshIDs(true);
                         if (this.state.passesCrop) {
                             this.props.setIDBox(box, this.props.currentID.backID!.croppedImage!);
                             this.props.loadImageState(this.props.internalID.backID!, this.state.passesCrop);
-                            this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                            if (this.props.processType === ProcessType.SEGMENTATION) {
+                                let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
+                                this.props.saveToInternalID(internalID.backID!, true);
+                            } else {
+                                this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                            }
                         } else {
                             this.props.progressNextStage(CurrentStage.SEGMENTATION_EDIT);
                         }
@@ -481,19 +490,30 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
             }
 
-            // first time
+            // first time (will never be myKadBack)
             if (this.state.passesCrop) {
-                if (this.props.internalID !== undefined && this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
-                    this.props.setIDBox(box, this.props.currentID.backID!.croppedImage!);
-                    this.props.loadImageState(this.props.internalID.backID!, this.state.passesCrop);
-                    this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
-                } else {
-                    if (this.props.internalID === undefined) {
-                        this.props.createNewID(box, true);
-                        this.props.saveDocumentType(0, this.state.singleDocumentType);
-                    } else if (this.props.internalID !== undefined && this.props.internalID.processStage !== IDProcess.MYKAD_BACK) {
-                        this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                // if (this.props.internalID !== undefined && this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
+                //     this.props.setIDBox(box, this.props.currentID.backID!.croppedImage!);
+                //     this.props.loadImageState(this.props.internalID.backID!, this.state.passesCrop);
+                //     this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                // } 
+                if (this.props.internalID === undefined) {
+                    this.props.createNewID(box, true);
+                    this.props.saveDocumentType(0, this.state.singleDocumentType);
+
+                    if (this.props.processType === ProcessType.SEGMENTATION) {
+                        let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
+                        if (internalID !== undefined && internalID.processStage === IDProcess.MYKAD_FRONT) {
+                            this.props.saveToInternalID(internalID.originalID!, false);
+                            this.props.loadImageState(internalID.backID!);
+                            this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+                        } else {
+                            this.props.saveToInternalID(internalID.originalID!, true);
+                            this.loadNextID();
+                        }
                     }
+                } else if (this.props.internalID !== undefined && this.props.internalID.processStage !== IDProcess.MYKAD_BACK) {
+                    this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
                 }
             } else {
                 this.props.progressNextStage(CurrentStage.SEGMENTATION_EDIT);
@@ -1241,6 +1261,7 @@ const mapDispatchToProps = {
 
 const mapStateToProps = (state: AppState) => {
     return {
+        processType: state.general.setupOptions.processType,
         currentStage: state.general.currentStage,
         indexedID: state.general.IDLibrary[state.general.currentIndex],
         currentID: state.id,

@@ -7,7 +7,7 @@ const initialState: IDState = {
     processed: false,
     source: '',
     originalIDProcessed: false,
-    backIDProcessed: false,
+    backIDsProcessed: 0,
     originalIDRotation: Rotation.ROT0,
     backIDRotation: Rotation.ROT0,
     croppedIDRotation: Rotation.ROT0,
@@ -70,7 +70,7 @@ export function IDReducer(
                 return {
                     ...state,
                     originalIDProcessed: action.payload.originalIDProcessed,
-                    backIDProcessed: false,
+                    backIDsProcessed: 0,
                     internalIndex: 0,
                     internalIDs: []
                 }
@@ -85,7 +85,7 @@ export function IDReducer(
                 return {
                     ...state,
                     originalIDProcessed: action.payload.originalIDProcessed,
-                    backIDProcessed: false,
+                    backIDsProcessed: 0,
                     internalIDs: ids
                 }
             }
@@ -234,22 +234,23 @@ export function IDReducer(
         case Action.SAVE_TO_INTERNAL_ID: {
             let IDs = state.internalIDs;
             let internalID = state.internalIDs[state.internalIndex];
+            let backIds = 0;
             if (internalID.processStage === IDProcess.MYKAD_BACK) {
                 internalID.backID = action.payload.imageState;
                 internalID.processStage = IDProcess.MYKAD_FRONT;
-                state.backIDProcessed = true;
-                state.processed = true;
+                state.processed = state.backIDsProcessed + 1 === state.internalIDs.length;
+                backIds = state.backIDsProcessed + 1;
                 internalID.processed = true;
             } else {
                 internalID.originalID = action.payload.imageState;
                 if (internalID.processStage === IDProcess.MYKAD_FRONT) {
                     internalID.processStage = IDProcess.MYKAD_BACK;
                     // internalID.processed = false;
+                    backIds = state.backIDsProcessed;
                 } else {
                     internalID.processed = true;
                     state.processed = true;
-                    state.originalIDProcessed = true;
-                    state.backIDProcessed = true;
+                    backIds = state.internalIndex + 1;
                 }
             }
             IDs.splice(state.internalIndex, 1, internalID);
@@ -260,14 +261,14 @@ export function IDReducer(
                     internalIDs: IDs,
                     internalIndex: state.internalIndex + 1,
                     originalIDProcessed: true,
-                    backIDProcessed: internalID.processed
+                    backIDsProcessed: backIds
                 }
             } else {
                 return {
                     ...state,
                     internalIDs: IDs,
                     originalIDProcessed: true,
-                    backIDProcessed: internalID.processed
+                    backIDsProcessed: backIds
                 }
             }   
         }

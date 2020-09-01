@@ -66,6 +66,16 @@ class SegCheck extends React.Component<IProps, IState> {
     }
 
     componentDidUpdate(previousProps: IProps) {
+        if (!previousProps.originalProcessed && this.props.originalProcessed) {
+            let originalImage = this.state.originalImage!;
+            let croppedImage = this.state.croppedImage!;
+            originalImage.src = ImageUtil.getSource(this.props.backID!.image);
+            croppedImage.src = ImageUtil.getSource(this.props.backID!.croppedImage!);
+            this.setState({
+                originalImage: originalImage,
+                croppedImage: croppedImage
+            })
+        }
         if (!this.props.originalProcessed && this.state.originalImage === undefined && this.state.croppedImage === undefined) {
             this.setState({
                 originalImage: ImageUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),

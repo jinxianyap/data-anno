@@ -14,7 +14,7 @@ export type IDState = {
     jsonData?: any;
 
     originalIDProcessed: boolean;
-    backIDProcessed: boolean;
+    backIDsProcessed: number;
 
     originalIDRotation: Rotation;
     backIDRotation: Rotation;

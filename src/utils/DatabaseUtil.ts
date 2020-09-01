@@ -28,7 +28,7 @@ export class DatabaseUtil {
             index: index,
             source: 'sessionId/0001',
             originalIDProcessed: false,
-            backIDProcessed: false,
+            backIDsProcessed: 0,
             originalIDRotation: Rotation.ROT0,
             croppedIDRotation: Rotation.ROT0,
             backIDRotation: Rotation.ROT0,

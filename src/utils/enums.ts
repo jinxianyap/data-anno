@@ -25,10 +25,10 @@ export enum Rotation {
 }
 
 export enum ProcessType {
-    WHOLE,
-    SEGMENTATION,
-    LANDMARK,
-    OCR
+    WHOLE = "Whole",
+    SEGMENTATION = "Segmentation",
+    LANDMARK = "Landmark",
+    OCR = "OCR"
 }
 
 export enum DatabasesTemp {

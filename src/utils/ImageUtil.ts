@@ -10,4 +10,8 @@ export class ImageUtil {
         location!.appendChild(image);
         return image;
     }
+
+    public static getSource(imageFile: File): string {
+        return URL.createObjectURL(imageFile);
+    }
 }
