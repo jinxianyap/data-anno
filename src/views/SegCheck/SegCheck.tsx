@@ -66,6 +66,9 @@ class SegCheck extends React.Component<IProps, IState> {
     }
 
     componentDidUpdate(previousProps: IProps) {
+        if (this.props.noMoreIDs) {
+            this.props.progressNextStage(CurrentStage.SETUP);
+        }
         if (!previousProps.originalProcessed && this.props.originalProcessed) {
             let originalImage = this.state.originalImage!;
             let croppedImage = this.state.croppedImage!;
