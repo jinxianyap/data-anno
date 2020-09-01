@@ -210,6 +210,26 @@ class ControlPanel extends React.Component<IProps, IState> {
                             // next ID
                             this.loadNextID();
                         }
+                    // coming from seg edit of front id
+                    } else if (this.props.currentID.internalIDs.length > 0 
+                        && previousProps.currentID.internalIndex === this.props.currentID.internalIndex
+                        && this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
+                            console.log(this.props.internalID);
+                        this.props.loadImageState(this.props.internalID.backID!);
+                        if (this.props.currentID.internalIndex < this.props.currentID.internalIDs.length) {
+                            if (this.props.internalID.documentType !== 'MyKad') {
+                                this.props.saveToInternalID(this.props.internalID.originalID!, true);
+                            } else {
+                                this.props.saveToInternalID(this.props.internalID.originalID!, false);
+                                this.loadBackId();
+                            }
+                        }
+
+                        if (this.props.currentID.internalIndex >= this.props.currentID.internalIDs.length
+                            || this.props.currentID.backIDsProcessed === this.props.currentID.internalIDs.length) {
+                            // next ID
+                            this.loadNextID();
+                        }
                     }
                 }
                 break;
@@ -579,16 +599,6 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     segEdit = () => {
         const setDocType = (e: any, id: number) => {
-            // if (this.state.landmarks.length === 0) {
-            //     this.setState({selectedDocumentTypes: e.target.value});
-            // } else {
-            //     let landmarks = this.state.landmarks.find((each) => (each.docType === e.target.value))!;
-            //     if (landmarks !== undefined) {
-            //         this.setState({selectedDocumentTypes: e.target.value, currentLandmarks: landmarks.landmarks});
-            //     } else {
-            //         this.setState({selectedDocumentTypes: e.target.value});
-            //     }
-            // }
             let docs = this.state.selectedDocumentTypes;
             let index = docs.findIndex((each) => each.id === id);
             let doc = docs[index];
@@ -635,7 +645,6 @@ class ControlPanel extends React.Component<IProps, IState> {
             if (this.props.internalID.processStage !== IDProcess.MYKAD_BACK) {
                 for (let i = 0; i < this.props.currentID.internalIDs.length; i++) {
                     let each = this.props.currentID.internalIDs[i];
-                // this.props.currentID.internalIDs.forEach((each) => {
                     let points = each.originalID!.IDBox!.position;
                     axios.post(
                         HOST + ":" + PORT + TRANSFORM,
@@ -650,8 +659,18 @@ class ControlPanel extends React.Component<IProps, IState> {
                             cropsDone++;
                             if (cropsDone === this.props.currentID.internalIDs.length) {
                                 this.setState({isCropping: false});
-                                this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
-                                this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                                if (this.props.processType === ProcessType.SEGMENTATION) {
+                                    let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
+                                    if (internalID !== undefined) {
+                                        console.log(internalID);
+                                        console.log(this.props.saveToInternalID(internalID.originalID!, internalID.documentType !== 'MyKad'));
+                                        console.log(this.props.currentID.internalIDs[this.props.currentID.internalIndex]);
+                                        this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+                                    }
+                                } else {
+                                    this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
+                                    this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                                }
                             }
                         }                
                     });

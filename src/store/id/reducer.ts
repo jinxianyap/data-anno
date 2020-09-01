@@ -52,7 +52,6 @@ export function IDReducer(
                 source: state.source,
                 originalID: cloneImageState(state.originalID!),
                 backID: cloneImageState(state.backID!),
-                // croppedID: state.croppedID!.image === undefined ? undefined : cloneImageState(state.croppedID!),
                 documentType: 'MyKad',
                 processStage: IDProcess.MYKAD_FRONT
             }
