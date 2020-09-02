@@ -788,7 +788,9 @@ class ControlPanel extends React.Component<IProps, IState> {
                     </Accordion>
                 <Button variant="secondary" style={{width: '100%'}} onClick={undoBox}>Undo Box</Button>
                 <Button variant="secondary" className="common-button" onClick={backStage}>Back</Button>
-                <Button disabled={this.props.currentID.internalIDs.length === 0 || this.state.isCropping} 
+                {/* SKIP_VALIDATION: comment out disabled attribute */}
+                <Button disabled={this.props.currentID.internalIDs.length === 0 || this.state.isCropping 
+                || this.props.currentID.originalIDProcessed && this.props.internalID.backID!.IDBox === undefined} 
                     className="common-button" onClick={() => this.setState({isCropping: true}, loadImageAndProgress)}>
                     { this.state.isCropping
                         ? <Spinner animation="border" role="status" size="sm">
@@ -803,18 +805,6 @@ class ControlPanel extends React.Component<IProps, IState> {
     landmarkEdit = () => {
         const setLandmark = (item: string) => {
             this.setState({selectedLandmark: item}, () => this.props.setCurrentSymbol(item));
-        }
-
-        const addLandmark = (landmark: string) => {
-            let index = 0;
-            options.landmark.keys.forEach((each, idx) => {
-                if (each === this.props.internalID.documentType) {
-                    index = idx;
-                }
-            })
-            options.landmark.values[index].push(landmark);
-            fs.writeFile('../../../options.json', JSON.stringify(options));
-            this.setState({showAddLandmarkModal: false}, this.loadLandmarkData);
         }
 
         const backStage = () => {
@@ -934,7 +924,10 @@ class ControlPanel extends React.Component<IProps, IState> {
                     onClick={() => this.setState({showAddLandmarkModal: true})}>+</Button> */}
                 {/* <AddTypeModal showModal={this.state.showAddLandmarkModal} item='landmarks' add={addLandmark} closeModal={() => this.setState({showAddLandmarkModal: false})}/> */}
                 <Button variant="secondary" className="common-button" onClick={backStage}>Back</Button>
-                <Button className="common-button" onClick={submitLandmark}>Done</Button>
+                {/* SKIP_VALIDATION: comment out disabled attribute */}
+                <Button className="common-button"
+                    // disabled={this.props.currentImage.landmark.filter((each) => each.position === undefined).length > 0}
+                    onClick={submitLandmark}>Done</Button>
             </div>
         );
     }
@@ -982,6 +975,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                         return (
                             <Form.Group key={each.name + "OCR"}>
                                 <Form.Label>{DatabaseUtil.beautifyWord(each.name)}</Form.Label>
+                                {/* SKIP_VALIDATION: Remove required */}
                                 <Form.Control type="text" defaultValue={each.value} ref={(ref: any) => {refs.push({name: each.name, mapToLandmark: each.mapToLandmark,ref})}} />
                             </Form.Group>
                         );
@@ -999,12 +993,22 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     ocrEdit = () => {
         let ocrs = this.props.currentImage.ocr;
+        let ocrLabelIncomplete = false;
 
         const getClassNameLandmark = (each: any) => {
-            if (this.props.currentImage.currentSymbol === each.name) {
-                return "selected-landmark";
+            let name = "landmark-tab ";
+            let ocrFilled = false;
+            let ocrsLabelled = this.props.currentImage.ocr.find((ocr) => ocr.mapToLandmark === each.mapToLandmark && ocr.name === each.name);
+            if (ocrsLabelled !== undefined) {
+                ocrFilled = ocrsLabelled.labels.filter((label) => label.position === undefined).length === 0;
             }
-            return "";
+            if (ocrFilled) {
+                name += "labelled-landmark ";
+            }
+            if (this.props.currentImage.currentSymbol === each.name) {
+                name += "selected-landmark";
+            }
+            return name;
         }
 
         const getClassNameOcr = (each: any, label: any) => {
@@ -1023,6 +1027,14 @@ class ControlPanel extends React.Component<IProps, IState> {
                 return this.props.currentImage.currentSymbol + " " + this.props.currentImage.ocrToLandmark;
             } else {
                 return '';
+            }
+        }
+
+        const validate = () => {
+            let ocrsToLabel = this.props.currentImage.ocr.filter((each) => each.count > 1);
+            if (ocrsToLabel.length > 0) {
+                let unlabeled = ocrsToLabel.filter((each) => each.labels.filter((label) => label.position === undefined).length > 0);
+                ocrLabelIncomplete = unlabeled.length > 0;
             }
         }
 
@@ -1047,6 +1059,9 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
             }
         }
+        
+        // SKIP_VALIDATION: comment out validate()
+        // validate();
 
         return (
             <div>
@@ -1064,7 +1079,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                         onClick={() => {
                                             this.props.setCurrentSymbol(each.name, each.mapToLandmark);
                                             this.props.setCurrentWord(each.labels[0]);}}>
-                                        {each.name}
+                                        {DatabaseUtil.beautifyWord(each.name)}
                                     </Accordion.Toggle>
                                     <Accordion.Collapse eventKey={each.name + " " + each.mapToLandmark}>
                                     <Card.Body>
@@ -1093,7 +1108,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     }
                 </Accordion>
             <Button variant="secondary" className="common-button" onClick={() => this.props.progressNextStage(CurrentStage.OCR_DETAILS)}>Back</Button>
-            <Button className="common-button" onClick={submitOcrBoxes}>Done</Button>
+            <Button className="common-button" disabled={ocrLabelIncomplete} onClick={submitOcrBoxes}>Done</Button>
         </div>);
     }
 
