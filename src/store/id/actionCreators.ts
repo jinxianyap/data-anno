@@ -102,6 +102,15 @@ export function saveToInternalID(image: ImageState, next: boolean): IDActionType
     }
 }
 
+export function updateOverallFlags(flags: string[]): IDActionTypes {
+    return {
+        type: Action.UPDATE_OVERALL_FLAGS,
+        payload: {
+            flags: flags
+        }
+    }
+}
+
 export function restoreID(): IDActionTypes {
     return {
         type: Action.RESTORE_ID

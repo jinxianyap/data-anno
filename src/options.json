@@ -25,6 +25,12 @@
         ]
     },
     "flags": {
+        "overall": {
+            "keys": ["quality"],
+            "values": [
+                ["glare", "blur", "damaged", "covered"]
+            ]
+        },
         "landmark": {
             "keys": ["quality"],
             "values": [
@@ -32,8 +38,9 @@
             ]
         },
         "video": {
-            "keys": ["quality"],
+            "keys": ["spoof", "quality"],
             "values": [
+                ["replay", "print"],
                 ["dark", "blur"]
             ]
         }

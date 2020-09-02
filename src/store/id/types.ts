@@ -20,6 +20,8 @@ export type IDState = {
     backIDRotation: Rotation;
     croppedIDRotation: Rotation;
 
+    overallFlags?: string[];
+
     videoLiveness?: boolean;
     videoFlags?: string[];
 
@@ -116,6 +118,13 @@ interface SaveToInternalID {
     }
 }
 
+interface UpdateOverallFlags {
+    type: typeof Action.UPDATE_OVERALL_FLAGS;
+    payload: {
+        flags: string[]
+    }
+}
+
 interface RestoreID {
     type: typeof Action.RESTORE_ID;
 }
@@ -130,4 +139,5 @@ export type IDActionTypes = SaveDocumentType
     | SaveCroppedImages
     | UpdateVideoData
     | SaveToInternalID
+    | UpdateOverallFlags
     | RestoreID

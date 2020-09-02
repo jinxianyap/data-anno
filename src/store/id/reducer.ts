@@ -271,6 +271,12 @@ export function IDReducer(
                 }
             }   
         }
+        case Action.UPDATE_OVERALL_FLAGS: {
+            return {
+                ...state,
+                overallFlags: action.payload.flags
+            }
+        }
         case Action.RESTORE_ID: {
             return {
                 ...initialState

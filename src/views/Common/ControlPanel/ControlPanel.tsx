@@ -9,7 +9,7 @@ import { GeneralActionTypes } from '../../../store/general/types';
 import { IDActionTypes, IDState, InternalIDState } from '../../../store/id/types';
 import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord, LandmarkData } from '../../../store/image/types';
 import { progressNextStage, getNextID, saveToLibrary } from '../../../store/general/actionCreators';
-import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, restoreID } from '../../../store/id/actionCreators';
+import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, updateOverallFlags, restoreID } from '../../../store/id/actionCreators';
 import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, addLandmarkData, updateLandmarkFlags, addOCRData, setFaceCompareMatch, restoreImage } from '../../../store/image/actionCreators';
 // import AddTypeModal from '../AddTypeModal/AddTypeModal';
 import { DatabaseUtil } from '../../../utils/DatabaseUtil';
@@ -39,6 +39,7 @@ interface IProps {
     saveCroppedImage: (croppedImage: File, index?: number) => IDActionTypes;
     refreshIDs: (originalProcessed: boolean) => IDActionTypes;
     saveDocumentType: (internalIndex: number, documentType: string) => IDActionTypes;
+    updateOverallFlags: (flags: string[]) => IDActionTypes;
     saveSegCheck: (passesCrop: boolean) => ImageActionTypes;
 
     // Landmark
@@ -72,9 +73,13 @@ interface IState {
         id: number,
         value: string
     }[];
-    passesCrop: boolean;
-    cropDirty: boolean;
+    passesCrop?: boolean;
     isCropping: boolean;
+    overallFlags: {
+        category: string,
+        flags: string[],
+    }[];
+    selectedOverallFlags: string[];
 
     // Landmark
     showAddLandmarkModal: boolean;
@@ -139,9 +144,9 @@ class ControlPanel extends React.Component<IProps, IState> {
             documentTypes: [],
             singleDocumentType: '',
             selectedDocumentTypes: [],
-            passesCrop: false,
-            cropDirty: false,
             isCropping: false,
+            overallFlags: [],
+            selectedOverallFlags: [],
 
             showAddLandmarkModal: false,
             landmarksLoaded: false,
@@ -170,7 +175,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                     this.props.loadNextID(this.props.indexedID);
                     break;
                 }
-                if (this.state.documentTypes.length === 0) this.loadDocumentTypes();
+                // initial load of doctypes and overall flags from config json, initial load of image
+                if (this.state.documentTypes.length === 0) this.loadSegCheckData();
                 if (!this.state.loadedSegCheckImage) {
                     this.loadSegCheckImage();
                     this.setState({loadedSegCheckImage: true});
@@ -367,16 +373,8 @@ class ControlPanel extends React.Component<IProps, IState> {
     componentDidMount() {
         if (this.props.currentStage === CurrentStage.SEGMENTATION_CHECK) {
             this.props.loadNextID(this.props.indexedID);
-            this.loadDocumentTypes();
+            this.loadSegCheckData();
         }
-    }
-
-    handleCropFail = () => {
-        this.setState({passesCrop: false, cropDirty: true});
-    }
-
-    handlePassesCrop = () => {
-        this.setState({passesCrop: true, cropDirty: true});
     }
 
     loadSegCheckImage = () => {
@@ -387,10 +385,18 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
     }
 
-    loadDocumentTypes = () => {
+    loadSegCheckData = () => {
+        let flags: {category: string, flags: string[]}[] = [];
+        for (let i = 0; i < options.flags.overall.keys.length; i++) {
+            flags.push({
+                category: options.flags.overall.keys[i],
+                flags: options.flags.overall.values[i]
+            });
+        }
         this.setState({
             documentTypes: options.documentTypes,
-            singleDocumentType: options.documentTypes[0]
+            singleDocumentType: options.documentTypes[0],
+            overallFlags: flags
         });
     }
 
@@ -398,7 +404,6 @@ class ControlPanel extends React.Component<IProps, IState> {
         let docLandmarks: {docType: string, landmarks: {name: string, flags: string[]}[]}[] = [];
         let currentLandmarks: {name: string, flags: string[]}[] = [];
         let flags: {category: string, flags: string[]}[] = [];
-
         options.landmark.keys.forEach((each, idx) => {
             let landmarks: {name: string, flags: string[]}[] = [];
             options.landmark.values[idx].forEach((each) => {
@@ -494,6 +499,10 @@ class ControlPanel extends React.Component<IProps, IState> {
             }
         }
 
+        const setFlag = (flags: string[]) => {
+            this.setState({selectedOverallFlags: flags});
+        }
+
         const submitSegCheck = (e: any) => {
             e.preventDefault();
 
@@ -515,6 +524,7 @@ class ControlPanel extends React.Component<IProps, IState> {
             if (this.props.currentID.internalIDs.length > 0) {
                 // front ID
                 if (this.props.internalID.processStage !== IDProcess.MYKAD_BACK) {
+                    this.props.updateOverallFlags(this.state.selectedOverallFlags);
                     if (this.state.passesCrop !== this.props.internalID.originalID!.passesCrop) {
                         console.log('refresh front');
                         this.props.refreshIDs(false);
@@ -574,6 +584,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 if (this.props.internalID === undefined) {
                     this.props.createNewID(box, true);
                     this.props.saveDocumentType(0, this.state.singleDocumentType);
+                    this.props.updateOverallFlags(this.state.selectedOverallFlags);
 
                     if (this.props.processType === ProcessType.SEGMENTATION) {
                         let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
@@ -611,13 +622,51 @@ class ControlPanel extends React.Component<IProps, IState> {
 
                 <Form.Group controlId="passesCrop">
                     <Form.Label>Cropping</Form.Label>
-                    <ToggleButtonGroup type="radio" name="passesCropButtons" style={{display: "block", width: "100%"}}>
-                        <ToggleButton variant="light" id="segcheck-fail-btn" className="common-button" onClick={this.handleCropFail} value="true">Fail</ToggleButton>
-                        <ToggleButton variant="light" id="segcheck-pass-btn" className="common-button" onClick={this.handlePassesCrop} value="false">Pass</ToggleButton>
+                    <ToggleButtonGroup type="radio" name="passesCropButtons" style={{display: "block", width: "100%"}}
+                        value={this.state.passesCrop} onChange={(val) => this.setState({passesCrop: val})}>
+                        <ToggleButton variant="light" id="segcheck-fail-btn" className="common-button" value={false}>Fail</ToggleButton>
+                        <ToggleButton variant="light" id="segcheck-pass-btn" className="common-button" value={true}>Pass</ToggleButton>
                     </ToggleButtonGroup>
                 </Form.Group>
 
-                <Button type="submit" className="block-button" id="segcheck-submit-btn" disabled={!this.state.cropDirty}>
+                <Form.Group controlId="overallFlags">
+                    <Form.Label>Flags</Form.Label>
+                        {
+                            this.state.overallFlags.map((each, idx) => {
+                                return (
+                                    <div key={idx}>
+                                        <p>{DatabaseUtil.beautifyWord(each.category)}</p>
+                                        <ToggleButtonGroup type="checkbox" onChange={(val) => setFlag(val)} value={this.state.selectedOverallFlags}>
+                                        {
+                                            each.flags.map((flag, i) => {
+                                                return (
+                                                    <ToggleButton
+                                                        className="video-flags"
+                                                        key={i}
+                                                        value={flag}
+                                                        variant="light"
+                                                        >
+                                                        {DatabaseUtil.beautifyWord(flag)}
+                                                    </ToggleButton>
+                                                );
+                                            })
+                                        }
+                                        </ToggleButtonGroup>
+                                    </div>
+                                );
+                            })
+                        }
+                </Form.Group>
+                {
+                    !this.props.currentID.originalIDProcessed && this.state.selectedOverallFlags.length > 0
+                    ?
+                    (<Button variant="primary" className="block-button" id="segcheck-skip-btn" onClick={this.loadNextID}>
+                        Skip
+                    </Button>)
+                    : <div />
+                }
+
+                <Button type="submit" className="block-button" id="segcheck-submit-btn" disabled={this.state.passesCrop === undefined}>
                     Next
                 </Button>
             </Form>
@@ -815,18 +864,25 @@ class ControlPanel extends React.Component<IProps, IState> {
             }
         }
 
-        const getLandmarkFlags = (flags: string[]) => {
-            const setFlag = (flag: string) => {
+        const getLandmarkFlags = () => {
+            const setFlag = (selected: string[]) => {
                 for (var i = 0; i < this.state.currentLandmarks.length; i++) {
                     if (this.state.currentLandmarks[i].name === this.state.selectedLandmark) {
                         let landmarks = this.state.currentLandmarks;
                         let landmark = landmarks[i];
-                        if (!landmark.flags.includes(flag)) {
-                            landmark.flags.push(flag);
-                            landmarks[i] = landmark;
-                            this.setState({currentLandmarks: landmarks});
-                        }
+                        landmark.flags = selected;
+                        landmarks[i] = landmark;
+                        this.setState({currentLandmarks: landmarks});
+                        break;
                     }
+                }
+            }
+
+            let selectedFlags: string[] = [];
+            for (var i = 0; i < this.state.currentLandmarks.length; i++) {
+                if (this.state.currentLandmarks[i].name === this.state.selectedLandmark) {
+                    selectedFlags = this.state.currentLandmarks[i].flags;
+                    break;
                 }
             }
 
@@ -837,17 +893,16 @@ class ControlPanel extends React.Component<IProps, IState> {
                             return (
                                     <div key={idx}>
                                         <p>{DatabaseUtil.beautifyWord(each.category)}</p>
-                                        <ToggleButtonGroup type="checkbox">
-                                            {each.flags.map((each, idx) => {
+                                        <ToggleButtonGroup type="checkbox" onChange={(val) => setFlag(val)} value={selectedFlags}>
+                                            {each.flags.map((flag, idx) => {
                                                 return (
                                                     <ToggleButton
                                                         className="labelling-flags"
                                                         key={idx}
-                                                        value={each}
+                                                        value={flag}
                                                         variant="light"
-                                                        checked={flags.includes(each)}
-                                                        onClick={() => setFlag(each)}>
-                                                        {each}
+                                                        >
+                                                        {DatabaseUtil.beautifyWord(flag)}
                                                     </ToggleButton>
                                                 );
                                             })}
@@ -909,7 +964,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                         </Accordion.Toggle>
                                         <Accordion.Collapse eventKey={idx.toString()}>
                                         <Card.Body>
-                                            {getLandmarkFlags(each.flags)}
+                                            {getLandmarkFlags()}
                                         </Card.Body>
                                         </Accordion.Collapse>
                                     </Card>
@@ -1113,20 +1168,37 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     frLivenessCheck = () => {
-        const setFlag = (flag: string) => {
-            let selected = this.state.selectedVideoFlags;
-            if (!selected.includes(flag)) {
-                selected.push(flag);
-            } else {
-                selected.splice(selected.findIndex((each) => each === flag), 1);
-            }
-            this.setState({selectedVideoFlags: selected});
+        const setFlag = (flags: string[], possibleFlags: string[]) => {
+            this.setState({selectedVideoFlags: flags}, validate);
         }
     
         const validate = () => {
-            if (this.state.passesLiveness) {
-                this.setState({livenessValidation: true});
+            let val = false;
+            if (this.state.passesLiveness !== undefined) {
+                if (this.state.passesLiveness) {
+                    val = true;
+                } else {
+                    let spoofFlags = this.state.videoFlags.find((each) => each.category === 'spoof');
+                    if (spoofFlags !== undefined) {
+                        if (spoofFlags.flags.length === 0) {
+                            val = true;
+                        } else {
+                            for (let i = 0; i < spoofFlags.flags.length; i++) {
+                                if (this.state.selectedVideoFlags.includes(spoofFlags.flags[i])) {
+                                    val = true;
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        val = true;
+                    }
+                }
             }
+
+            if (this.state.livenessValidation !== val) {
+                this.setState({livenessValidation: val});
+            }            
         }
 
         const backStage = () => {
@@ -1146,11 +1218,10 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <Card className="individual-card">
                     <Card.Title>Liveness</Card.Title>
                     <Card.Body>
-                        <p>Result: {this.props.currentID.jsonData !== undefined
-                            ? (this.props.currentID.jsonData!.criteria.liveness ? 'True' : 'False') : 'none'}</p>
-                        <ToggleButtonGroup type="radio" name="passesLivenessButtons" style={{display: "block", width: "100%"}}>
-                            <ToggleButton variant="light" className="common-button"  onClick={() => this.setState({passesLiveness: false}, validate)} value="livenessFalse">Fail</ToggleButton>
-                            <ToggleButton variant="light" className="common-button"  onClick={() => this.setState({passesLiveness: true}, validate)} value="livenessTrue">Pass</ToggleButton>
+                        <ToggleButtonGroup type="radio" name="passesLivenessButtons" style={{display: "block", width: "100%"}}
+                            value={this.state.passesLiveness} onChange={(val) => this.setState({passesLiveness: val}, validate)}>
+                            <ToggleButton variant="light" className="common-button" value={false}>Spoof</ToggleButton>
+                            <ToggleButton variant="light" className="common-button"  value={true}>Live</ToggleButton>
                         </ToggleButtonGroup>
                     </Card.Body>
                 </Card>
@@ -1162,8 +1233,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                             this.state.videoFlags.map((each, idx) => {
                                 return (
                                     <div key={idx}>
-                                        <p>{each.category}</p>
-                                        <ToggleButtonGroup type="checkbox">
+                                        <p>{DatabaseUtil.beautifyWord(each.category)}</p>
+                                        <ToggleButtonGroup type="checkbox" onChange={(val) => setFlag(val, each.flags)} value={this.state.selectedVideoFlags}>
                                         {
                                             each.flags.map((flag, i) => {
                                                 return (
@@ -1172,9 +1243,10 @@ class ControlPanel extends React.Component<IProps, IState> {
                                                         key={i}
                                                         value={flag}
                                                         variant="light"
-                                                        checked={this.state.selectedVideoFlags.includes(flag)}
-                                                        onClick={() => setFlag(flag)}>
-                                                        {flag}
+                                                        // checked={this.state.selectedVideoFlags.includes(flag)}
+                                                        // onChange={() => setFlag(flag)}
+                                                        >
+                                                        {DatabaseUtil.beautifyWord(flag)}
                                                     </ToggleButton>
                                                 );
                                             })
@@ -1189,7 +1261,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <Button variant="secondary" className="common-button" onClick={backStage}>
                     Back
                 </Button>
-                <Button className="common-button" onClick={submitLiveness} disabled={!this.state.livenessValidation}>
+                <Button className="common-button" onClick={submitLiveness} 
+                disabled={!this.state.livenessValidation}>
                     Done
                 </Button>
             </div>
@@ -1208,11 +1281,10 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <Card className="individual-card">
                     <Card.Title>Match</Card.Title>
                     <Card.Body>
-                        <p>Confidence: {this.props.currentID.jsonData !== undefined && this.props.currentID.jsonData!.criteria.match !== undefined
-                            ? this.props.currentID.jsonData!.criteria.match : 'none'}</p>
-                        <ToggleButtonGroup type="radio" name="passessFRMatchButtons" style={{display: "block", width: "100%"}}>
-                            <ToggleButton variant="light" className="common-button" onClick={() => this.props.setFaceCompareMatch(false)} value="matchFalse">Fail</ToggleButton>
-                            <ToggleButton variant="light" className="common-button" onClick={() => this.props.setFaceCompareMatch(true)} value="matchTrue">Pass</ToggleButton>
+                        <ToggleButtonGroup type="radio" name="passessFRMatchButtons" style={{display: "block", width: "100%"}}
+                            value={this.props.currentImage.faceCompareMatch} onChange={(val) => this.props.setFaceCompareMatch(val)}>
+                            <ToggleButton variant="light" className="common-button" value={false}>No Match</ToggleButton>
+                            <ToggleButton variant="light" className="common-button" value={true}>Match</ToggleButton>
                         </ToggleButtonGroup>
                     </Card.Body>
                 </Card>
@@ -1252,8 +1324,10 @@ class ControlPanel extends React.Component<IProps, IState> {
             documentTypes: [],
             singleDocumentType: '',
             selectedDocumentTypes: [],
-            passesCrop: false,
-            cropDirty: false,
+            passesCrop: undefined,
+            isCropping: false,
+            overallFlags: [],
+            selectedOverallFlags: [],
 
             showAddLandmarkModal: false,
             landmarksLoaded: false,
@@ -1360,6 +1434,7 @@ const mapDispatchToProps = {
     updateVideoData,
     setFaceCompareMatch,
     saveToInternalID,
+    updateOverallFlags,
     saveToLibrary,
     restoreID,
     restoreImage,
