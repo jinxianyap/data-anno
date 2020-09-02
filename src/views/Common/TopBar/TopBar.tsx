@@ -1,20 +1,28 @@
 import React from 'react';
 import { Navbar } from 'react-bootstrap';
-import { CurrentStage } from '../../../utils/enums';
+import { CurrentStage, ProcessType } from '../../../utils/enums';
 import { AppState } from '../../../store';
 import { connect } from 'react-redux';
 import './TopBar.scss';
 
 interface IProps {
+    processType: ProcessType;
     currentStage: CurrentStage;
 }
 
-const TopBar: React.FC<IProps> = ({currentStage}) => {
+const TopBar: React.FC<IProps> = ({processType, currentStage}) => {
 
     const getNavbarItems = () => {
         let id = 100;
         let values = Object.values(CurrentStage);
-        values = values.slice(0, values.length - 2);
+        let length = 101;
+
+        switch (processType) {
+            case (ProcessType.WHOLE): { values = values.slice(0, 8); break; }
+            case (ProcessType.SEGMENTATION): { values = values.slice(0, 3); length = 46; break; }
+            case (ProcessType.LANDMARK): { values = values.slice(0, 4); length = 54; break; }
+            case (ProcessType.OCR): { values = values.slice(0, 6); length -= 28; break; }
+        }
 
         return (
             <div style={{width: "100%"}}>
@@ -29,7 +37,7 @@ const TopBar: React.FC<IProps> = ({currentStage}) => {
                         //     name += " topbar-hidden";
                         // }
                         return (
-                            <Navbar.Brand className={name} key={idx} style={{width: (each.length / 101 * 100) + "%"}}>{each}</Navbar.Brand>
+                            <Navbar.Brand className={name} key={idx} style={{width: (each.length / length * 100) + "%"}}>{each}</Navbar.Brand>
                         )
                     })
                 }
@@ -48,6 +56,7 @@ const TopBar: React.FC<IProps> = ({currentStage}) => {
 }
 
 const mapStateToProps = (state: AppState) => ({
+    processType: state.general.setupOptions.processType,
     currentStage: state.general.currentStage
 });
 
