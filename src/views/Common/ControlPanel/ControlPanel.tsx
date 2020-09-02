@@ -629,34 +629,38 @@ class ControlPanel extends React.Component<IProps, IState> {
                     </ToggleButtonGroup>
                 </Form.Group>
 
-                <Form.Group controlId="overallFlags">
-                    <Form.Label>Flags</Form.Label>
-                        {
-                            this.state.overallFlags.map((each, idx) => {
-                                return (
-                                    <div key={idx}>
-                                        <p>{DatabaseUtil.beautifyWord(each.category)}</p>
-                                        <ToggleButtonGroup type="checkbox" onChange={(val) => setFlag(val)} value={this.state.selectedOverallFlags}>
-                                        {
-                                            each.flags.map((flag, i) => {
-                                                return (
-                                                    <ToggleButton
-                                                        className="video-flags"
-                                                        key={i}
-                                                        value={flag}
-                                                        variant="light"
-                                                        >
-                                                        {DatabaseUtil.beautifyWord(flag)}
-                                                    </ToggleButton>
-                                                );
-                                            })
-                                        }
-                                        </ToggleButtonGroup>
-                                    </div>
-                                );
-                            })
-                        }
-                </Form.Group>
+                { this.state.overallFlags.length > 0 ?
+                    <Card className="individual-card">
+                        <Card.Title>Flags</Card.Title>
+                        <Card.Body>
+                            {
+                                this.state.overallFlags.map((each, idx) => {
+                                    return (
+                                        <div key={idx}>
+                                            <p>{DatabaseUtil.beautifyWord(each.category)}</p>
+                                            <ToggleButtonGroup type="checkbox" onChange={(val) => setFlag(val)} value={this.state.selectedOverallFlags}>
+                                            {
+                                                each.flags.map((flag, i) => {
+                                                    return (
+                                                        <ToggleButton
+                                                            className="video-flags"
+                                                            key={i}
+                                                            value={flag}
+                                                            variant="light"
+                                                            >
+                                                            {DatabaseUtil.beautifyWord(flag)}
+                                                        </ToggleButton>
+                                                    );
+                                                })
+                                            }
+                                            </ToggleButtonGroup>
+                                        </div>
+                                    );
+                                })
+                            }
+                        </Card.Body>
+                    </Card>
+                : <div />}
                 {
                     !this.props.currentID.originalIDProcessed && this.state.selectedOverallFlags.length > 0
                     ?

@@ -12,7 +12,7 @@ import {connect} from "react-redux";
 import { DatabaseUtil } from '../../utils/DatabaseUtil';
 import { IDState, IDActionTypes } from '../../store/id/types';
 import { ImageActionTypes } from '../../store/image/types';
-import img from '../../ids/0001/0001_0.jpg';
+const axios = require('axios');
 
 interface IProps {
     saveSetupOptions: (setupOptions: SetupOptions) => GeneralActionTypes;
@@ -56,6 +56,17 @@ class SetupView extends React.Component<IProps, IState> {
         this.props.restoreImage();
         this.props.restoreID();
         this.props.restoreGeneral();
+    }
+
+    componentDidMount() {
+        axios.get('http://localhost:3000/getImage/0001').then((res: any) => {
+            console.log(res);
+            let img = new Image();
+            img.src = 'data:image/jpg;base64,' + res.data;
+            img.onload = () => {
+                document.getElementById("root")!.appendChild(img);
+            }
+        });
     }
 
     handleSubmit = (e: any) => {
@@ -110,7 +121,6 @@ class SetupView extends React.Component<IProps, IState> {
     render() {
         return (
             <Container className="setupView">
-            <img src={img} />
                 <Card style={{padding: "2rem"}}>               
                     <Form onSubmit={this.handleSubmit}>
                         <Form.Group controlId="setupUser">
