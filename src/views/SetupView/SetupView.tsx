@@ -12,6 +12,7 @@ import {connect} from "react-redux";
 import { DatabaseUtil } from '../../utils/DatabaseUtil';
 import { IDState, IDActionTypes } from '../../store/id/types';
 import { ImageActionTypes } from '../../store/image/types';
+import img from '../../ids/0001/0001_0.jpg';
 
 interface IProps {
     saveSetupOptions: (setupOptions: SetupOptions) => GeneralActionTypes;
@@ -109,6 +110,7 @@ class SetupView extends React.Component<IProps, IState> {
     render() {
         return (
             <Container className="setupView">
+            <img src={img} />
                 <Card style={{padding: "2rem"}}>               
                     <Form onSubmit={this.handleSubmit}>
                         <Form.Group controlId="setupUser">
