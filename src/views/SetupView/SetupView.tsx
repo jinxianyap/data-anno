@@ -44,7 +44,7 @@ class SetupView extends React.Component<IProps, IState> {
             database: DatabasesTemp.DB2,
             startDate: new Date(),
             endDate:new Date(),
-            processType: ProcessType.LANDMARK,
+            processType: ProcessType.OCR,
             incomplete: false,
             loadedIDs: false,
             files: []

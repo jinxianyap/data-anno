@@ -10,8 +10,7 @@ export enum CurrentStage {
 
 
     END_STAGE = "End Stage",
-    INTER_SEGMENTATION = "Inter Segmentation",
-    INTER_LANDMARK = "Inter Landmark",
+    INTER_STAGE = "Inter Stage"
 }
 
 export enum IDProcess {
