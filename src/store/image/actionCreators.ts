@@ -58,9 +58,15 @@ export function addLandmarkData(landmark: LandmarkData): ImageActionTypes {
     }
 }
 
-export function deleteLandmarkData(landmark: string): ImageActionTypes {
+export function clearLandmarkData(): ImageActionTypes {
     return {
-        type: Action.DELETE_LANDMARK_DATA,
+        type: Action.CLEAR_LANDMARK_DATA
+    }
+}
+
+export function deleteLandmarkPosition(landmark: string): ImageActionTypes {
+    return {
+        type: Action.DELETE_LANDMARK_POSITION,
         payload: {
             landmark: landmark
         }

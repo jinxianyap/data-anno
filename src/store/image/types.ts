@@ -115,8 +115,12 @@ interface AddLandmarkData {
     }
 }
 
-interface DeleteLandmarkData {
-    type: typeof Action.DELETE_LANDMARK_DATA;
+interface ClearLandmarkData {
+    type: typeof Action.CLEAR_LANDMARK_DATA;
+}
+
+interface DeleteLandmarkPosition {
+    type: typeof Action.DELETE_LANDMARK_POSITION;
     payload: {
         landmark: string
     }
@@ -172,7 +176,8 @@ export type ImageActionTypes = LoadImageState
     | SetImageProps
     | SetCurrentSymbol
     | AddLandmarkData
-    | DeleteLandmarkData
+    | ClearLandmarkData
+    | DeleteLandmarkPosition
     | UpdateLandmarkFlags
     | AddOCRData
     | UpdateOCRData

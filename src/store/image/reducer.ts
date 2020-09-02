@@ -1,4 +1,4 @@
-import { ImageState, ImageActionTypes } from "./types";
+import { ImageState, ImageActionTypes, LandmarkData } from "./types";
 import { Action } from "../Actions";
 
 const initialState: ImageState = {
@@ -69,6 +69,7 @@ export function imageReducer(
 
         case Action.ADD_LANDMARK_DATA: {
             let landmarks = state.landmark;
+            // let landmarks: LandmarkData[] = [];
 
             for (var j = 0; j < landmarks.length; j++) {
                 if (landmarks[j].name === action.payload.landmark.name) {
@@ -84,12 +85,21 @@ export function imageReducer(
             }
         }
 
-        case Action.DELETE_LANDMARK_DATA: {
+        case Action.CLEAR_LANDMARK_DATA: {
+            return {
+                ...state,
+                landmark: []
+            }
+        }
+
+        case Action.DELETE_LANDMARK_POSITION: {
             let landmarks = state.landmark;
 
             for (var k = 0; k < landmarks.length; k++) {
                 if (landmarks[k].name === action.payload.landmark) {
-                    landmarks.splice(k, 1);
+                    let landmark = landmarks[k];
+                    landmark.position = undefined
+                    landmarks.splice(k, 1, landmark);
                 }
             } 
 

@@ -44,7 +44,7 @@ class SetupView extends React.Component<IProps, IState> {
             database: DatabasesTemp.DB2,
             startDate: new Date(),
             endDate:new Date(),
-            processType: ProcessType.SEGMENTATION,
+            processType: ProcessType.LANDMARK,
             incomplete: false,
             loadedIDs: false,
             files: []

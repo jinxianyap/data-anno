@@ -334,6 +334,32 @@ class ControlPanel extends React.Component<IProps, IState> {
                         }
                     }
                 }
+                break;
+            }
+            case (CurrentStage.INTER_LANDMARK): {
+                if (previousProps.currentStage !== CurrentStage.INTER_LANDMARK
+                    || previousProps.currentID.internalIndex !== this.props.currentID.internalIndex) {
+                        if (this.props.currentID.internalIndex >= this.props.currentID.internalIDs.length) {
+                            this.loadNextID();
+                        } else {
+                            switch (this.props.internalID.processStage) {
+                                // after completing landmark edit for MYKAD_FRONT
+                                case (IDProcess.MYKAD_BACK): {
+                                    this.loadBackId();
+                                    break;
+                                }
+                                // after completing landmark edit for MYKAD_BACK or OTHER -> move on to next internal ID
+                                case (IDProcess.OTHER):
+                                case (IDProcess.MYKAD_FRONT):
+                                default: {
+                                    // this.props.saveToInternalID(this.props.internalID.backID!, true);
+                                    this.props.loadImageState(this.props.internalID.originalID!, false);
+                                    this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                                    break;
+                                }
+                            }
+                        }
+                }
             }
         }
     }
@@ -386,7 +412,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 landmarks: landmarks
             });
 
-            if (this.props.internalID.processStage === each) {
+            if (this.props.internalID.processStage === each && this.props.currentImage.landmark.length === 0) {
                 currentLandmarks = landmarks;
                 this.initializeLandmarkData(landmarks);
             }
@@ -661,7 +687,9 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
 
         const loadImageAndProgress = () => {
-            submitDocTypes();
+            if (!this.props.currentID.originalIDProcessed) {
+                submitDocTypes();
+            }
 
             const header = {
                 headers: {
@@ -847,7 +875,22 @@ class ControlPanel extends React.Component<IProps, IState> {
             this.state.currentLandmarks.forEach((each) => {
                 this.props.updateLandmarkFlags(each.name, each.flags);
             });
-            this.props.progressNextStage(CurrentStage.OCR_DETAILS);
+            if (this.props.processType === ProcessType.LANDMARK) {
+                if (this.props.internalID.processStage === IDProcess.MYKAD_FRONT) {
+                    this.props.saveToInternalID(this.props.currentImage, false);
+                    this.props.progressNextStage(CurrentStage.INTER_LANDMARK);
+                } else if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
+                    this.props.saveToInternalID(this.props.currentImage, true);
+                    this.props.progressNextStage(CurrentStage.INTER_LANDMARK);
+                } else {
+                    this.props.saveToInternalID(this.props.currentImage, true);
+                    this.props.progressNextStage(CurrentStage.INTER_LANDMARK);
+                }
+            } else {
+                this.props.progressNextStage(CurrentStage.OCR_DETAILS);
+            }
+
+            
         }
 
         const getClassName = (each: any) => {

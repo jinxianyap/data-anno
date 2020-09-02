@@ -3,7 +3,7 @@ import 'leaflet-easybutton/src/easy-button';
 import React from 'react';
 import { connect } from 'react-redux'; 
 import { ImageActionTypes, ImageState, LandmarkData, Position, OCRData, OCRWord } from '../../../store/image/types';
-import { addLandmarkData, deleteLandmarkData, updateOCRData, setCurrentSymbol, setCurrentWord } from '../../../store/image/actionCreators';
+import { addLandmarkData, deleteLandmarkPosition, updateOCRData, setCurrentSymbol, setCurrentWord } from '../../../store/image/actionCreators';
 import { AppState } from '../../../store';
 import { CurrentStage } from '../../../utils/enums';
 import './LandmarkLabeller.scss';
@@ -18,7 +18,7 @@ interface IProps {
     committedOCRs: OCRData[],
 
     addLandmarkData: (landmark: LandmarkData) => ImageActionTypes,
-    deleteLandmarkData: (landmark: string) => ImageActionTypes,
+    deleteLandmarkPosition: (landmark: string) => ImageActionTypes,
     updateOCRData: (id: number, name: string, value: string, position?: Position) => ImageActionTypes,
     setCurrentSymbol: (symbol?: string, landmark?: string) => ImageActionTypes,
     setCurrentWord: (word: OCRWord) => ImageActionTypes
@@ -1241,7 +1241,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         drawn.splice(index, 1);
         let boxes = this.state.landmarkBoxes;
         boxes.splice(index, 1);
-        this.setState({landmarkBoxes: boxes, drawnLandmarks: drawn, isDrawing: false, isMoving: false, isResizing: false}, () => {this.props.deleteLandmarkData(name)});
+        this.setState({landmarkBoxes: boxes, drawnLandmarks: drawn, isDrawing: false, isMoving: false, isResizing: false}, () => {this.props.deleteLandmarkPosition(name)});
     }
 
     deleteOcrBox = (e: any) => {
@@ -1292,7 +1292,7 @@ const mapStateToProps = (state: AppState, ownProps: any) => {
     
 const mapDispatchToProps = {
     addLandmarkData,
-    deleteLandmarkData,
+    deleteLandmarkPosition,
     updateOCRData,
     setCurrentSymbol,
     setCurrentWord

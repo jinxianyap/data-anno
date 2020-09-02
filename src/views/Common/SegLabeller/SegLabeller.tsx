@@ -99,6 +99,7 @@ class SegLabeller extends React.Component<IProps, IState> {
 
     componentDidUpdate(previousProps: IProps, previousState: IState) {
         if (previousProps.currentStage !== this.props.currentStage && !this.state.map) {
+            this.loadImageData();
             this.initializeMap();
         } else if (this.state.movingCircle === undefined
             && previousProps.currentStage === this.props.currentStage
