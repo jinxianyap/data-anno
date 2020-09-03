@@ -101,9 +101,9 @@ export function saveToInternalID(image: ImageState, next: boolean): IDActionType
     }
 }
 
-export function updateOverallFlags(flags: string[]): IDActionTypes {
+export function updateFrontIDFlags(flags: string[]): IDActionTypes {
     return {
-        type: Action.UPDATE_OVERALL_FLAGS,
+        type: Action.UPDATE_FRONT_ID_FLAGS,
         payload: {
             flags: flags
         }

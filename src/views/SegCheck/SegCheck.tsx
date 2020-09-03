@@ -85,6 +85,17 @@ class SegCheck extends React.Component<IProps, IState> {
                 croppedImage: ImageUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID")
             })
         }
+        if (!previousProps.currentID!.dataLoaded && this.props.currentID!.dataLoaded) {
+            if (!this.state.originalImage || !this.state.croppedImage) return;
+            let originalImage = this.state.originalImage!;
+            let croppedImage = this.state.croppedImage!;
+            originalImage.src = ImageUtil.getSource(this.props.originalID!.image);
+            croppedImage.src = ImageUtil.getSource(this.props.originalID!.croppedImage!);
+            this.setState({
+                originalImage: originalImage,
+                croppedImage: croppedImage
+            })
+        }
 
         if (this.state.isRotating) {
             setTimeout(() => this.rotateCropped(false, this.state.ccw), 1);

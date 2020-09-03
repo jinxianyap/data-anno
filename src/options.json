@@ -28,7 +28,7 @@
         "overall": {
             "keys": ["quality"],
             "values": [
-                ["glare", "blur", "damaged", "covered"]
+                ["glare", "blur", "damaged", "covered", "missing"]
             ]
         },
         "landmark": {

@@ -54,7 +54,7 @@ export class DatabaseUtil {
             },
             backID: {
                 image: this.dataURLtoFile(session.mykad_back_ori, id + "_mykad_back_ori.jpg"),
-                croppedImage: this.dataURLtoFile(session.mykad_front_ocr, id + "mykad_back_ocr.jpg"),
+                croppedImage: this.dataURLtoFile(session.mykad_back_ocr, id + "mykad_back_ocr.jpg"),
                 landmark: [],
                 ocr: [],
             },

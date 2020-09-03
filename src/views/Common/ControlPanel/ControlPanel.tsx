@@ -9,7 +9,7 @@ import { GeneralActionTypes } from '../../../store/general/types';
 import { IDActionTypes, IDState, InternalIDState } from '../../../store/id/types';
 import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord, LandmarkData } from '../../../store/image/types';
 import { progressNextStage, getNextID, saveToLibrary } from '../../../store/general/actionCreators';
-import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, updateOverallFlags, restoreID } from '../../../store/id/actionCreators';
+import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, updateFrontIDFlags, restoreID } from '../../../store/id/actionCreators';
 import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, addLandmarkData, updateLandmarkFlags, addOCRData, setFaceCompareMatch, restoreImage } from '../../../store/image/actionCreators';
 // import AddTypeModal from '../AddTypeModal/AddTypeModal';
 import { DatabaseUtil } from '../../../utils/DatabaseUtil';
@@ -40,7 +40,7 @@ interface IProps {
     saveCroppedImage: (croppedImage: File, index?: number) => IDActionTypes;
     refreshIDs: (originalProcessed: boolean) => IDActionTypes;
     saveDocumentType: (internalIndex: number, documentType: string) => IDActionTypes;
-    updateOverallFlags: (flags: string[]) => IDActionTypes;
+    updateFrontIDFlags: (flags: string[]) => IDActionTypes;
     saveSegCheck: (passesCrop: boolean) => ImageActionTypes;
 
     // Landmark
@@ -80,7 +80,8 @@ interface IState {
         category: string,
         flags: string[],
     }[];
-    selectedOverallFlags: string[];
+    selectedFrontIDFlags: string[];
+    selectedBackIDFlags: string[];
 
     // Landmark
     showAddLandmarkModal: boolean;
@@ -147,7 +148,8 @@ class ControlPanel extends React.Component<IProps, IState> {
             selectedDocumentTypes: [],
             isCropping: false,
             overallFlags: [],
-            selectedOverallFlags: [],
+            selectedFrontIDFlags: [],
+            selectedBackIDFlags: [],
 
             showAddLandmarkModal: false,
             landmarksLoaded: false,
@@ -182,6 +184,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                             console.log(res);
                             let completeID = DatabaseUtil.loadSessionData(res.data, this.props.indexedID);
                             this.props.loadNextID(completeID);
+                            this.loadSegCheckImage();
+                            this.setState({loadedSegCheckImage: true});
                         }
                     }).catch((err: any) => {
                         console.error(err);
@@ -524,7 +528,11 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
 
         const setFlag = (flags: string[]) => {
-            this.setState({selectedOverallFlags: flags});
+            if (this.props.currentID.originalIDProcessed) {
+                this.setState({selectedBackIDFlags: flags});
+            } else {
+                this.setState({selectedFrontIDFlags: flags});
+            }
         }
 
         const getCategoryFlags = (flags: string[]) => {
@@ -540,7 +548,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                         dividedFlags.map((divFlag, i) => {
                             return (
                                 <div style={{width: "100%"}}>
-                                    <ToggleButtonGroup key={i} type="checkbox" onChange={(val) => setFlag(val)} value={this.state.selectedOverallFlags}
+                                    <ToggleButtonGroup key={i} type="checkbox" onChange={(val) => setFlag(val)}
+                                        value={this.props.currentID.originalIDProcessed ? this.state.selectedBackIDFlags : this.state.selectedFrontIDFlags}
                                         style={{marginBottom: "1rem"}}>
                                     {
                                         divFlag.map((flag, idx) => {
@@ -584,7 +593,7 @@ class ControlPanel extends React.Component<IProps, IState> {
             if (this.props.currentID.internalIDs.length > 0) {
                 // front ID
                 if (this.props.internalID.processStage !== IDProcess.MYKAD_BACK) {
-                    this.props.updateOverallFlags(this.state.selectedOverallFlags);
+                    this.props.updateFrontIDFlags(this.state.selectedFrontIDFlags);
                     if (this.state.passesCrop !== this.props.internalID.originalID!.passesCrop) {
                         console.log('refresh front');
                         this.props.refreshIDs(false);
@@ -644,7 +653,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 if (this.props.internalID === undefined) {
                     this.props.createNewID(box, true);
                     this.props.saveDocumentType(0, this.state.singleDocumentType);
-                    this.props.updateOverallFlags(this.state.selectedOverallFlags);
+                    this.props.updateFrontIDFlags(this.state.selectedFrontIDFlags);
 
                     if (this.props.processType === ProcessType.SEGMENTATION) {
                         let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
@@ -686,7 +695,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     </ToggleButtonGroup>
                 </Form.Group>
 
-                { !this.props.currentID.originalIDProcessed && this.state.overallFlags.length > 0 ?
+                { this.state.overallFlags.length > 0 ?
                     <Card className="individual-card">
                         <Card.Title>Flags</Card.Title>
                         <Card.Body>
@@ -704,9 +713,10 @@ class ControlPanel extends React.Component<IProps, IState> {
                     </Card>
                 : <div />}
                 {
-                    !this.props.currentID.originalIDProcessed && this.state.selectedOverallFlags.length > 0
+                    this.state.selectedFrontIDFlags.length > 0 || this.state.selectedBackIDFlags.length > 0
                     ?
-                    (<Button variant="primary" className="block-button" id="segcheck-skip-btn" onClick={this.loadNextID}>
+                    (<Button variant="primary" className="block-button" id="segcheck-skip-btn"
+                        onClick={this.props.currentID.originalIDProcessed ? this.loadNextID : this.loadNextID}>
                         Skip
                     </Button>)
                     : <div />
@@ -1360,7 +1370,7 @@ class ControlPanel extends React.Component<IProps, IState> {
             passesCrop: undefined,
             isCropping: false,
             overallFlags: [],
-            selectedOverallFlags: [],
+            selectedFrontIDFlags: [],
 
             showAddLandmarkModal: false,
             landmarksLoaded: false,
@@ -1467,7 +1477,7 @@ const mapDispatchToProps = {
     updateVideoData,
     setFaceCompareMatch,
     saveToInternalID,
-    updateOverallFlags,
+    updateFrontIDFlags,
     saveToLibrary,
     restoreID,
     restoreImage,

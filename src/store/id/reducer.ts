@@ -276,10 +276,10 @@ export function IDReducer(
                 }
             }   
         }
-        case Action.UPDATE_OVERALL_FLAGS: {
+        case Action.UPDATE_FRONT_ID_FLAGS: {
             return {
                 ...state,
-                overallFlags: action.payload.flags
+                frontIDFlags: action.payload.flags
             }
         }
         case Action.RESTORE_ID: {

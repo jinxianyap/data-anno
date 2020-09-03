@@ -21,11 +21,12 @@ const fileType = {
     mykad_back_ori: '1',
 
     mykad_front_ocr: '2',
-    mykad_face: '3',
+    mykad_back_ocr: '3',
+    mykad_face: '4',
 
-    face: '4',
-    face_video: '5',
-    face_video_still: '6'
+    face: '5',
+    face_video: '6',
+    face_video_still: '7'
 }
 
 Object.freeze(fileType);
@@ -47,7 +48,7 @@ function getFileType(filename) {
                 return keys[2] === 'ocr' ? fileType.mykad_front_ocr : fileType.mykad_front_ori;
             }
             case ('back'): {
-                return fileType.mykad_back_ori;
+                return keys[2] === 'ocr' ? fileType.mykad_back_ocr : fileType.mykad_back_ori;
             }
             case ('face'):
             default: {
@@ -71,6 +72,7 @@ function allocateFiles(sessionID, route, files) {
     var mykad_front_ori,
         mykad_back_ori,
         mykad_front_ocr,
+        mykad_back_ocr,
         mykad_face,
         face,
         face_video;
@@ -89,6 +91,7 @@ function allocateFiles(sessionID, route, files) {
                 case (fileType.mykad_front_ori): mykad_front_ori = imgPrefix + file; break;
                 case (fileType.mykad_back_ori): mykad_back_ori = imgPrefix + file; break;
                 case (fileType.mykad_front_ocr): mykad_front_ocr = imgPrefix + file; break;
+                case (fileType.mykad_back_ocr): mykad_back_ocr = imgPrefix + file; break;
                 case (fileType.mykad_face): mykad_face = imgPrefix + file; break;
                 case (fileType.face): face = imgPrefix + file; break;
                 case (fileType.face_video): face_video = 'data:video/mp4;base64,' + file; break;
@@ -103,6 +106,7 @@ function allocateFiles(sessionID, route, files) {
         mykad_front_ori: mykad_front_ori,
         mykad_back_ori: mykad_back_ori,
         mykad_front_ocr: mykad_front_ocr,
+        mykad_back_ocr: mykad_back_ocr,
         mykad_face: mykad_face,
         face: face,
         face_video: face_video,
