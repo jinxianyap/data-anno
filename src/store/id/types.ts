@@ -4,13 +4,17 @@ import { ImageState, IDBox } from '../image/types';
 
 export type IDState = {
     processed: boolean;
-    source: string;
+    dateCreated: Date;
+    sessionID: string;
     index: number;
 
+    dataLoaded: boolean;
     originalID?: ImageState;
-    // croppedID?: ImageState;
     backID?: ImageState;
+    croppedFace?: File;
+    selfieImage?: File;
     selfieVideo?: File;
+    videoStills?: File[];
     jsonData?: any;
 
     originalIDProcessed: boolean;

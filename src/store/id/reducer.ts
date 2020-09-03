@@ -2,10 +2,15 @@ import { IDState, IDActionTypes, InternalIDState } from './types';
 import { Action } from '../Actions';
 import { IDProcess, Rotation } from '../../utils/enums';
 import { ImageState } from '../image/types';
+import { DatabaseUtil } from '../../utils/DatabaseUtil';
+
+const axios = require('axios');
 
 const initialState: IDState = {
     processed: false,
-    source: '',
+    dateCreated: new Date(),
+    sessionID: '',
+    dataLoaded: false,
     originalIDProcessed: false,
     backIDsProcessed: 0,
     originalIDRotation: Rotation.ROT0,
@@ -49,7 +54,7 @@ export function IDReducer(
         case Action.CREATE_NEW_ID: {
             let ID: InternalIDState = {
                 processed: false,
-                source: state.source,
+                source: state.sessionID,
                 originalID: cloneImageState(state.originalID!),
                 backID: cloneImageState(state.backID!),
                 documentType: 'MyKad',

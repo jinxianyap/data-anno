@@ -1,7 +1,6 @@
 import { IDActionTypes, IDState } from "./types";
 import { Action } from "../Actions";
 import { ImageState, IDBox } from "../image/types";
-import { number } from "prop-types";
 import { Rotation } from "../../utils/enums";
 
 export function loadNextID(ID: IDState): IDActionTypes {

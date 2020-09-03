@@ -2,7 +2,7 @@ import React from 'react';
 import './SetupView.scss'
 import { Form, Button, Container, Card } from 'react-bootstrap';
 import DatePicker from 'react-datepicker';
-import { ProcessType, CurrentStage, UsersTemp, DatabasesTemp } from '../../utils/enums';
+import { ProcessType, CurrentStage, UsersTemp } from '../../utils/enums';
 import { SetupOptions, GeneralActionTypes } from '../../store/general/types';
 import { saveSetupOptions, progressNextStage, loadFromDatabase, restoreGeneral } from '../../store/general/actionCreators';
 import { restoreID } from '../../store/id/actionCreators';
@@ -25,6 +25,11 @@ interface IProps {
 }
 
 interface IState {
+    databases: {
+        name: string,
+        dates: Date[],
+    }[],
+    selectedDates: Date[],
     user: string,
     database: string,
     startDate: Date,
@@ -41,8 +46,10 @@ class SetupView extends React.Component<IProps, IState> {
     constructor(props: IProps) {
         super(props);
         this.state = {
+            databases: [],
+            selectedDates: [],
             user: UsersTemp.Bob,
-            database: DatabasesTemp.DB2,
+            database: '',
             startDate: new Date(),
             endDate:new Date(),
             processType: ProcessType.WHOLE,
@@ -59,12 +66,24 @@ class SetupView extends React.Component<IProps, IState> {
     }
 
     componentDidMount() {
-        axios.get('/getImage/0001').then((res: any) => {
-            console.log(res);
-            let img = new Image();
-            img.src = 'data:image/jpg;base64,' + res.data;
-            img.onload = () => {
-                document.getElementById("root")!.appendChild(img);
+        axios.get('/getDatabases').then((res: any) => {
+            if (res.status === 200) {
+                let dbs = res.data.map((each: any) => {
+                    return {
+                        name: each.database,
+                        dates: each.dates.map((date: string) => new Date(
+                            parseInt(date.slice(0, 4)), 
+                            parseInt(date.slice(4, 6)), 
+                            parseInt(date.slice(6, 8))))
+                    }
+                });
+                this.setState({
+                    databases: dbs, 
+                    database: dbs[0].name, 
+                    selectedDates: dbs[0].dates, 
+                    startDate: dbs[0].dates[0],
+                    endDate: dbs[0].dates.slice(-1)[0]
+                });
             }
         });
     }
@@ -83,33 +102,34 @@ class SetupView extends React.Component<IProps, IState> {
                 processType: st.processType
             }
             this.props.saveSetupOptions(setup);
-            var reader = new FileReader();
-            reader.onload = (event: any) => {
-                //temp to simulate loading fileobjects from database
-                let json: any;
-                try {
-                    json = JSON.parse(event.target!.result!);
-                } catch (err) {
-                    console.error(err);
-                    let folders = [];
-                    let IDFolder1 = DatabaseUtil.loadIntoIDFolder(st.files, 0);
-                    folders.push(IDFolder1);
-                    let IDFolder2 = DatabaseUtil.loadIntoIDFolder(st.files, 1);
-                    folders.push(IDFolder2);
-                    this.props.loadFromDatabase(folders);
-                    this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
-                } finally {
-                    let folders = [];
-                    let IDFolder1 = DatabaseUtil.loadIntoIDFolder(st.files, 0, json);
-                    folders.push(IDFolder1);
-                    let IDFolder2 = DatabaseUtil.loadIntoIDFolder(st.files, 1, json);
-                    folders.push(IDFolder2);
-                    this.props.loadFromDatabase(folders);
+            axios.post('/loadDatabase', {
+                database: st.database,
+                startDate: DatabaseUtil.dateToString(st.startDate),
+                endDate: DatabaseUtil.dateToString(st.endDate)
+            }).then((res: any) => {
+                if (res.status === 200) {
+                    let IDs: IDState[] = [];
+                    for (let i = 0; i < res.data.length; i++) {
+                        for (let j = 0; j < res.data[i].sessions.length; j++) {
+                            IDs.push(DatabaseUtil.initializeID(res.data[i].sessions[j], res.data[i].date, IDs.length));
+                        }
+                    }
+                    this.props.loadFromDatabase(IDs);
+
                     this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
                 }
-            }
-            reader.readAsText(st.files[4]);
+            })
         }
+    }
+
+    handleDBSelect = (e: any) => {
+        let db = this.state.databases.find((each) => each.name === e.target.value)!;
+        this.setState({
+            database: e.target.value,
+            selectedDates: db.dates,
+            startDate: db.dates[0],
+            endDate: db.dates[db.dates.length - 1]
+        })
     }
 
     handleUpload = (e: any) => {
@@ -132,19 +152,21 @@ class SetupView extends React.Component<IProps, IState> {
 
                         <Form.Group controlId="database">
                             <Form.Label>Database</Form.Label>
-                            <Form.Control as="select" value={this.state.database} onChange={(e: any) => this.setState({database: e.target.value})}>
-                                {Object.entries(DatabasesTemp).map(([key, value]) => <option key={value} value={value}>{key}</option>)}
+                            <Form.Control as="select" value={this.state.database} onChange={(e: any) => this.handleDBSelect(e)}>
+                                {this.state.databases.map((each, idx) => <option key={idx} value={each.name}>{each.name}</option>)}
                             </Form.Control>
                         </Form.Group>
             
                         <Form.Group controlId="startDate">
                             <Form.Label>Start Date</Form.Label>
-                            <DatePicker id="startDatepicker" selected={this.state.startDate} onChange={(date: Date) => this.setState({startDate: date})} />
+                            <DatePicker id="startDatepicker" includeDates={this.state.selectedDates} 
+                            selected={this.state.startDate} onChange={(date: Date) => this.setState({startDate: date})} />
                         </Form.Group>
 
                         <Form.Group controlId="endDate">
                             <Form.Label>End Date</Form.Label>
-                            <DatePicker id="endDatepicker" selected={this.state.endDate} onChange={(date: Date) => this.setState({endDate: date})} />
+                            <DatePicker id="endDatepicker" includeDates={this.state.selectedDates}
+                            selected={this.state.endDate} onChange={(date: Date) => this.setState({endDate: date})} />
                         </Form.Group>
 
                         <Form.Group controlId="process">
@@ -159,8 +181,7 @@ class SetupView extends React.Component<IProps, IState> {
 
                         
 
-                        <Form.Group controlId="fileUpload">
-                        {/* <input type="file" multiple/> */}
+                        {/* <Form.Group controlId="fileUpload">
                         <Form.File
                             className="position-relative"
                             required
@@ -196,7 +217,7 @@ class SetupView extends React.Component<IProps, IState> {
                             label="JSON"
                             onChange={(e: any) => this.handleUpload(e)}
                             />
-                        </Form.Group>
+                        </Form.Group> */}
 
                         { this.state.incomplete
                             ? <p color='red'>Form not complete.</p>

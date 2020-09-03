@@ -19,6 +19,7 @@ const axios = require('axios');
 var fs = require('browserify-fs');
 
 interface IProps {
+    database: string;
     processType: ProcessType;
     currentStage: CurrentStage;
     currentID: IDState;
@@ -172,7 +173,19 @@ class ControlPanel extends React.Component<IProps, IState> {
             case (CurrentStage.SEGMENTATION_CHECK): {
                 if (this.props.indexedID === undefined) break;
                 if (previousProps.indexedID.index !== this.props.indexedID.index) {
-                    this.props.loadNextID(this.props.indexedID);
+                    axios.post('/loadSessionData', {
+                        database: this.props.database,
+                        date: DatabaseUtil.dateToString(this.props.indexedID.dateCreated),
+                        sessionID:  this.props.indexedID.sessionID
+                    }).then((res: any) => {
+                        if (res.status === 200) {
+                            console.log(res);
+                            let completeID = DatabaseUtil.loadSessionData(res.data, this.props.indexedID);
+                            this.props.loadNextID(completeID);
+                        }
+                    }).catch((err: any) => {
+                        console.error(err);
+                    });
                     break;
                 }
                 // initial load of doctypes and overall flags from config json, initial load of image
@@ -372,8 +385,19 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     componentDidMount() {
         if (this.props.currentStage === CurrentStage.SEGMENTATION_CHECK) {
-            this.props.loadNextID(this.props.indexedID);
-            this.loadSegCheckData();
+            axios.post('/loadSessionData', {
+                database: this.props.database,
+                date: DatabaseUtil.dateToString(this.props.indexedID.dateCreated),
+                sessionID:  this.props.indexedID.sessionID
+            }).then((res: any) => {
+                if (res.status === 200) {
+                    let completeID = DatabaseUtil.loadSessionData(res.data, this.props.indexedID);
+                    this.props.loadNextID(completeID);
+                    this.loadSegCheckData();
+                }
+            }).catch((err: any) => {
+                console.error(err);
+            });
         }
     }
 
@@ -503,6 +527,42 @@ class ControlPanel extends React.Component<IProps, IState> {
             this.setState({selectedOverallFlags: flags});
         }
 
+        const getCategoryFlags = (flags: string[]) => {
+            let dividedFlags: string[][] = [];
+
+            for (let i = 0; i < flags.length; i += 3) {
+                dividedFlags.push(flags.slice(i, i + 3));
+            }
+
+            return (
+                <div>
+                    {
+                        dividedFlags.map((divFlag, i) => {
+                            return (
+                                <div style={{width: "100%"}}>
+                                    <ToggleButtonGroup key={i} type="checkbox" onChange={(val) => setFlag(val)} value={this.state.selectedOverallFlags}
+                                        style={{marginBottom: "1rem"}}>
+                                    {
+                                        divFlag.map((flag, idx) => {
+                                            return (<ToggleButton
+                                                className="video-flags"
+                                                key={idx}
+                                                value={flag}
+                                                variant="light"
+                                                >
+                                                {DatabaseUtil.beautifyWord(flag)}
+                                            </ToggleButton>);
+                                        })
+                                    }   
+                                    </ToggleButtonGroup>
+                                </div>
+                            );
+                        })
+                    }
+                </div>
+            )
+        }
+
         const submitSegCheck = (e: any) => {
             e.preventDefault();
 
@@ -611,14 +671,11 @@ class ControlPanel extends React.Component<IProps, IState> {
                     this.props.currentID.originalIDProcessed ? <div /> :
                     <Form.Group controlId="docType">
                         <Form.Label>Document Type</Form.Label>
-                        {/* <Button onClick={() => {this.setState({showAddDocTypeModal: true})}} style={{padding: "0 0.5rem", margin: "0.5rem 1rem"}}>+</Button> */}
                         <Form.Control as="select" value={this.state.singleDocumentType} onChange={(e: any) => setSingleDocType(e)}>
                             {Object.entries(this.state.documentTypes).map(([key, value]) => <option key={key} value={value}>{value}</option>)}
                         </Form.Control>
                     </Form.Group>
                 }
-
-                {/* <AddTypeModal showModal={this.state.showAddDocTypeModal} item='documentTypes' add={addDocType} closeModal={() => this.setState({showAddDocTypeModal: false})}/> */}
 
                 <Form.Group controlId="passesCrop">
                     <Form.Label>Cropping</Form.Label>
@@ -629,7 +686,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     </ToggleButtonGroup>
                 </Form.Group>
 
-                { this.state.overallFlags.length > 0 ?
+                { !this.props.currentID.originalIDProcessed && this.state.overallFlags.length > 0 ?
                     <Card className="individual-card">
                         <Card.Title>Flags</Card.Title>
                         <Card.Body>
@@ -638,22 +695,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                     return (
                                         <div key={idx}>
                                             <p>{DatabaseUtil.beautifyWord(each.category)}</p>
-                                            <ToggleButtonGroup type="checkbox" onChange={(val) => setFlag(val)} value={this.state.selectedOverallFlags}>
-                                            {
-                                                each.flags.map((flag, i) => {
-                                                    return (
-                                                        <ToggleButton
-                                                            className="video-flags"
-                                                            key={i}
-                                                            value={flag}
-                                                            variant="light"
-                                                            >
-                                                            {DatabaseUtil.beautifyWord(flag)}
-                                                        </ToggleButton>
-                                                    );
-                                                })
-                                            }
-                                            </ToggleButtonGroup>
+                                            {getCategoryFlags(each.flags)}
                                         </div>
                                     );
                                 })
@@ -675,19 +717,6 @@ class ControlPanel extends React.Component<IProps, IState> {
                 </Button>
             </Form>
         )
-    }
-
-    dataURLtoFile = (dataurl: string, filename: string) => {
-        let arr = dataurl.split(','),
-            mime = arr[0].match(/:(.*?);/)![1],
-            bstr = atob(arr[1]), 
-            n = bstr.length, 
-            u8arr = new Uint8Array(n);
-
-        while(n--){
-            u8arr[n] = bstr.charCodeAt(n);
-        }
-        return new File([u8arr], filename, {type:mime});
     }
 
     createFormData = (image: File, points: any) => {
@@ -763,7 +792,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                         console.error(err);
                     }).then((res: any) => {
                         if (res.status === 200) {
-                            let image: File = this.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename);
+                            let image: File = DatabaseUtil.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename);
                             this.props.saveCroppedImage(image, i);
                             cropsDone++;
                             if (cropsDone === this.props.currentID.internalIDs.length) {
@@ -787,7 +816,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     console.error(err);
                 }).then((res: any) => {
                     if (res.status === 200) {
-                        let image: File = this.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename);
+                        let image: File = DatabaseUtil.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename);
                         this.props.saveCroppedImage(image);
                         this.setState({isCropping: false});
                         if (this.props.processType === ProcessType.SEGMENTATION) {
@@ -1446,6 +1475,7 @@ const mapDispatchToProps = {
 
 const mapStateToProps = (state: AppState) => {
     return {
+        database: state.general.setupOptions.database,
         processType: state.general.setupOptions.processType,
         currentStage: state.general.currentStage,
         indexedID: state.general.IDLibrary[state.general.currentIndex],
