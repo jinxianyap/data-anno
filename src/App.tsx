@@ -10,7 +10,7 @@ import BottomBar from './views/Common/BottomBar/BottomBar';
 import ControlPanel from './views/Common/ControlPanel/ControlPanel';
 import { Container, Row, Col, Spinner } from 'react-bootstrap';
 import SegEdit from './views/SegEdit/SegEdit';
-import Landmark from './views/LandmarkOCR/LandmarkOCR';
+import LandmarkOCR from './views/LandmarkOCR/LandmarkOCR';
 import LivenessAndMatch from './views/LivenessAndMatch/LivenessAndMatch';
 
 interface IProps {
@@ -29,7 +29,7 @@ const App: React.FC<IProps> = ({state, currentStage}) => {
       case (CurrentStage.LANDMARK_EDIT):
       case (CurrentStage.OCR_DETAILS):
       case (CurrentStage.OCR_EDIT):
-        return <Landmark />;
+        return <LandmarkOCR />;
       case (CurrentStage.FR_LIVENESS_CHECK):
       case (CurrentStage.FR_COMPARE_CHECK):
         return <LivenessAndMatch />;

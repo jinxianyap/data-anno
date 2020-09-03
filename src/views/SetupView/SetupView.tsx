@@ -59,7 +59,7 @@ class SetupView extends React.Component<IProps, IState> {
     }
 
     componentDidMount() {
-        axios.get('http://localhost:3000/getImage/0001').then((res: any) => {
+        axios.get('/getImage/0001').then((res: any) => {
             console.log(res);
             let img = new Image();
             img.src = 'data:image/jpg;base64,' + res.data;

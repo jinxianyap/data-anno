@@ -16,7 +16,7 @@ interface IState {
     // ID: IDFolder;
 }
 
-class Landmark extends React.Component<IProps, IState> {
+class LandmarkOCR extends React.Component<IProps, IState> {
 
     constructor(props: IProps) {
         super(props);
@@ -65,4 +65,4 @@ const mapStateToProps = (state: AppState) => ({
 export default connect(
     mapStateToProps,
     mapDispatchToProps
-)(Landmark);
+)(LandmarkOCR);
