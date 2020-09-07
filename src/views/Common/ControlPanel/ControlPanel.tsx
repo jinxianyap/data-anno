@@ -325,6 +325,14 @@ class ControlPanel extends React.Component<IProps, IState> {
                 if (this.props.currentID.internalIndex > 0 && this.props.currentID.videoLiveness !== undefined) {
                     this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
                 }
+                if (previousProps.currentID.videoLiveness !== this.props.currentID.videoLiveness) {
+                    if (this.props.internalID === undefined || 
+                        this.props.internalID && this.props.internalID.originalID!.croppedImage!.name === 'notfound') {
+                        this.loadNextID();
+                    } else {
+                        this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
+                    }
+                }
                 break;
             }
             case (CurrentStage.END_STAGE): {
@@ -630,7 +638,13 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
 
         const skipSegCheck = () => {
-            this.loadNextID(true);
+            if (this.props.currentID.selfieVideo!.name !== 'notfound') {
+                this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
+            } else if (this.props.currentID.selfieImage!.name !== 'notfound' && this.props.currentID.originalID!.croppedImage!.name !== 'notfound') {
+                this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
+            } else {
+                this.loadNextID(true);
+            }
         }
 
         const submitSegCheck = (e: any) => {
@@ -650,7 +664,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
             };
 
-            // repeat / first time mykadback
+            // not first time (mykadback always goes here)
             if (this.props.currentID.internalIDs.length > 0) {
                 // front ID
                 if (this.props.internalID.processStage !== IDProcess.MYKAD_BACK) {
@@ -659,7 +673,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                         console.log('refresh front');
                         this.props.refreshIDs(false);
                         if (this.state.passesCrop) {
-                            this.props.createNewID(box, true);
+                            let preBox = this.props.currentID.givenData!.backID!.segmentation;
+                            this.props.createNewID(preBox !== undefined ? preBox : box, true);
                             this.props.saveDocumentType(0, this.state.singleDocumentType);
                         } else {
                             this.props.progressNextStage(CurrentStage.SEGMENTATION_EDIT);
@@ -683,7 +698,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                         console.log('refresh back');
                         this.props.refreshIDs(true);
                         if (this.state.passesCrop) {
-                            this.props.setIDBox(box, this.props.currentID.backID!.croppedImage!);
+                            let preBox = this.props.currentID.givenData!.backID!.segmentation;
+                            this.props.setIDBox(preBox !== undefined ? preBox : box, this.props.currentID.backID!.croppedImage!);
                             this.props.loadImageState(this.props.internalID.backID!, this.state.passesCrop);
                             if (this.props.processType === ProcessType.SEGMENTATION) {
                                 let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
@@ -713,7 +729,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                 //     this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
                 // } 
                 if (this.props.internalID === undefined) {
-                    this.props.createNewID(box, true);
+                    let preBox = this.props.currentID.givenData!.originalID!.segmentation;
+                    this.props.createNewID(preBox !== undefined ? preBox : box, true);
                     this.props.saveDocumentType(0, this.state.singleDocumentType);
                     this.props.updateFrontIDFlags(this.state.selectedFrontIDFlags);
                     this.props.updateBackIDFlags(this.state.selectedBackIDFlags);
@@ -721,11 +738,11 @@ class ControlPanel extends React.Component<IProps, IState> {
                     if (this.props.processType === ProcessType.SEGMENTATION) {
                         let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
                         if (internalID !== undefined && internalID.processStage === IDProcess.MYKAD_FRONT) {
-                            this.props.saveToInternalID(internalID.originalID!, false);
+                            this.props.saveToInternalID(this.props.currentImage, false);
                             this.props.loadImageState(internalID.backID!);
                             this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
                         } else {
-                            this.props.saveToInternalID(internalID.originalID!, true);
+                            this.props.saveToInternalID(this.props.currentImage, true);
                             this.loadNextID();
                         }
                     }
@@ -866,7 +883,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                         console.error(err);
                     }).then((res: any) => {
                         if (res.status === 200) {
-                            let image: File = DatabaseUtil.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename);
+                            let image: File = DatabaseUtil.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename + "_cropped");
                             this.props.saveCroppedImage(image, i);
                             cropsDone++;
                             if (cropsDone === this.props.currentID.internalIDs.length) {
@@ -1319,7 +1336,6 @@ class ControlPanel extends React.Component<IProps, IState> {
 
         const submitLiveness = () => {
             this.props.updateVideoData(this.state.passesLiveness!, this.state.selectedVideoFlags);
-            this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
         }
 
         return (
@@ -1417,9 +1433,9 @@ class ControlPanel extends React.Component<IProps, IState> {
         this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
     }
 
-    loadNextID = (withoutSegCheck ?: boolean) => {
+    loadNextID = (beforeSegCheckDone?: boolean) => {
         this.resetState();
-        if (withoutSegCheck) {
+        if (beforeSegCheckDone) {
             let id = this.props.currentID;
             id.frontIDFlags = this.state.selectedFrontIDFlags;
             id.backIDFlags = this.state.selectedBackIDFlags;

@@ -3,19 +3,17 @@ import { Navbar } from 'react-bootstrap';
 import { AppState } from '../../../store';
 import { connect } from 'react-redux';
 import { IDState } from '../../../store/id/types';
+import { DatabaseUtil } from '../../../utils/DatabaseUtil';
 const axios = require('axios');
 
 interface IProps {
-    IDLibrary: IDState[]
+    IDLibrary: IDState[],
 }
 
 const Output: React.FC<IProps> = ({ IDLibrary }) => {
-    // const displayDate: string = dateCreated !== undefined 
-    //     ? dateCreated.getFullYear() + '-' + (dateCreated.getMonth() < 10 ? '0' + dateCreated.getMonth()  : dateCreated.getMonth())
-    //       + '-' + (dateCreated.getDate() < 10 ? '0' + dateCreated.getDate()  : dateCreated.getDate())
-    //     : '';
+    console.log(IDLibrary.map(DatabaseUtil.extractOutput));
     axios.post('/returnOutput', {
-        library: IDLibrary,
+        library: IDLibrary.map(DatabaseUtil.extractOutput),
         overwrite: true
     });
 

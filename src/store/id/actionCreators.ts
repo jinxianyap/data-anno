@@ -70,11 +70,10 @@ export function saveDocumentType(internalIndex: number, documentType: string): I
     }
 }
 
-export function setImageRotation(croppedId: boolean, id: File, idRotation: Rotation): IDActionTypes {
+export function setImageRotation(id: File, idRotation: Rotation): IDActionTypes {
     return {
         type: Action.SET_IMAGE_ROTATION,
         payload: {
-            croppedId: croppedId,
             id: id,
             idRotation: idRotation
         }

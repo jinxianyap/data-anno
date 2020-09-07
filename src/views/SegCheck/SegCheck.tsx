@@ -20,7 +20,7 @@ interface IProps {
     backID?: ImageState;
     croppedID?: ImageState;
     progressNextStage: (stage: CurrentStage) => GeneralActionTypes;
-    setImageRotation: (croppedId: boolean, id: File, idRotation: Rotation) => IDActionTypes;
+    setImageRotation: (id: File, idRotation: Rotation) => IDActionTypes;
 }
 
 interface IState {
@@ -153,7 +153,7 @@ class SegCheck extends React.Component<IProps, IState> {
                 (cropped ? this.props.backID!.croppedImage!.name : this.props.backID!.image.name) : 
                 (cropped ? this.props.originalID!.croppedImage!.name : this.props.originalID!.image.name);
             filename += "_" + newRotation;
-            this.props.setImageRotation(cropped, new File([blob!], filename), newRotation);
+            this.props.setImageRotation(new File([blob!], filename), newRotation);
         }, "image/jpeg", 1);
         parent.appendChild(img);
 

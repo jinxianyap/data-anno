@@ -9,7 +9,7 @@
             ["id_num", "name"]
         ],
         "displayNames": [
-            ["kPMLandmark", "securityChip", "mscLogo", "ghostImage", "gender", "citizen", "name", "address", "facialImage", "myKadLogo", "myKadNumber", "hibiscusLogo", "malaysiaFlag", "religion"],
+            ["kadPengenalanMalaysiaLandmark", "securityChip", "mscLogo", "ghostImage", "gender", "citizen", "name", "address", "facialImage", "myKadLogo", "myKadNumber", "hibiscusLogo", "malaysiaFlag", "religion"],
             ["coatOfArmsLandmark", "crown", "klccTower", "touchNGo", "signature", "chipLogo", "serialNumber", "kPPN", "malaysiaLogo", "ATMLogo", "myKadNumber"],
             ["passportNumber", "name"],
             ["IDNumber", "name"]

@@ -234,6 +234,94 @@ function getCSVData(filepath, session, res, rej) {
     })
 }
 
+function mergeJSONData(initial, updated) {
+    function mergeLandmarks(originalLandmarks, updatedLandmarks) {
+        if (originalLandmarks.length < updatedLandmarks.length) {
+            return updatedLandmarks;
+        } else {
+            return originalLandmarks.map((each, idx) => {
+                if (each.length < updatedLandmarks[idx].length) {
+                    return updatedLandmarks[idx];
+                } else {
+                    return each.map((lm) => {
+                        let updatedLm = updatedLandmarks[idx].find((llm) => llm.codeName === lm.codeName);
+                        if (updatedLm === undefined) {
+                            return lm;
+                        } else {
+                            if (updatedLm.position !== undefined) {
+                                return updatedLm;
+                            } else {
+                                return lm;
+                            }
+                        }
+                    })
+                }
+            })
+        }
+    }
+
+    function mergeOCRs(originalOCRs, updatedOCRs) {
+        if (originalOCRs.length < updatedOCRs.length) {
+            originalOCRs = updatedOCRs;
+        } else {
+            return originalOCRs.map((each, idx) => {
+                if (each.length < updatedOCRs[idx].length) {
+                    return updatedOCRs[idx];
+                } else {
+                    return each.map((ocr) => {
+                        let updatedOCR = updatedOCRs[idx].find((uocr) => uocr.codeName === ocr.codeName);
+                        if (!updatedOCR) {
+                            return ocr;
+                        } else {
+                            if (updatedOCR.count !== ocr.count
+                            || updatedOCR.labels.every((each) => each.position !== undefined)
+                            || updatedOCR.labels.some((each, idx) => each.value !== ocr.labels[idx].value)) {
+                                return updatedOCR;
+                            } else {
+                                return ocr;
+                            }
+                        }
+                    })
+                }
+            })
+        }
+    }
+
+    return {
+        dateCreated: initial.dateCreated,
+        sessionID: initial.sessionID,
+        originalIDRotation: updated.originalIDRotation,
+        backIDRotation: updated.backIDRotation,
+        frontIDFlags: updated.frontIDFlags,
+        backIDFlags: updated.backIDFlags,
+        
+        processed: updated.processed,
+        processStage: updated.processStage,
+        documentType: updated.documentType,
+
+        segmentation: {
+            originalID: updated.segmentation.originalID.IDBox,
+            backID: updated.segmentation.backID.IDBox
+        },
+        landmarks: {
+            originalID: mergeLandmarks(initial.landmarks.originalID, updated.landmarks.originalID),
+            backID: mergeLandmarks(initial.landmarks.backID, updated.landmarks.backID)
+        },
+        ocr: {
+            originalID: mergeOCRs(initial.ocr.originalID, updated.ocr.originalID),
+            backID: mergeOCRs(initial.ocr.backID, updated.ocr.backID),
+        },
+
+        videoLiveness: updated.videoLiveness !== undefined ? updated.videoLiveness : initial.videoLiveness,
+        videoFlags: updated.videoFlags !== undefined ? updated.videoFlags : initial.videoFlags,
+        faceCompareMatch: updated.faceCompareMatch.map((each, idx) => {
+            return each !== undefined 
+                ? each
+                : initial.faceCompareMatch[idx];
+        })
+    }
+}
+
 app.post('/loadSessionData', async (req, res) => {
     let db = req.body.database;
     let date = req.body.date;
@@ -343,8 +431,20 @@ app.post('/returnOutput', async (req, res) => {
                 let sessionRoute = dateRoute + each.sessionID + ".json";
                 try {
                     each.lastModified = (new Date()).toLocaleString();
-                    fs.writeFileSync(sessionRoute, JSON.stringify(each), 'utf8');
-                    res({sessionID: each.sessionID, success: true});
+                    try {
+                        let data = fs.readFileSync(sessionRoute);
+                        if (data) {
+                            let initialData = JSON.parse(data);
+                            let updatedData = mergeJSONData(initialData, each);
+                            fs.writeFileSync(sessionRoute, JSON.stringify(updatedData), 'utf8');
+                            res({sessionID: each.sessionID, success: true});
+                        }
+                    } catch(err) {
+                        // console.error(err);
+                        // if json file not found
+                        fs.writeFileSync(sessionRoute, JSON.stringify(each), 'utf8');
+                        res({sessionID: each.sessionID, success: true})
+                    }
                 } catch(err) {
                     console.error(err);
                     res({sessionID: each.sessionID, success: false});

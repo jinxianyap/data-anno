@@ -22,7 +22,6 @@ export type IDState = {
 
     originalIDRotation: Rotation;
     backIDRotation: Rotation;
-    croppedIDRotation: Rotation;
 
     frontIDFlags?: string[];
     backIDFlags?: string[];
@@ -47,11 +46,15 @@ export type InternalIDState = {
 
 export type GivenData = {
     originalID?: {
+        spoof: boolean;
+        segmentation?: IDBox,
         landmark: LandmarkData[],
         ocr: OCRData[],
         faceCompareMatch?: boolean
     },
     backID?: {
+        spoof: boolean;
+        segmentation?: IDBox,
         landmark: LandmarkData[],
         ocr: OCRData[]
     },
@@ -69,7 +72,6 @@ interface SaveDocumentType {
 interface SetImageRotation {
     type: typeof Action.SET_IMAGE_ROTATION;
     payload: {
-        croppedId: boolean,
         id: File,
         idRotation: Rotation
     }

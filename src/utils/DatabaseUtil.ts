@@ -35,7 +35,6 @@ export class DatabaseUtil {
             originalIDProcessed: false,
             backIDsProcessed: 0,
             originalIDRotation: Rotation.ROT0,
-            croppedIDRotation: Rotation.ROT0,
             backIDRotation: Rotation.ROT0,
             internalIDs: [],
             internalIndex: 0
@@ -79,7 +78,7 @@ export class DatabaseUtil {
         return ID;
     }
 
-    private static loadGivenData(session: any): Promise<GivenData> {
+    private static loadMyKadGivenData(session: any): Promise<GivenData> {
         let result: GivenData = {};
         let docKey = ['MyKadFront', 'MyKadBack'];
 
@@ -140,13 +139,39 @@ export class DatabaseUtil {
                     return ocr;
                 }).filter((each: OCRData) => each.name !== '' && each.mapToLandmark !== '');
                 if (front) {
+                    let bounds = rawData.landmarks.find((each: any) => each.id === 'mykad');
                     given.originalID = {
+                        spoof: rawData.spoof_results.is_card_spoof,
+                        segmentation: bounds !== undefined ? {
+                            id: 0,
+                            position: {x1: bounds.coords[0],
+                                x2: bounds.coords[0] + bounds.coords[2],
+                                x3: bounds.coords[0] + bounds.coords[2],
+                                x4: bounds.coords[0],
+                                y1: bounds.coords[1] + bounds.coords[3],
+                                y2: bounds.coords[1] + bounds.coords[3],
+                                y3: bounds.coords[1],
+                                y4: bounds.coords[1]}
+                        } : undefined,
                         landmark: landmarks,
                         ocr: ocr,
                         // faceCompareMatch: rawData.
                     }
                 } else {
+                    let bounds = rawData.landmarks.find((each: any) => each.id === 'mykad_back');
                     given.backID = {
+                        spoof: rawData.spoof_results.is_card_spoof,
+                        segmentation: bounds !== undefined ? {
+                            id: 0,
+                            position: {x1: bounds.coords[0],
+                                x2: bounds.coords[0] + bounds.coords[2],
+                                x3: bounds.coords[0] + bounds.coords[2],
+                                x4: bounds.coords[0],
+                                y1: bounds.coords[1] + bounds.coords[3],
+                                y2: bounds.coords[1] + bounds.coords[3],
+                                y3: bounds.coords[1],
+                                y4: bounds.coords[1]}
+                        } : undefined,
                         landmark: landmarks,
                         ocr: ocr
                     }
@@ -174,8 +199,7 @@ export class DatabaseUtil {
     public static loadSessionData(session: any, ID: IDState): Promise<IDState> {
         return new Promise<IDState>(async (res, rej) => {
             let sessionID = session.sessionID;
-            this.loadGivenData(session).then((givenData) => {
-                console.log(givenData);
+            this.loadMyKadGivenData(session).then((givenData) => {
                 res({
                     ...ID,
                     dataLoaded: true,
@@ -188,15 +212,50 @@ export class DatabaseUtil {
                     videoStills: session.face_video_stills !== undefined ? session.face_video_stills.map((each: any, idx: number) => 
                         this.dataURLtoFile(each, sessionID + "_face_" + (idx + 1) + ".jpg")
                     ) : undefined,
-                    givenData: givenData
+                    givenData: givenData,
+                    frontIDFlags: givenData.originalID !== undefined && givenData.originalID!.spoof ? ['spoof'] : [],
+                    backIDFlags: givenData.backID !== undefined && givenData.backID!.spoof ? ['spoof'] : []
                 });
             });
         })
     }
 
+    public static extractOutput(ID: IDState): any {
+        return {
+            dateCreated: ID.dateCreated,
+            sessionID: ID.sessionID,
+            originalIDRotation: ID.originalIDRotation,
+            backIDRotation: ID.backIDRotation,
+            frontIDFlags: ID.frontIDFlags,
+            backIDFlags: ID.backIDFlags,
+            
+            processed: ID.internalIDs.map((each) => each.processed),
+            processStage: ID.internalIDs.map((each) => each.processStage),
+            documentType: ID.internalIDs.map((each) => each.documentType),
+
+            segmentation: {
+                originalID: ID.internalIDs.map((each) => each.originalID!.IDBox),
+                backID: ID.internalIDs.map((each) => each.backID!.IDBox)
+            },
+            landmarks: {
+                originalID: ID.internalIDs.map((each) => each.originalID!.landmark),
+                backID: ID.internalIDs.map((each) => each.backID!.landmark)
+            },
+            ocr: {
+                originalID: ID.internalIDs.map((each) => each.originalID!.ocr),
+                backID: ID.internalIDs.map((each) => each.backID!.ocr),
+            },
+
+            videoLiveness: ID.videoLiveness,
+            videoFlags: ID.videoFlags,
+            faceCompareMatch: ID.internalIDs.map((each) => each.originalID!.faceCompareMatch)
+        }
+    }
+
     public static dataURLtoFile(dataurl: string, filename: string): File {
         if (!dataurl) {
             dataurl = DummyImage;
+            filename = "notfound";
         }
         let arr = dataurl.split(','),
             mime = arr[0].match(/:(.*?);/)![1],

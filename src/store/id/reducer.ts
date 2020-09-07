@@ -1,8 +1,7 @@
 import { IDState, IDActionTypes, InternalIDState } from './types';
 import { Action } from '../Actions';
 import { IDProcess, Rotation } from '../../utils/enums';
-import { ImageState } from '../image/types';
-import { DatabaseUtil } from '../../utils/DatabaseUtil';
+import { ImageState, IDBox } from '../image/types';
 
 const axios = require('axios');
 
@@ -15,21 +14,19 @@ const initialState: IDState = {
     backIDsProcessed: 0,
     originalIDRotation: Rotation.ROT0,
     backIDRotation: Rotation.ROT0,
-    croppedIDRotation: Rotation.ROT0,
     index: 0,
     internalIndex: 0,
     internalIDs: [],
 }
 
-function cloneImageState(original: ImageState): ImageState {
+function cloneImageState(original: ImageState, IDBox?: IDBox, passesCrop?: boolean): ImageState {
     const getDeepCopy = (obj: any) => {
         return obj === undefined ? undefined : JSON.parse(JSON.stringify(obj));
     };
-
     return {
         image: new File([original.image], original.image.name),
-        passesCrop: getDeepCopy(original.passesCrop),
-        IDBox: getDeepCopy(original.IDBox),
+        passesCrop: passesCrop !== undefined ? passesCrop : getDeepCopy(original.passesCrop),
+        IDBox: IDBox !== undefined ? IDBox : getDeepCopy(original.IDBox),
         croppedImage: original.croppedImage === undefined ? undefined : new File([original.croppedImage], original.croppedImage.name),
         imageProps: getDeepCopy(original.imageProps),
         landmark: getDeepCopy(original.landmark),
@@ -55,13 +52,11 @@ export function IDReducer(
             let ID: InternalIDState = {
                 processed: false,
                 source: state.sessionID,
-                originalID: cloneImageState(state.originalID!),
+                originalID: cloneImageState(state.originalID!, action.payload.IDBox, action.payload.passesCrop),
                 backID: cloneImageState(state.backID!),
                 documentType: 'MyKad',
-                processStage: IDProcess.MYKAD_FRONT
+                processStage: IDProcess.MYKAD_FRONT,
             }
-            ID.originalID!.IDBox = action.payload.IDBox;
-            ID.originalID!.passesCrop = action.payload.passesCrop;
             let IDs = state.internalIDs;
             IDs.push(ID);
             return {
@@ -181,48 +176,24 @@ export function IDReducer(
         }
         case Action.SET_IMAGE_ROTATION: {
             if (state.originalIDProcessed && state.internalIDs[state.internalIndex].processStage === IDProcess.MYKAD_BACK) {
-                if (action.payload.croppedId) {
-                    state.croppedIDRotation = action.payload.idRotation;
-                    state.backID!.croppedImage = action.payload.id;
-                    if (state.internalIDs.length > 0) {
-                        let ids = state.internalIDs;
-                        return {
-                            ...state,
-                            internalIDs: ids.map((each) => {each.backID!.croppedImage = action.payload.id; return each})
-                        }
-                    }
-                } else {
-                    state.backIDRotation = action.payload.idRotation;
-                    state.backID!.image = action.payload.id;
-                    if (state.internalIDs.length > 0) {
-                        let ids = state.internalIDs;
-                        return {
-                            ...state,
-                            internalIDs: ids.map((each) => {each.backID!.image = action.payload.id; return each})
-                        }
+                state.backIDRotation = action.payload.idRotation;
+                state.backID!.image = action.payload.id;
+                if (state.internalIDs.length > 0) {
+                    let ids = state.internalIDs;
+                    return {
+                        ...state,
+                        internalIDs: ids.map((each) => {each.backID!.image = action.payload.id; return each})
                     }
                 }
             } else if (!state.originalIDProcessed ||
                 (state.internalIDs[state.internalIndex] !== undefined && state.internalIDs[state.internalIndex].processStage !== IDProcess.MYKAD_BACK)) {
-                if (action.payload.croppedId) {
-                    state.croppedIDRotation = action.payload.idRotation;
-                    state.originalID!.croppedImage = action.payload.id;
-                    if (state.internalIDs.length > 0) {
-                        let ids = state.internalIDs;
-                        return {
-                            ...state,
-                            internalIDs: ids.map((each) => {each.originalID!.croppedImage = action.payload.id; return each})
-                        }
-                    }
-                } else {
-                    state.originalIDRotation = action.payload.idRotation;
-                    state.originalID!.image = action.payload.id;
-                    if (state.internalIDs.length > 0) {
-                        let ids = state.internalIDs;
-                        return {
-                            ...state,
-                            internalIDs: ids.map((each) => {each.originalID!.image = action.payload.id; return each})
-                        }
+                state.originalIDRotation = action.payload.idRotation;
+                state.originalID!.image = action.payload.id;
+                if (state.internalIDs.length > 0) {
+                    let ids = state.internalIDs;
+                    return {
+                        ...state,
+                        internalIDs: ids.map((each) => {each.originalID!.image = action.payload.id; return each})
                     }
                 }
             }

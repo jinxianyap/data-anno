@@ -4,14 +4,14 @@ import { AppState } from '../../store';
 import { connect } from 'react-redux';
 import { Container, Row, Col } from 'react-bootstrap';
 import ReactPlayer from 'react-player/lazy';
-import { IDState } from '../../store/id/types';
+import { IDState, InternalIDState } from '../../store/id/types';
 import { CurrentStage } from '../../utils/enums';
 import { ImageUtil } from '../../utils/ImageUtil';
 
 interface IProps {
     id: IDState,
     currentStage: CurrentStage,
-    image: File
+    internalID: InternalIDState
 }
 
 interface IState {
@@ -29,7 +29,16 @@ class LivenessAndMatch extends React.Component<IProps, IState> {
 
     componentDidUpdate() {
         if (this.props.currentStage === CurrentStage.FR_COMPARE_CHECK && !this.state.croppedImageLoaded) {
-            ImageUtil.loadImage("frCompare", this.props.image, "frCompareID");
+            if (this.props.id.croppedFace!.name !== 'notfound') {
+                ImageUtil.loadImage("frCompareFace", this.props.id.croppedFace!, "frCompareID");
+            } else if (this.props.internalID.originalID!.croppedImage!.name !== 'notfound') {
+                ImageUtil.loadImage("frCompareFace", this.props.internalID.originalID!.croppedImage!, "frCompareID");
+            }
+            if (this.props.id.selfieImage!.name !== 'notfound') {
+                ImageUtil.loadImage("frCompareSelfie", this.props.id.selfieImage!, "frCompareSelfieImage");
+            } else if (this.props.id.videoStills!.length > 0) {
+                ImageUtil.loadImage("frCompareSelfie", this.props.id.videoStills![0], "frCompareSelfieImage");
+            }
             this.setState({croppedImageLoaded: true});
         }
     }
@@ -39,7 +48,7 @@ class LivenessAndMatch extends React.Component<IProps, IState> {
             return (
                 <Container className="setupView">
                     {
-                        this.props.id.selfieVideo !== undefined ?
+                        this.props.id.selfieVideo!.name !== 'notfound' ?
                         <ReactPlayer
                             url={URL.createObjectURL(this.props.id.selfieVideo)}
                             playing={true}
@@ -56,20 +65,10 @@ class LivenessAndMatch extends React.Component<IProps, IState> {
                 <Container style={{height: "100%"}}>
                     <Row style={{height: "100%"}}>
                         <Col xs={6}>
-                            <div id="frCompare" className="pairDisplay"></div>
+                            <div id="frCompareFace" className="pairDisplay"></div>
                         </Col>
                         <Col xs={6}>
-                        {
-                            this.props.id.selfieVideo !== undefined ?
-                            <ReactPlayer
-                                url={URL.createObjectURL(this.props.id.selfieVideo)}
-                                playing={true}
-                                loop={true}
-                                width="100%"
-                                height="70vh"
-                            />
-                            : <div />
-                        }
+                            <div id="frCompareSelfie" className="pairDisplay"></div>
                         </Col>
                     </Row>
                 </Container>
@@ -85,7 +84,7 @@ const mapStateToProps = (state: AppState) => {
     return {
         currentStage: state.general.currentStage,
         id: state.id,
-        image: state.id.croppedFace!
+        internalID: state.id.internalIDs[state.id.internalIndex]
     };
 }
 
