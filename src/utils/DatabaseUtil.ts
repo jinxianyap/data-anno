@@ -30,7 +30,7 @@ export class DatabaseUtil {
             dataLoaded: false,
             processed: false,
             index: index,
-            dateCreated: new Date(parseInt(date.slice(0, 4)), parseInt(date.slice(4, 6)), parseInt(date.slice(6, 8))),
+            dateCreated: date,
             sessionID: id,
             originalIDProcessed: false,
             backIDsProcessed: 0,
@@ -212,10 +212,10 @@ export class DatabaseUtil {
 
     public static dateToString(date: Date) {
         let month = '';
-        if (date.getMonth() < 10) {
-            month = '0' + date.getMonth();
+        if (date.getMonth() + 1 < 10) {
+            month = '0' + (date.getMonth() + 1);
         } else {
-            month += date.getMonth();
+            month += (date.getMonth() + 1);
         }
         let day = '';
         if (date.getDate() < 10) {

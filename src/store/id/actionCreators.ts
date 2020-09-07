@@ -110,6 +110,15 @@ export function updateFrontIDFlags(flags: string[]): IDActionTypes {
     }
 }
 
+export function updateBackIDFlags(flags: string[]): IDActionTypes {
+    return {
+        type: Action.UPDATE_BACK_ID_FLAGS,
+        payload: {
+            flags: flags
+        }
+    }
+}
+
 export function restoreID(): IDActionTypes {
     return {
         type: Action.RESTORE_ID

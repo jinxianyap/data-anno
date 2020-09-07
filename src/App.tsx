@@ -12,6 +12,7 @@ import { Container, Row, Col, Spinner } from 'react-bootstrap';
 import SegEdit from './views/SegEdit/SegEdit';
 import LandmarkOCR from './views/LandmarkOCR/LandmarkOCR';
 import LivenessAndMatch from './views/LivenessAndMatch/LivenessAndMatch';
+import Output from './views/Common/Output/Output';
 
 interface IProps {
   state: AppState,
@@ -47,7 +48,7 @@ const App: React.FC<IProps> = ({state, currentStage}) => {
       </div>
       <TopBar />
         <Container className="content-container">
-            {currentStage !== CurrentStage.SETUP ?
+            {currentStage !== CurrentStage.SETUP && currentStage !== CurrentStage.OUTPUT ?
               (
                 <Row style={{height: "100%", width: "100%", margin: 0}}>
                   <Col md={7} lg={9} id="paint-area" style={{ maxHeight: "100%", overflowY: "auto" }}>
@@ -60,14 +61,26 @@ const App: React.FC<IProps> = ({state, currentStage}) => {
                     <ControlPanel />
                   </Col>
                 </Row>)
-              : <Row style={{height: "100%", width: "100%", margin: 0}}>
+              : <div />
+            }
+            { currentStage === CurrentStage.SETUP ?
+                <Row style={{height: "100%", width: "100%", margin: 0}}>
                   <Col md={3} lg={2} />
-                  <Col md={6} lg={8}><SetupView/></Col>
+                  <Col md={6} lg={8}><SetupView /></Col>
                   <Col md={3} lg={2} />
                 </Row>
+              : <div />
+            }
+            { currentStage === CurrentStage.OUTPUT ?
+                <Row style={{height: "100%", width: "100%", margin: 0}}>
+                  <Col md={3} lg={2} />
+                  <Col md={6} lg={8}><Output /></Col>
+                  <Col md={3} lg={2} />
+                </Row>
+              : <div />
             }
         </Container> 
-        {currentStage === CurrentStage.SETUP ? <div/> : <BottomBar />}
+        {currentStage === CurrentStage.SETUP || currentStage === CurrentStage.OUTPUT ? <div/> : <BottomBar />}
     </div>
   );
 }

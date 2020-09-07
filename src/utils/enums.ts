@@ -8,9 +8,10 @@ export enum CurrentStage {
     FR_LIVENESS_CHECK = "Face Liveness",
     FR_COMPARE_CHECK = "Face Comparison",
 
-
+    // Functional Only
     END_STAGE = "End Stage",
-    INTER_STAGE = "Inter Stage"
+    INTER_STAGE = "Inter Stage",
+    OUTPUT = "Output"
 }
 
 export enum IDProcess {

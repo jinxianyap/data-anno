@@ -9,7 +9,7 @@ import { GeneralActionTypes } from '../../../store/general/types';
 import { IDActionTypes, IDState, InternalIDState } from '../../../store/id/types';
 import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord, LandmarkData, Position } from '../../../store/image/types';
 import { progressNextStage, getNextID, saveToLibrary } from '../../../store/general/actionCreators';
-import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, updateFrontIDFlags, restoreID } from '../../../store/id/actionCreators';
+import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, updateFrontIDFlags, updateBackIDFlags, restoreID } from '../../../store/id/actionCreators';
 import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, addLandmarkData, updateLandmarkFlags, addOCRData, setFaceCompareMatch, restoreImage } from '../../../store/image/actionCreators';
 // import AddTypeModal from '../AddTypeModal/AddTypeModal';
 import { DatabaseUtil } from '../../../utils/DatabaseUtil';
@@ -41,6 +41,7 @@ interface IProps {
     refreshIDs: (originalProcessed: boolean) => IDActionTypes;
     saveDocumentType: (internalIndex: number, documentType: string) => IDActionTypes;
     updateFrontIDFlags: (flags: string[]) => IDActionTypes;
+    updateBackIDFlags: (flags: string[]) => IDActionTypes;
     saveSegCheck: (passesCrop: boolean) => ImageActionTypes;
 
     // Landmark
@@ -179,9 +180,10 @@ class ControlPanel extends React.Component<IProps, IState> {
             case (CurrentStage.SEGMENTATION_CHECK): {
                 if (this.props.indexedID === undefined) break;
                 if (previousProps.indexedID.index !== this.props.indexedID.index) {
+                    document.getElementById('overlay')!.classList.add('show');
                     axios.post('/loadSessionData', {
                         database: this.props.database,
-                        date: DatabaseUtil.dateToString(this.props.indexedID.dateCreated),
+                        date: this.props.indexedID.dateCreated,
                         sessionID:  this.props.indexedID.sessionID
                     }).then((res: any) => {
                         if (res.status === 200) {
@@ -190,11 +192,12 @@ class ControlPanel extends React.Component<IProps, IState> {
                                 console.log(completeID);
                                 this.props.loadNextID(completeID);
                                 this.loadSegCheckImage();
-                                this.setState({loadedSegCheckImage: true});
+                                this.setState({loadedSegCheckImage: true}, () => document.getElementById('overlay')!.classList.remove('show'));
                             });
                         }
                     }).catch((err: any) => {
                         console.error(err);
+                        document.getElementById('overlay')!.classList.remove('show');
                     });
                     break;
                 }
@@ -398,9 +401,10 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     componentDidMount() {
         if (this.props.currentStage === CurrentStage.SEGMENTATION_CHECK) {
+            document.getElementById('overlay')!.classList.add('show');
             axios.post('/loadSessionData', {
                 database: this.props.database,
-                date: DatabaseUtil.dateToString(this.props.indexedID.dateCreated),
+                date: this.props.indexedID.dateCreated,
                 sessionID:  this.props.indexedID.sessionID
             }).then((res: any) => {
                 if (res.status === 200) {
@@ -409,10 +413,12 @@ class ControlPanel extends React.Component<IProps, IState> {
                         console.log(completeID);
                         this.props.loadNextID(completeID);
                         this.loadSegCheckData();
+                        document.getElementById('overlay')!.classList.remove('show');
                     })
                 }
             }).catch((err: any) => {
                 console.error(err);
+                document.getElementById('overlay')!.classList.remove('show');
             });
         }
     }
@@ -485,10 +491,13 @@ class ControlPanel extends React.Component<IProps, IState> {
             };
             if (this.props.currentID.givenData !== undefined) {
                 // if db csv already has ocr data
-                if (this.props.currentID.originalIDProcessed && this.props.currentID.givenData.backID !== undefined) {
-                    let dbLandmark = this.props.currentID.givenData.backID.landmark.find((lm) => lm.codeName === each.codeName);
-                    if (dbLandmark !== undefined) {
-                        landmark.position = dbLandmark.position;
+                if (this.props.currentID.originalIDProcessed) {
+                    if (this.props.currentID.givenData.backID !== undefined) {
+                        let dbLandmark = this.props.currentID.givenData.backID.landmark.find((lm) => lm.codeName === each.codeName);
+                        console.log(dbLandmark);
+                        if (dbLandmark !== undefined) {
+                            landmark.position = dbLandmark.position;
+                        }
                     }
                 } else {
                     if (this.props.currentID.givenData.originalID !== undefined) {
@@ -515,10 +524,12 @@ class ControlPanel extends React.Component<IProps, IState> {
                 let value = undefined;
                 if (this.props.currentID.givenData !== undefined) {
                     // if db csv already has ocr data
-                    if (this.props.currentID.originalIDProcessed && this.props.currentID.givenData.backID !== undefined) {
-                        let dbOCR = this.props.currentID.givenData.backID.ocr.find((lm) => lm.codeName === options.ocr.codeNames[idx][i]);
-                        if (dbOCR !== undefined) {
-                            value = dbOCR.labels.map((each) => each.value).join(' ');
+                    if (this.props.currentID.originalIDProcessed) {
+                        if (this.props.currentID.givenData.backID !== undefined) {
+                            let dbOCR = this.props.currentID.givenData.backID.ocr.find((lm) => lm.codeName === options.ocr.codeNames[idx][i]);
+                            if (dbOCR !== undefined) {
+                                value = dbOCR.labels.map((each) => each.value).join(' ');
+                            }
                         }
                     } else {
                         if (this.props.currentID.givenData.originalID !== undefined) {
@@ -618,6 +629,10 @@ class ControlPanel extends React.Component<IProps, IState> {
             )
         }
 
+        const skipSegCheck = () => {
+            this.loadNextID(true);
+        }
+
         const submitSegCheck = (e: any) => {
             e.preventDefault();
 
@@ -663,6 +678,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     }
                 } else {
                 // back ID - always here for mykadback
+                    this.props.updateBackIDFlags(this.state.selectedBackIDFlags);
                     if (this.state.passesCrop !== this.props.internalID.backID!.passesCrop) {
                         console.log('refresh back');
                         this.props.refreshIDs(true);
@@ -700,6 +716,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     this.props.createNewID(box, true);
                     this.props.saveDocumentType(0, this.state.singleDocumentType);
                     this.props.updateFrontIDFlags(this.state.selectedFrontIDFlags);
+                    this.props.updateBackIDFlags(this.state.selectedBackIDFlags);
 
                     if (this.props.processType === ProcessType.SEGMENTATION) {
                         let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
@@ -763,7 +780,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     this.props.currentID.originalIDProcessed && this.state.selectedBackIDFlags.length > 0
                     ?
                     (<Button variant="primary" className="block-button" id="segcheck-skip-btn"
-                        onClick={this.props.currentID.originalIDProcessed ? this.loadNextID : this.loadNextID}>
+                        onClick={skipSegCheck}>
                         Skip
                     </Button>)
                     : <div />
@@ -1400,9 +1417,16 @@ class ControlPanel extends React.Component<IProps, IState> {
         this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
     }
 
-    loadNextID = () => {
+    loadNextID = (withoutSegCheck ?: boolean) => {
         this.resetState();
-        this.props.saveToLibrary(this.props.currentID);
+        if (withoutSegCheck) {
+            let id = this.props.currentID;
+            id.frontIDFlags = this.state.selectedFrontIDFlags;
+            id.backIDFlags = this.state.selectedBackIDFlags;
+            this.props.saveToLibrary(id);
+        } else {
+            this.props.saveToLibrary(this.props.currentID);
+        }
         this.props.restoreID();
         this.props.restoreImage();
         this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
@@ -1420,6 +1444,7 @@ class ControlPanel extends React.Component<IProps, IState> {
             isCropping: false,
             overallFlags: [],
             selectedFrontIDFlags: [],
+            selectedBackIDFlags: [],
 
             showAddLandmarkModal: false,
             landmarksLoaded: false,
@@ -1436,7 +1461,10 @@ class ControlPanel extends React.Component<IProps, IState> {
             videoFlagsLoaded: false,
             videoFlags: [],
             selectedVideoFlags: [],
+            passesLiveness: undefined,
             livenessValidation: false,
+
+            faceCompareMatch: undefined
         });
     }
 
@@ -1527,6 +1555,7 @@ const mapDispatchToProps = {
     setFaceCompareMatch,
     saveToInternalID,
     updateFrontIDFlags,
+    updateBackIDFlags,
     saveToLibrary,
     restoreID,
     restoreImage,

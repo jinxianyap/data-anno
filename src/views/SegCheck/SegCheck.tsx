@@ -46,7 +46,7 @@ class SegCheck extends React.Component<IProps, IState> {
 
     componentWillMount() {
         if (this.props.noMoreIDs) {
-            this.props.progressNextStage(CurrentStage.SETUP);
+            this.props.progressNextStage(CurrentStage.OUTPUT);
         }
     }
 
@@ -67,7 +67,7 @@ class SegCheck extends React.Component<IProps, IState> {
 
     componentDidUpdate(previousProps: IProps) {
         if (this.props.noMoreIDs) {
-            this.props.progressNextStage(CurrentStage.SETUP);
+            this.props.progressNextStage(CurrentStage.OUTPUT);
         }
         if (!previousProps.originalProcessed && this.props.originalProcessed) {
             let originalImage = this.state.originalImage!;

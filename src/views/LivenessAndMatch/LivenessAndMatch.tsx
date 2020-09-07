@@ -85,7 +85,7 @@ const mapStateToProps = (state: AppState) => {
     return {
         currentStage: state.general.currentStage,
         id: state.id,
-        image: state.image.croppedImage!
+        image: state.id.croppedFace!
     };
 }
 

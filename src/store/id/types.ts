@@ -4,7 +4,7 @@ import { ImageState, IDBox, LandmarkData, OCRData } from '../image/types';
 
 export type IDState = {
     processed: boolean;
-    dateCreated: Date;
+    dateCreated: string;
     sessionID: string;
     index: number;
 
@@ -25,6 +25,7 @@ export type IDState = {
     croppedIDRotation: Rotation;
 
     frontIDFlags?: string[];
+    backIDFlags?: string[];
 
     videoLiveness?: boolean;
     videoFlags?: string[];
@@ -142,6 +143,13 @@ interface UpdateFrontIDFlags {
     }
 }
 
+interface UpdateBackIDFlags {
+    type: typeof Action.UPDATE_BACK_ID_FLAGS;
+    payload: {
+        flags: string[]
+    }
+}
+
 interface RestoreID {
     type: typeof Action.RESTORE_ID;
 }
@@ -157,4 +165,5 @@ export type IDActionTypes = SaveDocumentType
     | UpdateVideoData
     | SaveToInternalID
     | UpdateFrontIDFlags
+    | UpdateBackIDFlags
     | RestoreID

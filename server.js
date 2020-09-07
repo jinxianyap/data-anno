@@ -31,13 +31,26 @@ const fileType = {
 
 Object.freeze(fileType);
 
+function fromDateToString(dateObj, isOutput) {
+    let year = dateObj.getFullYear().toString();
+    let month = dateObj.getMonth() + 1 < 10 ? '0' + (dateObj.getMonth() + 1).toString() : (dateObj.getMonth() + 1).toString();
+    let date = dateObj.getDate() < 10 ? '0' + dateObj.getDate().toString() : dateObj.getDate().toString();
+    let dateStr = year + month + date;
+    if (isOutput) {
+        let hour = dateObj.getHours() < 10 ? '0' + dateObj.getHours() : dateObj.getHours();
+        let minute = dateObj.getMinutes() < 10 ? '0' + dateObj.getMinutes() : dateObj.getMinutes();
+        let second = dateObj.getSeconds() < 10 ? '0' + dateObj.getSeconds() : dateObj.getSeconds();
+        dateStr = dateStr + "_" + hour + minute + second;
+    }
+    return dateStr;
+}
 
-function getDate(date) { 
+function fromStringToDate(date) { 
     return new Date(parseInt(date.slice(0, 4)), parseInt(date.slice(4, 6)), parseInt(date.slice(6, 8)));
 }
 
 function withinDateRange(date, start, end) {
-    return (getDate(date) >= getDate(start) && getDate(date) <= getDate(end));
+    return (fromStringToDate(date) >= fromStringToDate(start) && fromStringToDate(date) <= fromStringToDate(end));
 }
 
 function getFileType(filename) {
@@ -68,6 +81,7 @@ function getFileType(filename) {
     }
 }
 
+// transforms each image into base64 representation
 function allocateFiles(sessionID, route, files) {
     var mykad_front_ori,
         mykad_back_ori,
@@ -241,7 +255,6 @@ app.post('/loadDatabase', async (req, res) => {
     let end = req.body.endDate;
 
     let dateImgRoute = testFolder + db + '/images/';
-    let dateDataRoute = testFolder + db + '/raw_data/';
     let dateImgs = fs.readdirSync(dateImgRoute);
     dateImgs = dateImgs.filter((each) => withinDateRange(each, start, end));
 
@@ -254,27 +267,15 @@ app.post('/loadDatabase', async (req, res) => {
         
         if (sessions) {
             for (let j = 0; j < sessions.length; j++) {
-                let imageRoute = sessionRoute + sessions[j] + '/';
-                // if (j === 0) {
-                //     let files = fs.readdirSync(imageRoute);
-                //     let session = allocateFiles(sessions[j], imageRoute, files);
-                //     sessionIDs.push(session);
-                // } else {
-                    sessionIDs.push({
-                        sessionID: sessions[j]
-                    });
-                // }
+                sessionIDs.push({
+                    sessionID: sessions[j]
+                });
             }
 
-            let csvPath = dateDataRoute + dateImgs[i].slice(0, 4) + '-' + dateImgs[i].slice(4, 6) + '-' + dateImgs[i].slice(6, 8) + '.csv';
             let folder = {
                 date: dateImgs[i],
                 sessions: sessionIDs,
-                // raw_data: undefined
             };
-            // await new Promise((res, rej) => parseCSV(csvPath, res))
-            //     .then((val) => {folder.raw_data = val; folders.push(folder);})
-            //     .catch((err) => {console.error(err); folders.push(folder);});
             folders.push(folder);
         } else {
             res.status(500).send();
@@ -306,11 +307,59 @@ app.get('/getDatabases', (req, res) => {
             });
         });
 
-        Promise.all(results).then((dbs) => res.status(200).send(dbs)).catch((err) => res.status(500).send(err));
+        Promise.all(results).then((dbs) => {
+            let filtered = dbs.filter((each) => each.dates !== undefined);
+            res.status(200).send(filtered);
+        }).catch((err) => res.status(500).send(err));
 
     } else {
         res.status(500).err('No databases found');
     }
+})
+
+app.post('/returnOutput', async (req, res) => {
+    let { library, overwrite } = req.body;
+    let today = fromDateToString(new Date(), true);
+    let route = testFolder + "annotation_output/output/";
+
+    if (!overwrite) {
+        route = testFolder + "annotation_output/output_" + today + "/";
+        fs.mkdirSync(route, {recursive: true}, (err) => {
+            if (err) throw err;
+        });
+    }
+
+    let writes = library.map((each) => {
+        return new Promise((res, rej) => {
+            let date = each.dateCreated.split('T')[0].split('-').join('');
+            let dateRoute = route + date + "/";
+            let dates = fs.readdirSync(route);
+            if (dates) {
+                if (!dates.includes(date)) {
+                    fs.mkdirSync(dateRoute, {recursive: true}, (err) => {
+                        if (err) throw err;
+                    });
+                }
+                let sessionRoute = dateRoute + each.sessionID + ".json";
+                try {
+                    each.lastModified = (new Date()).toLocaleString();
+                    fs.writeFileSync(sessionRoute, JSON.stringify(each), 'utf8');
+                    res({sessionID: each.sessionID, success: true});
+                } catch(err) {
+                    console.error(err);
+                    res({sessionID: each.sessionID, success: false});
+                }
+            } else {
+                res({sessionID: each.sessionID, success: false});
+            }
+        });
+    })
+
+    Promise.all(writes).then((results) => {
+        res.status(200).send(results);
+    }).catch((err) =>
+        res.status(500).send(err)
+    );
 })
 
 // if (process.env.NODE_ENV === 'production') {

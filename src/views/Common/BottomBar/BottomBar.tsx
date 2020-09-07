@@ -9,16 +9,12 @@ interface IProps {
     index: number;
     numberOfIDs: number;
     processType: ProcessType;
-    dateCreated?: Date;
+    dateCreated?: string;
     currentIDSource: string;
     database: string;
 }
 
 const BottomBar: React.FC<IProps> = ({index, numberOfIDs, processType, dateCreated, currentIDSource, database}) => {
-    const displayDate: string = dateCreated !== undefined 
-        ? dateCreated.getFullYear() + '-' + (dateCreated.getMonth() < 10 ? '0' + dateCreated.getMonth()  : dateCreated.getMonth())
-          + '-' + (dateCreated.getDate() < 10 ? '0' + dateCreated.getDate()  : dateCreated.getDate())
-        : '';
 
     return (
         <Navbar fixed="bottom">
@@ -28,7 +24,7 @@ const BottomBar: React.FC<IProps> = ({index, numberOfIDs, processType, dateCreat
             <Navbar.Collapse className="justify-content-end">
                 { dateCreated !== undefined ? 
                     <Navbar.Text style={{marginRight: "3rem"}}>Date:   
-                        {displayDate}</Navbar.Text> :
+                        {dateCreated.slice(0, 4) + '-' + dateCreated.slice(4, 6) + '-' + dateCreated.slice(6, 8)}</Navbar.Text> :
                         <div /> 
                 }
                 <Navbar.Text style={{marginRight: "3rem"}}>Session ID:   {currentIDSource}</Navbar.Text>

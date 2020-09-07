@@ -73,7 +73,7 @@ class SetupView extends React.Component<IProps, IState> {
                         name: each.database,
                         dates: each.dates.map((date: string) => new Date(
                             parseInt(date.slice(0, 4)), 
-                            parseInt(date.slice(4, 6)), 
+                            parseInt(date.slice(4, 6)) - 1, 
                             parseInt(date.slice(6, 8))))
                     }
                 });

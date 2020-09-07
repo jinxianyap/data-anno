@@ -8,7 +8,7 @@ const axios = require('axios');
 
 const initialState: IDState = {
     processed: false,
-    dateCreated: new Date(),
+    dateCreated: '',
     sessionID: '',
     dataLoaded: false,
     originalIDProcessed: false,
@@ -280,6 +280,12 @@ export function IDReducer(
             return {
                 ...state,
                 frontIDFlags: action.payload.flags
+            }
+        }
+        case Action.UPDATE_BACK_ID_FLAGS: {
+            return {
+                ...state,
+                backIDFlags: action.payload.flags
             }
         }
         case Action.RESTORE_ID: {
