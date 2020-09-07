@@ -2,13 +2,15 @@ import { Action } from "../Actions";
 
 export type ImageState = {
     image: File;
+    croppedImage?: File;
+    imageProps?: ImageProps;
+    croppedImageProps?: ImageProps;
 
     // Seg Check
     passesCrop?: boolean;
     IDBox?: IDBox,
-    croppedImage?: File;
-    imageProps?: ImageProps;
 
+    // landmark
     landmark: LandmarkData[];
     currentSymbol?: string;
 
@@ -17,8 +19,6 @@ export type ImageState = {
     ocrToLandmark?: string;
     currentWord?: OCRWord;
 
-    // FR Compare (for each cropped internal ID)
-    croppedFace?: File;
     faceCompareMatch?: boolean
 }
 
@@ -30,6 +30,7 @@ export type IDBox = {
 export type LandmarkData = {
     id: number,
     type: 'landmark',
+    codeName: string,
     name: string,
     position?: Position,
     flags: string[]
@@ -38,6 +39,7 @@ export type LandmarkData = {
 export type OCRData = {
     id: number,
     type: 'OCR',
+    codeName: string,
     name: string,
     mapToLandmark: string,
     count: number,
@@ -49,8 +51,6 @@ export type LandmarkOCRData = LandmarkData | OCRData;
 export type ImageProps = {
     width: number,
     height: number,
-    offsetX: number,
-    offsetY: number
 }
 
 export type Position = {

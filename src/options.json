@@ -2,33 +2,45 @@
     "documentTypes": ["MyKad", "Passport", "Other"],
     "landmark": {
         "keys": ["MyKadFront", "MyKadBack", "Passport", "Other"],
-        "values": [
-            ["kPMLandmark", "securityChip", "mscLogo", "ghostImage", "gender", "citizen", "name", "address", "facialImage", "myKadLogo", "myKadNumber", "hibiscusLogo", "malaysiaFlag"],
-            ["coatOfArmLandmark", "klccTower", "signature", "myKadNumber"],
+        "codeNames": [
+            ["kpm", "security", "msc", "ghost", "gender", "citizen", "name", "address", "face", "logo", "ic_num", "hibiscus", "flag", "religion"],
+            ["coa", "crown", "tower", "touchNgo", "sign", "chip_logo", "serial_num", "kppn", "malaysia_logo", "atm_logo", "ic_num"],
+            ["passport_num", "name"],
+            ["id_num", "name"]
+        ],
+        "displayNames": [
+            ["kPMLandmark", "securityChip", "mscLogo", "ghostImage", "gender", "citizen", "name", "address", "facialImage", "myKadLogo", "myKadNumber", "hibiscusLogo", "malaysiaFlag", "religion"],
+            ["coatOfArmsLandmark", "crown", "klccTower", "touchNGo", "signature", "chipLogo", "serialNumber", "kPPN", "malaysiaLogo", "ATMLogo", "myKadNumber"],
             ["passportNumber", "name"],
             ["IDNumber", "name"]
         ]
     },
     "ocr": {
         "keys": ["MyKadFront", "MyKadBack", "Passport", "Other"],
-        "values": [
-            ["icNumber", "name", "birthDate", "street", "city", "state", "zipCode", "fullAddress", "gender"],
-            ["icNumber"],
+        "codeNames": [
+            ["ic_num", "name", "address", "gender", "citizen"],
+            ["mykad_back_ic_num"],
+            ["passport_num", "name"],
+            ["id_num"]
+        ],
+        "displayNames": [
+            ["myKadNumber", "name", "address", "gender", "citizen"],
+            ["myKadNumber"],
             ["passportNumber", "name"],
             ["IDNumber"]
         ],
         "mapToLandmark": [
-            ["myKadNumber", "name", "myKadNumber", "address", "address", "address", "address", "address", "gender"],
-            ["myKadNumber"],
-            ["passportNumber", "name"],
-            ["IDNumber"]
+            ["ic_num", "name", "address", "gender", "citizen"],
+            ["ic_num"],
+            ["passport_num", "name"],
+            ["id_num"]
         ]
     },
     "flags": {
         "overall": {
             "keys": ["quality"],
             "values": [
-                ["glare", "blur", "damaged", "covered", "missing"]
+                ["glare", "blur", "damaged", "covered", "missing", "spoof"]
             ]
         },
         "landmark": {

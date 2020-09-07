@@ -1,6 +1,6 @@
 import { Action } from '../Actions';
 import { IDProcess, Rotation } from '../../utils/enums';
-import { ImageState, IDBox } from '../image/types';
+import { ImageState, IDBox, LandmarkData, OCRData } from '../image/types';
 
 export type IDState = {
     processed: boolean;
@@ -15,7 +15,7 @@ export type IDState = {
     selfieImage?: File;
     selfieVideo?: File;
     videoStills?: File[];
-    jsonData?: any;
+    givenData?: GivenData;
 
     originalIDProcessed: boolean;
     backIDsProcessed: number;
@@ -42,6 +42,19 @@ export type InternalIDState = {
     originalID?: ImageState;
     // croppedID?: ImageState;
     backID?: ImageState;
+}
+
+export type GivenData = {
+    originalID?: {
+        landmark: LandmarkData[],
+        ocr: OCRData[],
+        faceCompareMatch?: boolean
+    },
+    backID?: {
+        landmark: LandmarkData[],
+        ocr: OCRData[]
+    },
+    liveness?: boolean
 }
 
 interface SaveDocumentType {

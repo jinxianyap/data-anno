@@ -7,7 +7,7 @@ import options from '../../../options.json';
 import './ControlPanel.scss';
 import { GeneralActionTypes } from '../../../store/general/types';
 import { IDActionTypes, IDState, InternalIDState } from '../../../store/id/types';
-import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord, LandmarkData } from '../../../store/image/types';
+import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord, LandmarkData, Position } from '../../../store/image/types';
 import { progressNextStage, getNextID, saveToLibrary } from '../../../store/general/actionCreators';
 import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, updateFrontIDFlags, restoreID } from '../../../store/id/actionCreators';
 import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, addLandmarkData, updateLandmarkFlags, addOCRData, setFaceCompareMatch, restoreImage } from '../../../store/image/actionCreators';
@@ -90,11 +90,13 @@ interface IState {
         docType: string,
         landmarks: {
             name: string,
+            codeName: string,
             flags: string[]
         }[]
     }[];
     currentLandmarks: {
         name: string,
+        codeName: string,
         flags: string[]
     }[];
     landmarkFlags: {
@@ -110,12 +112,14 @@ interface IState {
         docType: string,
         details: {
             name: string,
+            codeName: string,
             mapToLandmark: string,
             value?: string
         }[]
     }[];
     currentOCR: {
         name: string,
+        codeName: string,
         mapToLandmark: string,
         value?: string
     }[];
@@ -182,10 +186,12 @@ class ControlPanel extends React.Component<IProps, IState> {
                     }).then((res: any) => {
                         if (res.status === 200) {
                             console.log(res);
-                            let completeID = DatabaseUtil.loadSessionData(res.data, this.props.indexedID);
-                            this.props.loadNextID(completeID);
-                            this.loadSegCheckImage();
-                            this.setState({loadedSegCheckImage: true});
+                            DatabaseUtil.loadSessionData(res.data, this.props.indexedID).then((completeID) => {
+                                console.log(completeID);
+                                this.props.loadNextID(completeID);
+                                this.loadSegCheckImage();
+                                this.setState({loadedSegCheckImage: true});
+                            });
                         }
                     }).catch((err: any) => {
                         console.error(err);
@@ -278,16 +284,19 @@ class ControlPanel extends React.Component<IProps, IState> {
             case (CurrentStage.LANDMARK_EDIT): {
                 if (this.props.internalID === undefined) return;
                 if (!this.state.landmarksLoaded) {
+                    console.log('intial load of landmark set');
                     this.loadLandmarkData();
                 } else {
                     this.state.landmarks.forEach((each) => {
                         // current set of landmarks is incorrect for the doctype
                         if (each.docType === this.props.internalID.processStage && each.landmarks !== this.state.currentLandmarks) {
+                            console.log('reload set of landmark');
                             this.initializeLandmarkData(each.landmarks);
                             this.setState({currentLandmarks: each.landmarks});
                         } else if (each.docType === this.props.internalID.processStage && each.landmarks === this.state.currentLandmarks
                             && this.props.currentImage.landmark.length === 0) {
                             // initial landmark names not added to image state
+                            console.log('adding intiial landmarks');
                             this.initializeLandmarkData(this.state.currentLandmarks);
                         }
                     });
@@ -395,9 +404,12 @@ class ControlPanel extends React.Component<IProps, IState> {
                 sessionID:  this.props.indexedID.sessionID
             }).then((res: any) => {
                 if (res.status === 200) {
-                    let completeID = DatabaseUtil.loadSessionData(res.data, this.props.indexedID);
-                    this.props.loadNextID(completeID);
-                    this.loadSegCheckData();
+                    DatabaseUtil.loadSessionData(res.data, this.props.indexedID)
+                    .then((completeID) => {
+                        console.log(completeID);
+                        this.props.loadNextID(completeID);
+                        this.loadSegCheckData();
+                    })
                 }
             }).catch((err: any) => {
                 console.error(err);
@@ -429,14 +441,15 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     loadLandmarkData = () => {
-        let docLandmarks: {docType: string, landmarks: {name: string, flags: string[]}[]}[] = [];
-        let currentLandmarks: {name: string, flags: string[]}[] = [];
+        let docLandmarks: {docType: string, landmarks: {name: string, codeName: string, flags: string[]}[]}[] = [];
+        let currentLandmarks: {name: string, codeName: string, flags: string[]}[] = [];
         let flags: {category: string, flags: string[]}[] = [];
         options.landmark.keys.forEach((each, idx) => {
-            let landmarks: {name: string, flags: string[]}[] = [];
-            options.landmark.values[idx].forEach((each) => {
+            let landmarks: {name: string, codeName: string, flags: string[]}[] = [];
+            options.landmark.displayNames[idx].forEach((each, i) => {
                 landmarks.push({
                     name: each,
+                    codeName: options.landmark.codeNames[idx][i],
                     flags: []
                 });
             });
@@ -446,8 +459,7 @@ class ControlPanel extends React.Component<IProps, IState> {
             });
 
             if (this.props.internalID.processStage === each && this.props.currentImage.landmark.length === 0) {
-                currentLandmarks = landmarks;
-                this.initializeLandmarkData(landmarks);
+                currentLandmarks = this.initializeLandmarkData(landmarks);
             }
         });
 
@@ -461,31 +473,65 @@ class ControlPanel extends React.Component<IProps, IState> {
         this.setState({landmarks: docLandmarks, currentLandmarks: currentLandmarks, landmarkFlags: flags, landmarksLoaded: true});
     }
 
-    initializeLandmarkData = (landmarks: {name: string, flags: string[]}[]) => {
+    initializeLandmarkData = (landmarks: {name: string, codeName: string, flags: string[]}[]) => {
+        let newLandmarks: {name: string, codeName: string, flags: string[]}[] = [];
         landmarks.forEach((each, idx) => {
             let landmark: LandmarkData = {
                 id: idx,
                 name: each.name,
+                codeName: each.codeName,
                 flags: each.flags,
                 type: 'landmark'
             };
+            if (this.props.currentID.givenData !== undefined) {
+                // if db csv already has ocr data
+                if (this.props.currentID.originalIDProcessed && this.props.currentID.givenData.backID !== undefined) {
+                    let dbLandmark = this.props.currentID.givenData.backID.landmark.find((lm) => lm.codeName === each.codeName);
+                    if (dbLandmark !== undefined) {
+                        landmark.position = dbLandmark.position;
+                    }
+                } else {
+                    if (this.props.currentID.givenData.originalID !== undefined) {
+                        let dbLandmark = this.props.currentID.givenData.originalID.landmark.find((lm) => lm.codeName === each.codeName);
+                        if (dbLandmark !== undefined) {
+                            landmark.position = dbLandmark.position;
+                        }
+                    }
+                }
+            }
+            // if not, just initialize with the correct set of landmarks with each position as undefined
             this.props.addLandmarkData(landmark);
-        })
+            newLandmarks.push(landmark);
+        });
+        return newLandmarks;
     }
     
     loadOCRDetails = () => {
-        let docOCR: {docType: string, details: {name: string, mapToLandmark: string, value?: string}[]}[] = [];
-        let currentOCR: {name: string, mapToLandmark: string, value?: string}[] = [];
+        let docOCR: {docType: string, details: {name: string, codeName: string, mapToLandmark: string, value?: string}[]}[] = [];
+        let currentOCR: {name: string, codeName: string, mapToLandmark: string, value?: string}[] = [];
         options.ocr.keys.forEach((each, idx) => {
-            let ocr: {name: string, mapToLandmark: string, value?: string}[] = [];
-            for (var i = 0; i < options.ocr.values[idx].length; i++) {
-                let value = this.props.currentID.jsonData !== undefined ? this.props.currentID.jsonData[options.ocr.values[idx][i]] : undefined;
-                // special case for birthdate
-                if (this.props.currentID.jsonData !== undefined && options.ocr.values[idx][i] === "birthDate") {
-                    value = this.props.currentID.jsonData[options.ocr.values[idx][i]].originalString;
+            let ocr: {name: string, codeName: string, mapToLandmark: string, value?: string}[] = [];
+            for (var i = 0; i < options.ocr.codeNames[idx].length; i++) {
+                let value = undefined;
+                if (this.props.currentID.givenData !== undefined) {
+                    // if db csv already has ocr data
+                    if (this.props.currentID.originalIDProcessed && this.props.currentID.givenData.backID !== undefined) {
+                        let dbOCR = this.props.currentID.givenData.backID.ocr.find((lm) => lm.codeName === options.ocr.codeNames[idx][i]);
+                        if (dbOCR !== undefined) {
+                            value = dbOCR.labels.map((each) => each.value).join(' ');
+                        }
+                    } else {
+                        if (this.props.currentID.givenData.originalID !== undefined) {
+                            let dbOCR = this.props.currentID.givenData.originalID.ocr.find((lm) => lm.codeName ===  options.ocr.codeNames[idx][i]);
+                            if (dbOCR !== undefined) {
+                                value = dbOCR.labels.map((each) => each.value).join(' ');
+                            }
+                        }
+                    }
                 }
                 ocr.push({
-                    name: options.ocr.values[idx][i],
+                    name: options.ocr.displayNames[idx][i],
+                    codeName: options.ocr.codeNames[idx][i],
                     mapToLandmark: options.ocr.mapToLandmark[idx][i],
                     value: value
                 });
@@ -713,7 +759,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                     </Card>
                 : <div />}
                 {
-                    this.state.selectedFrontIDFlags.length > 0 || this.state.selectedBackIDFlags.length > 0
+                    !this.props.currentID.originalIDProcessed && this.state.selectedFrontIDFlags.length > 0 || 
+                    this.props.currentID.originalIDProcessed && this.state.selectedBackIDFlags.length > 0
                     ?
                     (<Button variant="primary" className="block-button" id="segcheck-skip-btn"
                         onClick={this.props.currentID.originalIDProcessed ? this.loadNextID : this.loadNextID}>
@@ -910,7 +957,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         const getLandmarkFlags = () => {
             const setFlag = (selected: string[]) => {
                 for (var i = 0; i < this.state.currentLandmarks.length; i++) {
-                    if (this.state.currentLandmarks[i].name === this.state.selectedLandmark) {
+                    if (this.state.currentLandmarks[i].codeName === this.state.selectedLandmark) {
                         let landmarks = this.state.currentLandmarks;
                         let landmark = landmarks[i];
                         landmark.flags = selected;
@@ -1002,7 +1049,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                             eventKey={idx.toString()}
                                             className={getClassName(each)}
                                             key={idx}
-                                            onClick={() => setLandmark(each.name)}>
+                                            onClick={() => setLandmark(each.codeName)}>
                                                 {DatabaseUtil.beautifyWord(each.name)}
                                         </Accordion.Toggle>
                                         <Accordion.Collapse eventKey={idx.toString()}>
@@ -1031,7 +1078,7 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     ocrDetails = () => {
-        let refs: {name: string, mapToLandmark: string, ref: any}[] = [];
+        let refs: {name: string, codeName: string, mapToLandmark: string, ref: any}[] = [];
 
         const handleSubmit = (e: any) => {
             e.preventDefault();
@@ -1042,6 +1089,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     id: idx,
                     type: 'OCR',
                     name: each.name,
+                    codeName: each.codeName,
                     mapToLandmark: each.mapToLandmark,
                     labels: each.ref.value.split(' ').map((each: string, idx: number) => {
                         return {id: idx, value: each};
@@ -1074,7 +1122,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                             <Form.Group key={each.name + "OCR"}>
                                 <Form.Label>{DatabaseUtil.beautifyWord(each.name)}</Form.Label>
                                 {/* SKIP_VALIDATION: Remove required */}
-                                <Form.Control type="text" defaultValue={each.value} ref={(ref: any) => {refs.push({name: each.name, mapToLandmark: each.mapToLandmark,ref})}} />
+                                <Form.Control type="text" defaultValue={each.value}
+                                ref={(ref: any) => {refs.push({name: each.name, codeName: each.codeName, mapToLandmark: each.mapToLandmark,ref})}} />
                             </Form.Group>
                         );
                     })
@@ -1343,7 +1392,7 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     loadBackId = () => {
         this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
-        this.setState({loadedSegCheckImage: true}, () => this.props.loadImageState(this.props.internalID.backID!));
+        this.setState({passesCrop: undefined, loadedSegCheckImage: true}, () => this.props.loadImageState(this.props.internalID.backID!));
     }
 
     loadNextInternalId = () => {

@@ -59,6 +59,7 @@ interface IState {
 type Box = {
     id: number,
     name: string,
+    codeName: string,
     value?: string,
     position: {
         x1?: number,
@@ -96,6 +97,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             currentBox: {
                 id: 0,
                 name: '',
+                codeName: '',
                 position: {},
             },
             landmarkBoxes: [],
@@ -152,6 +154,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 currentBox: {
                     id: 0,
                     name: '',
+                    codeName: '',
                     position: {}
                 }
             })
@@ -266,6 +269,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     landmark.position.y3 / this.state.ratio,
                     landmark.position.x3 / this.state.ratio,
                     landmark.name,
+                    landmark.codeName,
                     landmark.name,
                     this.props.currentStage !== CurrentStage.LANDMARK_EDIT,
                     true,
@@ -273,6 +277,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     this.props.currentStage !== CurrentStage.LANDMARK_EDIT ? false : this.props.currentSymbol === landmark.name);
                 let box: Box = {
                     id: landmark.id,
+                    codeName: landmark.codeName,
                     name: landmark.name,
                     value: landmark.name,
                     position: {
@@ -317,6 +322,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                         pos.y3 / this.state.ratio,
                         pos.x3 / this.state.ratio,
                         ocr.name,
+                        ocr.codeName,
                         label.value,
                         this.props.currentStage !== CurrentStage.OCR_EDIT,
                         false,
@@ -325,6 +331,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                         this.props.currentSymbol === ocr.name && this.props.currentWord.id === label.id);
                     let box: Box = {
                         id: label.id,
+                        codeName: ocr.codeName,
                         name: ocr.name,
                         value: label.value,
                         position: {
@@ -441,6 +448,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 id: this.props.currentStage === CurrentStage.OCR_EDIT ? this.props.currentWord.id
                 : this.props.currentImageState.landmark.find((each) => each.name === this.props.currentSymbol)!.id,
                 name: this.props.currentSymbol,
+                codeName: '',
                 position: {
                     x1: e.latlng.lng * this.state.ratio,
                     y1: e.latlng.lat * this.state.ratio,
@@ -518,6 +526,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             currentBox: {
                 id: this.state.currentBox.id,
                 name: this.props.currentSymbol,
+                codeName: '',
                 position: {
                     ...this.state.currentBox.position,
                     x2: e.latlng.lng * this.state.ratio,
@@ -564,6 +573,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 e.latlng.lat, 
                 e.latlng.lng, 
                 this.props.currentSymbol,
+                this.props.currentImageState.landmark.find((each) => each.name === this.props.currentSymbol)!.codeName,
                 this.props.currentSymbol,
                 false,
                 true,
@@ -581,6 +591,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 currentBox: {
                     id: this.state.drawnLandmarks.length,
                     name: '',
+                    codeName: '',
                     position: {}
                 },
                 landmarkBoxes: boxes,
@@ -597,6 +608,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 latlng[0], 
                 latlng[1],
                 this.props.currentSymbol, 
+                this.props.currentImageState.ocr.find((each) => each.name === this.props.currentSymbol)!.codeName,
                 this.props.currentImageState.currentWord!.value,
                 false,
                 false,
@@ -615,6 +627,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 currentBox: {
                     id: 0,
                     name: '',
+                    codeName: '',
                     position: {}
                 },
                 ocrBoxes: boxes,
@@ -663,7 +676,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         }
     }
 
-    createRectangle = (lat1: number, lng1: number, lat2: number, lng2: number, name: string, value: string, display?: boolean, isLandmark?: boolean, id?: number, active?: boolean) => {
+    createRectangle = (lat1: number, lng1: number, lat2: number, lng2: number, name: string, codeName: string, value: string, display?: boolean, isLandmark?: boolean, id?: number, active?: boolean) => {
         let boxBounds: [number, number][] = this.reorderCoords(lat1, lng1, lat2, lng2);
         let rectangle = L.rectangle(boxBounds, {color: active ? "green" : "red", weight: 1, className: 'bounding-box'}).addTo(this.state.map!);
        
@@ -711,6 +724,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         let resultBox: Box = {
             id: id !== undefined ? id : (!isLandmark ? this.props.currentWord.id : this.state.drawnLandmarks.length),
             name: name,
+            codeName: codeName,
             value: value,
             position: {
                 x1: boxBounds[0][1] * this.state.ratio,
@@ -744,6 +758,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             id: landmark.id,
             type: 'landmark',
             name: landmark.name,
+            codeName: landmark.codeName,
             position: {
                 x1: landmark.position.x1!,
                 x2: landmark.position.x2!,
@@ -1055,6 +1070,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     pos.y3! / this.state.ratio + e.latlng.lat - this.state.prevCoords.lat, 
                     pos.x3! / this.state.ratio + e.latlng.lng - this.state.prevCoords.lng, 
                     box.name,
+                    box.codeName,
                     box.value!,
                     false,
                     isLandmark,
@@ -1076,6 +1092,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     currentBox: {
                         id: this.state.drawnLandmarks.length,
                         name: '',
+                        codeName: '',
                         position: {}
                     },
                     landmarkBoxes: boxes,
@@ -1099,6 +1116,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     lat2,
                     lng2,
                     box.name,
+                    box.codeName,
                     box.value!,
                     false,
                     isLandmark,
@@ -1120,6 +1138,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     currentBox: {
                         id: 0,
                         name: '',
+                        codeName: '',
                         position: {}
                     },
                     ocrBoxes: boxes,
@@ -1153,6 +1172,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     pos.y3! / this.state.ratio, 
                     pos.x3! / this.state.ratio, 
                     box.name,
+                    box.codeName,
                     box.value!,
                     false,
                     isLandmark,
@@ -1174,6 +1194,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     currentBox: {
                         id: this.state.drawnLandmarks.length,
                         name: '',
+                        codeName: '',
                         position: {}
                     },
                     landmarkBoxes: boxes,
@@ -1190,6 +1211,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     pos.y3! / this.state.ratio, 
                     pos.x3! / this.state.ratio, 
                     box.name,
+                    box.codeName,
                     box.value!,
                     false,
                     isLandmark,
@@ -1210,6 +1232,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     currentBox: {
                         id: 0,
                         name: '',
+                        codeName: '',
                         position: {}
                     },
                     ocrBoxes: boxes,

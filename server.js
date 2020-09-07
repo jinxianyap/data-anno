@@ -114,11 +114,105 @@ function allocateFiles(sessionID, route, files) {
     }
 }
 
-function parseCSV(filepath, res, rej) {
+function getCSVData(filepath, session, res, rej) {
     csv()
     .fromFile(filepath)
-    .then((json)=>{
-        res(json);
+    .then(async (json)=>{
+        let result = {};
+        let sessionData = json.filter((each) => each.session_id === session.sessionID);
+        // front ocr data
+        // both ori and ocr images are present -> front ocr succeeded
+        if (session.mykad_front_ori && session.mykad_front_ocr) {
+            let frontEntries = sessionData.filter((each) => each.doc_type === 'MYKAD_FRONT');
+            if (frontEntries.length === 6) {
+                // this means a selfie video was uploaded
+                // result_ocr field are all equivalent, but liveness & confidence section differs among entries
+                let result_ocr = JSON.parse(frontEntries[0].result_ocr);
+                result.front_ocr = {
+                    glare_results: result_ocr.glare_results,
+                    landmarks: result_ocr.landmarks,
+                    ocr_results: result_ocr.ocr_results,
+                    spoof_results: result_ocr.spoof_results
+                };
+                let faceResults = frontEntries.filter((each) => each.type === 'FACE_VS_MYKAD').map((each) => JSON.parse(each.result_face)).filter((each) => each.success);
+                let liveness = frontEntries.find((each) => each.type === 'FACE_LIVENESS');
+                result.face_compare = {
+                    success: faceResults.length === 5,
+                    confidence: faceResults.map((each) => each.collection[0].confidence).reduce((a, b) => Math.max(a, b)),
+                    liveness: liveness !== undefined && JSON.parse(liveness.result_face).status.code === 0 ? liveness.liveness_probability : undefined
+                }
+            } else if (frontEntries.length > 0) {
+                // this means no selfie video was uploaded
+                await new Promise((res, rej) => {
+                    if (frontEntries.length === 1) {
+                        let result_ocr = JSON.parse(frontEntries[0].result_ocr);
+                        result.front_ocr = {
+                            glare_results: result_ocr.glare_results,
+                            landmarks: result_ocr.landmarks,
+                            ocr_results: result_ocr.ocr_results,
+                            spoof_results: result_ocr.spoof_results
+                        };    
+                        if (frontEntries[0].type === 'FACE_VS_MYKAD') {
+                            let faceResult = JSON.parse(frontEntries[0].result_face);
+                            result.face_compare = {
+                                success: faceResult.success,
+                                confidence: faceResult.collection[0].confidence
+                            }
+                        }
+                        res();            
+                    } else {
+                        // multiple tries, take most recent entry
+                        let frontDone = false;
+                        let mostRecentFound = false;
+                        let mostRecent = undefined;
+                        for (let i = frontEntries.length - 1; i >= 0; i--) {
+                            if (!frontDone && parseInt(frontEntries[i].code) === 0) {
+                                frontDone = true;
+                                let result_ocr = JSON.parse(frontEntries[i].result_ocr);
+                                result.front_ocr = {
+                                    glare_results: result_ocr.glare_results,
+                                    landmarks: result_ocr.landmarks,
+                                    ocr_results: result_ocr.ocr_results,
+                                    spoof_results: result_ocr.spoof_results
+                                };
+                            }
+                            if (!mostRecentFound && frontEntries[i].type === 'FACE_VS_MYKAD') {
+                                mostRecentFound = true;
+                                mostRecent = frontEntries[i];
+                            }
+                            if (i === 0 && frontDone && mostRecentFound) {
+                                let faceResult = JSON.parse(mostRecent.result_face);
+                                result.face_compare = {
+                                    success: faceResult.success,
+                                    confidence: faceResult.collection[0].confidence
+                                }
+                                res();
+                            } else if (i === 0 && frontDone) {
+                                res();
+                            }
+                        }
+                    }
+                })
+            }
+        }
+
+        // back ocr data
+        // both ori and ocr images are present -> back ocr succeeded
+        if (session.mykad_back_ori && session.mykad_back_ocr) {
+            let backEntries = sessionData.filter((each) => each.doc_type === 'MYKAD_BACK');
+            if (backEntries.length > 0) {
+                // all back ids have the same result_ocr
+                result_ocr = JSON.parse(backEntries[0].result_ocr);
+                result.back_ocr = {
+                    glare_results: result_ocr.glare_results,
+                    landmarks: result_ocr.landmarks,
+                    ocr_results: result_ocr.ocr_results,
+                    spoof_results: result_ocr.spoof_results
+                }
+            }
+        }
+        session.raw_data = result;
+        res(session);
     })
     .catch((err) => {
         console.error(err);
@@ -126,7 +220,7 @@ function parseCSV(filepath, res, rej) {
     })
 }
 
-app.post('/loadSessionData', (req, res) => {
+app.post('/loadSessionData', async (req, res) => {
     let db = req.body.database;
     let date = req.body.date;
     let sessionID = req.body.sessionID;
@@ -134,6 +228,10 @@ app.post('/loadSessionData', (req, res) => {
     let route = testFolder + db + "/images/" + date + "/" + sessionID + "/";
     let files = fs.readdirSync(route);
     let session = allocateFiles(sessionID, route, files);
+    let csvPath = testFolder + db + "/raw_data/" + date.slice(0, 4) + '-' + date.slice(4, 6) + '-' + date.slice(6, 8) + '.csv';
+    await new Promise((res, rej) => getCSVData(csvPath, session, res, rej))
+        .then((val) => {session = val;})
+        .catch((err) => {console.error(err)});
     res.status(200).send(session);
 })
 
@@ -172,11 +270,12 @@ app.post('/loadDatabase', async (req, res) => {
             let folder = {
                 date: dateImgs[i],
                 sessions: sessionIDs,
-                raw_data: undefined
+                // raw_data: undefined
             };
-            await new Promise((res, rej) => parseCSV(csvPath, res))
-                .then((val) => {folder.raw_data = val; folders.push(folder);})
-                .catch((err) => {console.error(err); folders.push(folder);});
+            // await new Promise((res, rej) => parseCSV(csvPath, res))
+            //     .then((val) => {folder.raw_data = val; folders.push(folder);})
+            //     .catch((err) => {console.error(err); folders.push(folder);});
+            folders.push(folder);
         } else {
             res.status(500).send();
             return;
