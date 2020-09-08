@@ -89,13 +89,18 @@ export class DatabaseUtil {
                 let ocr = [];
 
                 let ocrSrc = front ? session.mykad_front_ocr : session.mykad_back_ocr;
-                let height: number = await new Promise((res, rej) => {
+                let imgProps: ImageProps = await new Promise((res, rej) => {
                     let img = new Image();
                     img.onload = () => {
-                        res(img.height);
+                        let props: ImageProps = {
+                            height: img.height,
+                            width: img.width
+                        }
+                        res(props);
                     }
                     img.src = ocrSrc;
                 })
+                given.imageProps = imgProps;
 
                 landmarks = rawData.landmarks.map((each: any, idx: number) => {
                     let flags: string[] = [];
@@ -117,10 +122,10 @@ export class DatabaseUtil {
                             x2: each.coords[2],
                             x3: each.coords[2],
                             x4: each.coords[0],
-                            y1: height - each.coords[1],
-                            y2: height - each.coords[1],
-                            y3: height - each.coords[3],
-                            y4: height - each.coords[3]
+                            y1: imgProps.height - each.coords[1],
+                            y2: imgProps.height - each.coords[1],
+                            y3: imgProps.height - each.coords[3],
+                            y4: imgProps.height - each.coords[3]
                         }
                     }
                     return landmark;
@@ -233,6 +238,7 @@ export class DatabaseUtil {
             processStage: ID.internalIDs.map((each) => each.processStage),
             documentType: ID.internalIDs.map((each) => each.documentType),
 
+            imageProps: ID.givenData!.imageProps,
             segmentation: {
                 originalID: ID.internalIDs.map((each) => each.originalID!.IDBox),
                 backID: ID.internalIDs.map((each) => each.backID!.IDBox)

@@ -128,6 +128,60 @@ function allocateFiles(sessionID, route, files) {
     }
 }
 
+function updateDataWithJSON(result, data) {
+    function updateOCR(ocrResults, front) {
+        if (ocrResults !== undefined) {
+            let landmarks = front ? data.landmarks.originalID : data.landmarks.backID;
+            let ocrs = front ? data.ocr.originalID : data.ocr.backID;
+            if (landmarks !== undefined && landmarks.length > 0) {
+                ocrResults.glare_results = ocrResults.glare_results.map((each) => {
+                    let landmark = landmarks[0].find((lm) => lm.codeName === each.field);
+                    if (landmark !== undefined) {
+                        each.glare = landmark.flags.includes('glare');
+                    }
+                    return each;
+                })
+        
+                ocrResults.landmarks = ocrResults.landmarks.map((each) => {
+                    let landmark = landmarks[0].find((lm) => lm.codeName === each.id);
+                    if (landmark !== undefined && data.imageProps !== undefined) {
+                        each.coords = [landmark.position.x1, 
+                            data.imageProps.height - landmark.position.y1, 
+                            landmark.position.x2,
+                            data.imageProps.height - landmark.position.y4];
+                    }
+                    return each;
+                })
+            }
+            if (ocrs !== undefined && ocrs.length > 0) {
+                ocrResults.ocr_results = ocrResults.ocr_results.map((each) => {
+                    let ocr = ocrs[0].find((o) => o.codeName === each.field);
+                    if (ocr !== undefined) {
+                        each.text = ocr.labels.map((lbl) => lbl.value).join(" ");
+                    }
+                    return each;
+                })
+            }
+            ocrResults.spoof_results.is_card_spoof = data.frontIDFlags.includes('spoof');
+        }
+        return ocrResults
+    }
+
+    result.front_ocr = updateOCR(result.front_ocr, true);
+    result.back_ocr = updateOCR(result.back_ocr, false);
+    let dataExists = data.faceCompareMatch.length > 0 && data.faceCompareMatch[0] !== null;
+    if (dataExists) {
+        result.face_compare = {
+            success: data.faceCompareMatch[0],
+            confidence: data.faceCompareMatch.map((each) => each) ? 100 : 0,
+            liveness: data.videoLiveness === true ? 100 : 0
+        }
+    
+    }
+
+    return result;
+}
+
 function getCSVData(filepath, session, res, rej) {
     csv()
     .fromFile(filepath)
@@ -236,11 +290,13 @@ function getCSVData(filepath, session, res, rej) {
 
 function mergeJSONData(initial, updated) {
     function mergeLandmarks(originalLandmarks, updatedLandmarks) {
-        if (originalLandmarks.length < updatedLandmarks.length) {
+        if (originalLandmarks.length === 0 || originalLandmarks.length < updatedLandmarks.length) {
             return updatedLandmarks;
         } else {
             return originalLandmarks.map((each, idx) => {
-                if (each.length < updatedLandmarks[idx].length) {
+                if (updatedLandmarks[idx] === undefined) {
+                    return each;
+                } else if (updatedLandmarks[idx] !== undefined && each.length < updatedLandmarks[idx].length) {
                     return updatedLandmarks[idx];
                 } else {
                     return each.map((lm) => {
@@ -261,11 +317,19 @@ function mergeJSONData(initial, updated) {
     }
 
     function mergeOCRs(originalOCRs, updatedOCRs) {
-        if (originalOCRs.length < updatedOCRs.length) {
+        if (originalOCRs === undefined && updatedOCRs === undefined) {
+            return [];
+        } else if (originalOCRs === undefined) {
+            return updatedOCRs;
+        } else if (updatedOCRs === undefined) {
+            return originalOCRs;
+         } else if (originalOCRs.length === 0 || originalOCRs.length < updatedOCRs.length) {
             originalOCRs = updatedOCRs;
         } else {
             return originalOCRs.map((each, idx) => {
-                if (each.length < updatedOCRs[idx].length) {
+                if (updatedOCRs[idx] === undefined) {
+                    return each;
+                } else if (updatedOCRs[idx] !== undefined && each.length < updatedOCRs[idx].length) {
                     return updatedOCRs[idx];
                 } else {
                     return each.map((ocr) => {
@@ -275,7 +339,8 @@ function mergeJSONData(initial, updated) {
                         } else {
                             if (updatedOCR.count !== ocr.count
                             || updatedOCR.labels.every((each) => each.position !== undefined)
-                            || updatedOCR.labels.some((each, idx) => each.value !== ocr.labels[idx].value)) {
+                            || updatedOCR.labels.some((each, idx) => each.value !== ocr.labels[idx].value 
+                                || each.position !== ocr.labels[idx].position)) {
                                 return updatedOCR;
                             } else {
                                 return ocr;
@@ -299,6 +364,7 @@ function mergeJSONData(initial, updated) {
         processStage: updated.processStage,
         documentType: updated.documentType,
 
+        imageProps: updated.imageProps,
         segmentation: {
             originalID: updated.segmentation.originalID.IDBox,
             backID: updated.segmentation.backID.IDBox
@@ -330,10 +396,21 @@ app.post('/loadSessionData', async (req, res) => {
     let route = testFolder + db + "/images/" + date + "/" + sessionID + "/";
     let files = fs.readdirSync(route);
     let session = allocateFiles(sessionID, route, files);
+
     let csvPath = testFolder + db + "/raw_data/" + date.slice(0, 4) + '-' + date.slice(4, 6) + '-' + date.slice(6, 8) + '.csv';
     await new Promise((res, rej) => getCSVData(csvPath, session, res, rej))
         .then((val) => {session = val;})
         .catch((err) => {console.error(err)});
+    try {
+        let jsonFilePath = testFolder + "annotation_output/" + db + "/" + date + "/" + sessionID + ".json";
+        let jsonData = fs.readFileSync(jsonFilePath);
+        if (jsonData) {
+            let data = JSON.parse(jsonData);
+            session.raw_data = updateDataWithJSON(session.raw_data, data); 
+        }
+    } catch (err) {
+        console.error(err);
+    }
     res.status(200).send(session);
 })
 
@@ -406,12 +483,25 @@ app.get('/getDatabases', (req, res) => {
 })
 
 app.post('/returnOutput', async (req, res) => {
-    let { library, overwrite } = req.body;
+    let { library, database, overwrite } = req.body;
     let today = fromDateToString(new Date(), true);
-    let route = testFolder + "annotation_output/output/";
+    let topLevel = testFolder + "annotation_output/"
+    let route = topLevel + database + "/";
+
+    let dbs = fs.readdirSync(topLevel);
+    if (dbs) {
+        if (!dbs.includes(database)) {
+            fs.mkdirSync(route, {recursive: true}, (err) => {
+                if (err) throw err;
+                res.status(500).send();
+            })
+        }
+    } else {
+        res.status(500).send();
+    }
 
     if (!overwrite) {
-        route = testFolder + "annotation_output/output_" + today + "/";
+        route = testFolder + "annotation_output/" + database + "/output_" + today + "/";
         fs.mkdirSync(route, {recursive: true}, (err) => {
             if (err) throw err;
         });
@@ -426,24 +516,28 @@ app.post('/returnOutput', async (req, res) => {
                 if (!dates.includes(date)) {
                     fs.mkdirSync(dateRoute, {recursive: true}, (err) => {
                         if (err) throw err;
+                        res.status(500).send();
                     });
                 }
-                let sessionRoute = dateRoute + each.sessionID + ".json";
                 try {
+                    let sessionRoute = dateRoute + each.sessionID + ".json";
                     each.lastModified = (new Date()).toLocaleString();
                     try {
-                        let data = fs.readFileSync(sessionRoute);
-                        if (data) {
+                        let sessions = fs.readdirSync(dateRoute);
+                        if (sessions.includes(each.sessionID + ".json")) {
+                            let data = fs.readFileSync(sessionRoute);
                             let initialData = JSON.parse(data);
                             let updatedData = mergeJSONData(initialData, each);
+                            console.log("merge " + each.sessionID);
                             fs.writeFileSync(sessionRoute, JSON.stringify(updatedData), 'utf8');
                             res({sessionID: each.sessionID, success: true});
+                        } else {
+                            console.log("new file " + each.sessionID);
+                            fs.writeFileSync(sessionRoute, JSON.stringify(each), 'utf8');
+                            res({sessionID: each.sessionID, success: true})
                         }
                     } catch(err) {
-                        // console.error(err);
-                        // if json file not found
-                        fs.writeFileSync(sessionRoute, JSON.stringify(each), 'utf8');
-                        res({sessionID: each.sessionID, success: true})
+                        throw err;
                     }
                 } catch(err) {
                     console.error(err);

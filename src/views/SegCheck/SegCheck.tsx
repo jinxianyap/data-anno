@@ -2,7 +2,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { ImageState } from '../../store/image/types';
 import { AppState } from '../../store';
-import { ImageUtil } from '../../utils/ImageUtil';
+import { GeneralUtil } from '../../utils/GeneralUtil';
 import { Container, Row, Col, Button } from 'react-bootstrap';
 import './SegCheck.scss';
 import { CurrentStage, Rotation } from '../../utils/enums';
@@ -54,13 +54,13 @@ class SegCheck extends React.Component<IProps, IState> {
         if (this.props.noMoreIDs) return;
         if (this.props.originalProcessed) {
             this.setState({
-                originalImage: ImageUtil.loadImage("segCheckID", this.props.backID!.image, "segCheckBackID"),
-                croppedImage: ImageUtil.loadImage("segCheckCropped", this.props.backID!.croppedImage!, "segCheckCroppedID")
+                originalImage: GeneralUtil.loadImage("segCheckID", this.props.backID!.image, "segCheckBackID"),
+                croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.backID!.croppedImage!, "segCheckCroppedID")
             })
         } else if (this.props.originalID !== undefined) {
             this.setState({
-                originalImage: ImageUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
-                croppedImage: ImageUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID")
+                originalImage: GeneralUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
+                croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID")
             })
         }
     }
@@ -72,8 +72,8 @@ class SegCheck extends React.Component<IProps, IState> {
         if (!previousProps.originalProcessed && this.props.originalProcessed) {
             let originalImage = this.state.originalImage!;
             let croppedImage = this.state.croppedImage!;
-            originalImage.src = ImageUtil.getSource(this.props.backID!.image);
-            croppedImage.src = ImageUtil.getSource(this.props.backID!.croppedImage!);
+            originalImage.src = GeneralUtil.getSource(this.props.backID!.image);
+            croppedImage.src = GeneralUtil.getSource(this.props.backID!.croppedImage!);
             this.setState({
                 originalImage: originalImage,
                 croppedImage: croppedImage
@@ -81,16 +81,16 @@ class SegCheck extends React.Component<IProps, IState> {
         }
         if (!this.props.originalProcessed && this.state.originalImage === undefined && this.state.croppedImage === undefined) {
             this.setState({
-                originalImage: ImageUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
-                croppedImage: ImageUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID")
+                originalImage: GeneralUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
+                croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID")
             })
         }
         if (!previousProps.currentID!.dataLoaded && this.props.currentID!.dataLoaded) {
             if (!this.state.originalImage || !this.state.croppedImage) return;
             let originalImage = this.state.originalImage!;
             let croppedImage = this.state.croppedImage!;
-            originalImage.src = ImageUtil.getSource(this.props.originalID!.image);
-            croppedImage.src = ImageUtil.getSource(this.props.originalID!.croppedImage!);
+            originalImage.src = GeneralUtil.getSource(this.props.originalID!.image);
+            croppedImage.src = GeneralUtil.getSource(this.props.originalID!.croppedImage!);
             this.setState({
                 originalImage: originalImage,
                 croppedImage: croppedImage
@@ -103,7 +103,7 @@ class SegCheck extends React.Component<IProps, IState> {
     }
 
     disableControls = (cropped: boolean, ccw: boolean) => {
-        document.getElementById('overlay')!.classList.add('show');
+        GeneralUtil.toggleOverlay(true);
         this.setState({isRotating: true, ccw: ccw});
     }
 
@@ -158,7 +158,7 @@ class SegCheck extends React.Component<IProps, IState> {
         parent.appendChild(img);
 
         setTimeout(() => {
-            document.getElementById('overlay')!.classList.remove('show');
+            GeneralUtil.toggleOverlay(false);
             this.setState({
                 originalImageRotation: cropped ? this.state.originalImageRotation : newRotation,
                 croppedImageRotation: cropped ? newRotation : this.state.croppedImageRotation,

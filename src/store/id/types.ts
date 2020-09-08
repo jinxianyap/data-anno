@@ -1,6 +1,6 @@
 import { Action } from '../Actions';
 import { IDProcess, Rotation } from '../../utils/enums';
-import { ImageState, IDBox, LandmarkData, OCRData } from '../image/types';
+import { ImageState, IDBox, LandmarkData, OCRData, ImageProps } from '../image/types';
 
 export type IDState = {
     processed: boolean;
@@ -45,6 +45,7 @@ export type InternalIDState = {
 }
 
 export type GivenData = {
+    imageProps?: ImageProps;
     originalID?: {
         spoof: boolean;
         segmentation?: IDBox,

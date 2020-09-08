@@ -14,6 +14,7 @@ import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, addLand
 // import AddTypeModal from '../AddTypeModal/AddTypeModal';
 import { DatabaseUtil } from '../../../utils/DatabaseUtil';
 import { HOST, PORT, TRANSFORM } from '../../../config';
+import { GeneralUtil } from '../../../utils/GeneralUtil';
 const axios = require('axios');
 
 var fs = require('browserify-fs');
@@ -180,24 +181,22 @@ class ControlPanel extends React.Component<IProps, IState> {
             case (CurrentStage.SEGMENTATION_CHECK): {
                 if (this.props.indexedID === undefined) break;
                 if (previousProps.indexedID.index !== this.props.indexedID.index) {
-                    document.getElementById('overlay')!.classList.add('show');
+                    GeneralUtil.toggleOverlay(true);
                     axios.post('/loadSessionData', {
                         database: this.props.database,
                         date: this.props.indexedID.dateCreated,
                         sessionID:  this.props.indexedID.sessionID
                     }).then((res: any) => {
                         if (res.status === 200) {
-                            console.log(res);
                             DatabaseUtil.loadSessionData(res.data, this.props.indexedID).then((completeID) => {
-                                console.log(completeID);
                                 this.props.loadNextID(completeID);
                                 this.loadSegCheckImage();
-                                this.setState({loadedSegCheckImage: true}, () => document.getElementById('overlay')!.classList.remove('show'));
+                                this.setState({loadedSegCheckImage: true}, () => GeneralUtil.toggleOverlay(false));
                             });
                         }
                     }).catch((err: any) => {
                         console.error(err);
-                        document.getElementById('overlay')!.classList.remove('show');
+                        GeneralUtil.toggleOverlay(false);
                     });
                     break;
                 }
@@ -409,7 +408,7 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     componentDidMount() {
         if (this.props.currentStage === CurrentStage.SEGMENTATION_CHECK) {
-            document.getElementById('overlay')!.classList.add('show');
+            GeneralUtil.toggleOverlay(true);
             axios.post('/loadSessionData', {
                 database: this.props.database,
                 date: this.props.indexedID.dateCreated,
@@ -418,15 +417,14 @@ class ControlPanel extends React.Component<IProps, IState> {
                 if (res.status === 200) {
                     DatabaseUtil.loadSessionData(res.data, this.props.indexedID)
                     .then((completeID) => {
-                        console.log(completeID);
                         this.props.loadNextID(completeID);
                         this.loadSegCheckData();
-                        document.getElementById('overlay')!.classList.remove('show');
+                        GeneralUtil.toggleOverlay(false);
                     })
                 }
             }).catch((err: any) => {
                 console.error(err);
-                document.getElementById('overlay')!.classList.remove('show');
+                GeneralUtil.toggleOverlay(false);
             });
         }
     }
@@ -502,7 +500,6 @@ class ControlPanel extends React.Component<IProps, IState> {
                 if (this.props.currentID.originalIDProcessed) {
                     if (this.props.currentID.givenData.backID !== undefined) {
                         let dbLandmark = this.props.currentID.givenData.backID.landmark.find((lm) => lm.codeName === each.codeName);
-                        console.log(dbLandmark);
                         if (dbLandmark !== undefined) {
                             landmark.position = dbLandmark.position;
                         }
@@ -638,6 +635,8 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
 
         const skipSegCheck = () => {
+            this.props.updateFrontIDFlags(this.state.selectedFrontIDFlags);
+            this.props.updateBackIDFlags(this.state.selectedBackIDFlags);
             if (this.props.currentID.selfieVideo!.name !== 'notfound') {
                 this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
             } else if (this.props.currentID.selfieImage!.name !== 'notfound' && this.props.currentID.originalID!.croppedImage!.name !== 'notfound') {
@@ -673,7 +672,10 @@ class ControlPanel extends React.Component<IProps, IState> {
                         console.log('refresh front');
                         this.props.refreshIDs(false);
                         if (this.state.passesCrop) {
-                            let preBox = this.props.currentID.givenData!.backID!.segmentation;
+                            let preBox = undefined;
+                            if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.originalID !== undefined) {
+                                preBox = this.props.currentID.givenData!.originalID!.segmentation;
+                            }
                             this.props.createNewID(preBox !== undefined ? preBox : box, true);
                             this.props.saveDocumentType(0, this.state.singleDocumentType);
                         } else {
@@ -698,7 +700,10 @@ class ControlPanel extends React.Component<IProps, IState> {
                         console.log('refresh back');
                         this.props.refreshIDs(true);
                         if (this.state.passesCrop) {
-                            let preBox = this.props.currentID.givenData!.backID!.segmentation;
+                            let preBox = undefined;
+                            if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.backID !== undefined) {
+                                preBox = this.props.currentID.givenData!.backID!.segmentation;
+                            }
                             this.props.setIDBox(preBox !== undefined ? preBox : box, this.props.currentID.backID!.croppedImage!);
                             this.props.loadImageState(this.props.internalID.backID!, this.state.passesCrop);
                             if (this.props.processType === ProcessType.SEGMENTATION) {
@@ -729,7 +734,10 @@ class ControlPanel extends React.Component<IProps, IState> {
                 //     this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
                 // } 
                 if (this.props.internalID === undefined) {
-                    let preBox = this.props.currentID.givenData!.originalID!.segmentation;
+                    let preBox = undefined;
+                    if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.originalID !== undefined) {
+                        preBox = this.props.currentID.givenData!.originalID!.segmentation;
+                    }
                     this.props.createNewID(preBox !== undefined ? preBox : box, true);
                     this.props.saveDocumentType(0, this.state.singleDocumentType);
                     this.props.updateFrontIDFlags(this.state.selectedFrontIDFlags);

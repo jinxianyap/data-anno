@@ -1,6 +1,6 @@
 
 
-export class ImageUtil {
+export class GeneralUtil {
     public static loadImage(elemID: string, imageFile: File, imageID: string): HTMLImageElement {
         let location = document.getElementById(elemID);
         let image = new Image();
@@ -13,5 +13,13 @@ export class ImageUtil {
 
     public static getSource(imageFile: File): string {
         return URL.createObjectURL(imageFile);
+    }
+
+    public static toggleOverlay(show: boolean): void {
+        if (show) {
+            document.getElementById('overlay')!.classList.add('show');
+        } else {
+            document.getElementById('overlay')!.classList.remove('show');
+        }
     }
 }

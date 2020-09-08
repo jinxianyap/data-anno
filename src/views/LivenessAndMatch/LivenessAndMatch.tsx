@@ -6,7 +6,7 @@ import { Container, Row, Col } from 'react-bootstrap';
 import ReactPlayer from 'react-player/lazy';
 import { IDState, InternalIDState } from '../../store/id/types';
 import { CurrentStage } from '../../utils/enums';
-import { ImageUtil } from '../../utils/ImageUtil';
+import { GeneralUtil } from '../../utils/GeneralUtil';
 
 interface IProps {
     id: IDState,
@@ -30,14 +30,14 @@ class LivenessAndMatch extends React.Component<IProps, IState> {
     componentDidUpdate() {
         if (this.props.currentStage === CurrentStage.FR_COMPARE_CHECK && !this.state.croppedImageLoaded) {
             if (this.props.id.croppedFace!.name !== 'notfound') {
-                ImageUtil.loadImage("frCompareFace", this.props.id.croppedFace!, "frCompareID");
+                GeneralUtil.loadImage("frCompareFace", this.props.id.croppedFace!, "frCompareID");
             } else if (this.props.internalID.originalID!.croppedImage!.name !== 'notfound') {
-                ImageUtil.loadImage("frCompareFace", this.props.internalID.originalID!.croppedImage!, "frCompareID");
+                GeneralUtil.loadImage("frCompareFace", this.props.internalID.originalID!.croppedImage!, "frCompareID");
             }
             if (this.props.id.selfieImage!.name !== 'notfound') {
-                ImageUtil.loadImage("frCompareSelfie", this.props.id.selfieImage!, "frCompareSelfieImage");
+                GeneralUtil.loadImage("frCompareSelfie", this.props.id.selfieImage!, "frCompareSelfieImage");
             } else if (this.props.id.videoStills!.length > 0) {
-                ImageUtil.loadImage("frCompareSelfie", this.props.id.videoStills![0], "frCompareSelfieImage");
+                GeneralUtil.loadImage("frCompareSelfie", this.props.id.videoStills![0], "frCompareSelfieImage");
             }
             this.setState({croppedImageLoaded: true});
         }

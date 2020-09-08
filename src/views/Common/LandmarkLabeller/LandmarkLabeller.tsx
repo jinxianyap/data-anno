@@ -732,9 +732,9 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 x3: boxBounds[1][1] * this.state.ratio,
                 x4: boxBounds[0][1] * this.state.ratio,
                 y1: boxBounds[0][0] * this.state.ratio,
-                y2: boxBounds[1][0] * this.state.ratio,
+                y2: boxBounds[0][0] * this.state.ratio,
                 y3: boxBounds[1][0] * this.state.ratio,
-                y4: boxBounds[0][0] * this.state.ratio
+                y4: boxBounds[1][0] * this.state.ratio
             },
             rectangle: rectangle,
             descriptor: textMarker,
