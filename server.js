@@ -159,6 +159,16 @@ function updateDataWithJSON(result, data) {
                     let ocr = ocrs[0].find((o) => o.codeName === each.field);
                     if (ocr !== undefined) {
                         each.text = ocr.labels.map((lbl) => lbl.value).join(" ");
+                        each.coords = ocr.labels.map((lbl) => {
+                            if (lbl.position !== undefined) {
+                                return [lbl.position.x1, 
+                                    data.imageProps.height - lbl.position.y1, 
+                                    lbl.position.x2,
+                                    data.imageProps.height - lbl.position.y4];
+                            } else {
+                                return [];
+                            }
+                        })
                     }
                     return each;
                 })

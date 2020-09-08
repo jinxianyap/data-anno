@@ -138,7 +138,27 @@ export class DatabaseUtil {
                         codeName: each.field,
                         mapToLandmark: this.translateTerm(docKey, 'ocr', each.field, true),
                         name: this.translateTerm(docKey, 'ocr', each.field),
-                        labels: text.map((each, idx) => { let word: OCRWord = {id: idx, value: each}; return word;}),
+                        labels: text.map((lbl, idx) => { 
+                            let pos = undefined;
+                            if (each.coords[idx].length > 0 && each.coords[idx] !== undefined) {
+                                pos = {
+                                    x1: each.coords[idx][0],
+                                    x2: each.coords[idx][2],
+                                    x3: each.coords[idx][2],
+                                    x4: each.coords[idx][0],
+                                    y1: imgProps.height - each.coords[idx][1],
+                                    y2: imgProps.height - each.coords[idx][1],
+                                    y3: imgProps.height - each.coords[idx][3],
+                                    y4: imgProps.height - each.coords[idx][3],
+                                }
+                            }
+                            let word: OCRWord = {
+                                id: idx,
+                                value: lbl,
+                                position: pos
+                            };
+                            return word;
+                        }),
                         count: text.length
                     }
                     return ocr;

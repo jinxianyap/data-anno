@@ -529,8 +529,10 @@ class ControlPanel extends React.Component<IProps, IState> {
                 let value = undefined;
                 if (this.props.currentID.givenData !== undefined) {
                     // if db csv already has ocr data
+                    let ocrsToUpdate: OCRData[] = [];
                     if (this.props.currentID.originalIDProcessed) {
                         if (this.props.currentID.givenData.backID !== undefined) {
+                            ocrsToUpdate = this.props.currentID.givenData.backID.ocr.filter((each) => each.labels.some((lbl) => lbl.position !== undefined));
                             let dbOCR = this.props.currentID.givenData.backID.ocr.find((lm) => lm.codeName === options.ocr.codeNames[idx][i]);
                             if (dbOCR !== undefined) {
                                 value = dbOCR.labels.map((each) => each.value).join(' ');
@@ -538,11 +540,16 @@ class ControlPanel extends React.Component<IProps, IState> {
                         }
                     } else {
                         if (this.props.currentID.givenData.originalID !== undefined) {
+                            ocrsToUpdate = this.props.currentID.givenData.originalID.ocr.filter((each) => each.labels.some((lbl) => lbl.position !== undefined));
                             let dbOCR = this.props.currentID.givenData.originalID.ocr.find((lm) => lm.codeName ===  options.ocr.codeNames[idx][i]);
                             if (dbOCR !== undefined) {
                                 value = dbOCR.labels.map((each) => each.value).join(' ');
                             }
                         }
+                    }
+                    if (ocrsToUpdate.length > 0) {
+                        console.log(ocrsToUpdate);
+                        ocrsToUpdate.forEach(this.props.addOCRData);
                     }
                 }
                 ocr.push({

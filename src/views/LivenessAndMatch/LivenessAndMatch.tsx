@@ -28,17 +28,19 @@ class LivenessAndMatch extends React.Component<IProps, IState> {
     }
 
     componentDidMount() {
-        if (this.props.id.croppedFace!.name !== 'notfound') {
-            GeneralUtil.loadImage("frCompareFace", this.props.id.croppedFace!, "frCompareID");
-        } else if (this.props.internalID.originalID!.croppedImage!.name !== 'notfound') {
-            GeneralUtil.loadImage("frCompareFace", this.props.internalID.originalID!.croppedImage!, "frCompareID");
+        if (this.props.currentStage === CurrentStage.FR_COMPARE_CHECK && !this.state.croppedImageLoaded) {
+            if (this.props.id.croppedFace!.name !== 'notfound') {
+                GeneralUtil.loadImage("frCompareFace", this.props.id.croppedFace!, "frCompareID");
+            } else if (this.props.internalID.originalID!.croppedImage!.name !== 'notfound') {
+                GeneralUtil.loadImage("frCompareFace", this.props.internalID.originalID!.croppedImage!, "frCompareID");
+            }
+            if (this.props.id.selfieImage!.name !== 'notfound') {
+                GeneralUtil.loadImage("frCompareSelfie", this.props.id.selfieImage!, "frCompareSelfieImage");
+            } else if (this.props.id.videoStills!.length > 0) {
+                GeneralUtil.loadImage("frCompareSelfie", this.props.id.videoStills![0], "frCompareSelfieImage");
+            }
+            this.setState({croppedImageLoaded: true});
         }
-        if (this.props.id.selfieImage!.name !== 'notfound') {
-            GeneralUtil.loadImage("frCompareSelfie", this.props.id.selfieImage!, "frCompareSelfieImage");
-        } else if (this.props.id.videoStills!.length > 0) {
-            GeneralUtil.loadImage("frCompareSelfie", this.props.id.videoStills![0], "frCompareSelfieImage");
-        }
-        this.setState({croppedImageLoaded: true});
     }
 
     componentDidUpdate() {
