@@ -11,10 +11,10 @@ import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord, LandmarkData, Po
 import { progressNextStage, getNextID, saveToLibrary } from '../../../store/general/actionCreators';
 import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, updateFrontIDFlags, updateBackIDFlags, restoreID } from '../../../store/id/actionCreators';
 import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, addLandmarkData, updateLandmarkFlags, addOCRData, setFaceCompareMatch, restoreImage } from '../../../store/image/actionCreators';
-// import AddTypeModal from '../AddTypeModal/AddTypeModal';
 import { DatabaseUtil } from '../../../utils/DatabaseUtil';
 import { HOST, PORT, TRANSFORM } from '../../../config';
 import { GeneralUtil } from '../../../utils/GeneralUtil';
+import { GrFormNext, GrFormPrevious } from 'react-icons/gr';
 const axios = require('axios');
 
 var fs = require('browserify-fs');
@@ -23,6 +23,8 @@ interface IProps {
     database: string;
     processType: ProcessType;
     currentStage: CurrentStage;
+    currentIndex: number;
+    totalIDs: number;
     currentID: IDState;
     indexedID: IDState;
     internalID: InternalIDState;
@@ -548,7 +550,6 @@ class ControlPanel extends React.Component<IProps, IState> {
                         }
                     }
                     if (ocrsToUpdate.length > 0) {
-                        console.log(ocrsToUpdate);
                         ocrsToUpdate.forEach(this.props.addOCRData);
                     }
                 }
@@ -644,9 +645,11 @@ class ControlPanel extends React.Component<IProps, IState> {
         const skipSegCheck = () => {
             this.props.updateFrontIDFlags(this.state.selectedFrontIDFlags);
             this.props.updateBackIDFlags(this.state.selectedBackIDFlags);
-            if (this.props.currentID.selfieVideo!.name !== 'notfound') {
+            if (this.props.currentID.selfieVideo!.name !== 'notfound' && this.props.processType === ProcessType.WHOLE) {
                 this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
-            } else if (this.props.currentID.selfieImage!.name !== 'notfound' && this.props.currentID.croppedFace!.name !== 'notfound') {
+            } else if (this.props.currentID.selfieImage!.name !== 'notfound'
+                && this.props.currentID.croppedFace!.name !== 'notfound'
+                && this.props.processType === ProcessType.WHOLE) {
                 this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
             } else {
                 this.loadNextID(true);
@@ -1006,7 +1009,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         const getLandmarkFlags = () => {
             const setFlag = (selected: string[]) => {
                 for (var i = 0; i < this.state.currentLandmarks.length; i++) {
-                    if (this.state.currentLandmarks[i].codeName === this.state.selectedLandmark) {
+                    if (this.state.currentLandmarks[i].name === this.state.selectedLandmark) {
                         let landmarks = this.state.currentLandmarks;
                         let landmark = landmarks[i];
                         landmark.flags = selected;
@@ -1098,7 +1101,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                             eventKey={idx.toString()}
                                             className={getClassName(each)}
                                             key={idx}
-                                            onClick={() => setLandmark(each.codeName)}>
+                                            onClick={() => setLandmark(each.name)}>
                                                 {DatabaseUtil.beautifyWord(each.name)}
                                         </Accordion.Toggle>
                                         <Accordion.Collapse eventKey={idx.toString()}>
@@ -1557,9 +1560,17 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
 
         return (
-            <div id="controlPanel">
-                {showIndex()}
-                {controlFunctions()}
+            <div>
+                <div id="folder-number">
+                    <Button variant="light"><GrFormPrevious /></Button>
+                    <p style={{width: "fit-content", display: "inline-block"}}>Folder:   {this.props.currentIndex + 1}/{this.props.totalIDs}</p>
+                    <Button variant="light"><GrFormNext /></Button>
+                </div>
+                <div id="controlPanel">
+
+                    {showIndex()}
+                    {controlFunctions()}
+                </div>
             </div>
         );
     }
@@ -1594,6 +1605,8 @@ const mapDispatchToProps = {
 
 const mapStateToProps = (state: AppState) => {
     return {
+        currentIndex: state.general.currentIndex,
+        totalIDs: state.general.IDLibrary.length,
         database: state.general.setupOptions.database,
         processType: state.general.setupOptions.processType,
         currentStage: state.general.currentStage,

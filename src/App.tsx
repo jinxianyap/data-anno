@@ -55,9 +55,6 @@ const App: React.FC<IProps> = ({state, currentStage}) => {
                     {paintContent()}
                   </Col>
                   <Col style={{padding: 0, height: "100%"}}>
-                    <div id="folder-number">
-                      <p>Folder:   {state.general.currentIndex + 1}/{state.general.IDLibrary.length}</p>
-                    </div>
                     <ControlPanel />
                   </Col>
                 </Row>)

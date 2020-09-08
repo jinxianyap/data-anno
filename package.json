@@ -63,5 +63,6 @@
     "@types/react-redux": "^7.1.9",
     "concurrently": "^5.3.0"
   },
-  "proxy": "http://localhost:5000"
+  "proxy": "http://localhost:5000",
+  "dbDirectory": "/home/jinxian/for_annotation_tool_dev/"
 }

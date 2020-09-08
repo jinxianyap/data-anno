@@ -32,7 +32,9 @@ export enum ProcessType {
     WHOLE = "Whole",
     SEGMENTATION = "Segmentation",
     LANDMARK = "Landmark",
-    OCR = "OCR"
+    OCR = "OCR",
+    LIVENESS = "Liveness",
+    FACE = "Face", // only do liveness and face comparison
 }
 
 export enum DatabasesTemp {

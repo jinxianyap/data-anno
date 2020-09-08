@@ -4,8 +4,9 @@ const fs = require('fs');
 const path = require('path');
 const app = express();
 const port = process.env.PORT || 5000;
-const testFolder = '../for_annotation_tool_dev/';
 const csv = require('csvtojson');
+const pkg = require('./package.json');
+const testFolder = pkg.dbDirectory;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -178,11 +179,12 @@ function updateDataWithJSON(result, data) {
         return ocrResults
     }
 
-    result.front_ocr = updateOCR(result.front_ocr, true);
-    result.back_ocr = updateOCR(result.back_ocr, false);
+    let newResult = {};
+    newResult.front_ocr = updateOCR(result.front_ocr, true);
+    newResult.back_ocr = updateOCR(result.back_ocr, false);
     let dataExists = data.faceCompareMatch.length > 0 && data.faceCompareMatch[0] !== null;
     if (dataExists) {
-        result.face_compare = {
+        newResult.face_compare = {
             success: data.faceCompareMatch[0],
             confidence: data.faceCompareMatch.map((each) => each) ? 100 : 0,
             liveness: data.videoLiveness === true ? 100 : 0
@@ -190,7 +192,7 @@ function updateDataWithJSON(result, data) {
     
     }
 
-    return result;
+    return newResult;
 }
 
 function getCSVData(filepath, session, res, rej) {
@@ -412,16 +414,29 @@ app.post('/loadSessionData', async (req, res) => {
     await new Promise((res, rej) => getCSVData(csvPath, session, res, rej))
         .then((val) => {session = val;})
         .catch((err) => {console.error(err)});
-    try {
-        let jsonFilePath = testFolder + "annotation_output/" + db + "/" + date + "/" + sessionID + ".json";
-        let jsonData = fs.readFileSync(jsonFilePath);
-        if (jsonData) {
-            let data = JSON.parse(jsonData);
-            session.raw_data = updateDataWithJSON(session.raw_data, data); 
+
+    let outputPath = testFolder + "annotation_output/" + db + "/";
+    let outputFiles = fs.readdirSync(outputPath);
+    if (outputFiles && outputFiles.includes(date)) {
+        let dateOutputPath = outputPath + date + "/";
+        let jsonFilename = sessionID + ".json";
+        let dateOutputFiles = fs.readdirSync(dateOutputPath);
+        
+        if (dateOutputFiles && dateOutputFiles.includes(jsonFilename)) {
+            try {
+                let jsonData = fs.readFileSync(dateOutputPath + jsonFilename);
+                if (jsonData) {
+                    let data = JSON.parse(jsonData);
+                    let updatedData = updateDataWithJSON(session.raw_data, data);
+                    session.raw_data = updatedData;
+                }
+            } catch (err) {
+                console.error(err);
+                session.raw_data = csvData;
+            }
         }
-    } catch (err) {
-        console.error(err);
     }
+
     res.status(200).send(session);
 })
 

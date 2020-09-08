@@ -139,8 +139,8 @@ class SegLabeller extends React.Component<IProps, IState> {
             }
 
             let wrapper: HTMLElement = document.getElementById('seg-edit')!;
-            let xmargin = (wrapper.clientWidth - width) / 2;
-            let ymargin = (wrapper.clientHeight - height) / 2;
+            let xmargin = (wrapper.clientWidth - width) / 4;
+            let ymargin = (wrapper.clientHeight - height) / 4;
 
             this.setState({
                 source: image.src,

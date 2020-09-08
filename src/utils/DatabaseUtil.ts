@@ -140,7 +140,7 @@ export class DatabaseUtil {
                         name: this.translateTerm(docKey, 'ocr', each.field),
                         labels: text.map((lbl, idx) => { 
                             let pos = undefined;
-                            if (each.coords[idx].length > 0 && each.coords[idx] !== undefined) {
+                            if (each.coords !== undefined && each.coords[idx] !== undefined && each.coords[idx].length > 0) {
                                 pos = {
                                     x1: each.coords[idx][0],
                                     x2: each.coords[idx][2],
@@ -216,7 +216,8 @@ export class DatabaseUtil {
                                     res(fin);
                                 }
                             }))
-            .catch((err) => { res(result); });
+            .catch((err) => { console.error(err);
+                res(result); });
         })
 
     }

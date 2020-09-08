@@ -164,9 +164,9 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
     loadImageData = () => {
         let image = new Image();
         image.onload = () => {
-            let area = document!.getElementById("paint-area")!;
-            let fitHeight = 800;
-            let fitWidth = area !== undefined ? area.offsetWidth / 12 * 9 : 800;
+            let wrapper: HTMLElement = document.getElementById('landmark-ocr')!;
+            let fitHeight = wrapper.clientHeight * 0.75;
+            let fitWidth = wrapper.clientWidth * 0.75;
             let height = 0;
             let width = 0;
             let ratio = 0;
@@ -181,7 +181,6 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 height = image.naturalHeight / ratio;
             }
 
-            let wrapper: HTMLElement = document.getElementById('landmark-ocr')!;
             let xmargin = (wrapper.clientWidth - width) / 2;
             let ymargin = (wrapper.clientHeight - height) / 2;
 
