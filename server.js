@@ -9,6 +9,7 @@ const csv = require('csvtojson');
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, '/build')));
 
 const ccHeaders = {
     'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -555,6 +556,10 @@ app.post('/returnOutput', async (req, res) => {
         res.status(500).send(err)
     );
 })
+
+app.get('/', (req,res) => {
+    res.sendFile(path.join(__dirname, '/build/index.html'));
+  });
 
 if (process.env.NODE_ENV === 'production') {
   // Serve any static files
