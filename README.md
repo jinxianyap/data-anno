@@ -81,6 +81,22 @@ Inter Stage handles the necessary dispatch actions, updates to the state and nav
 ## Saving Annotation Output
 After all IDs have been processed, users are redirected to `Output`, which will call the `returnOutput` API upon mounting. When saving the annotation output, the entire IDLibrary is posted in the API call, but not before calling `DatabaseUtil.extractOutput` on each individual IDState to convert it into a compatible format. On the server side, the response body is parsed and merged with the existing JSON file if present. Merging will never erase original content in the event that the updated data is incomplete, but will only save those fields that are not empty into its corresponding location in the output JSON file. The status of the POST request is then displayed in a table.
 
+### Representation of Coordinates
+The front end interface saves the x- and y-coordinates of all 4 points of a bounding box in a position field. The coordinates are both measured starting from 0 at the lower left corner.
+```bash
+position: {
+    x1: 0,
+    x2: 8,
+    x3: 8,
+    x4: 0,
+    y1: 5,
+    y2: 5,
+    y3: 1,
+    y4: 1
+}
+```
+On the server side, coordinates are stored in the form of `[displacement from left, displacement from top, width, height]`. When saving annotation output, the conversion of coordinates from the position object to the list format is done on the server side. When loading session data and pulling from previously-generated JSON files, the conversion of coordinates from the list format to the position object is done on the frontend in `DatabaseUtil.loadGivenData`.
+
 ## References
 - [LeafletJS](https://leafletjs.com/reference-1.7.1.html): used by `SegLabeller`, `LandmarkLabeller`
 - [eKYC](https://ekyc-demo-api.wiseai.tech/ekyc/complete/reference)
