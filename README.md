@@ -49,11 +49,11 @@ export enum CurrentStage {
     OCR_EDIT = "OCR Edit",
     FR_LIVENESS_CHECK = "Face Liveness",
     FR_COMPARE_CHECK = "Face Comparison",
+    OUTPUT = "Output"
 
     // Functional Only
     END_STAGE = "End Stage",
     INTER_STAGE = "Inter Stage",
-    OUTPUT = "Output"
 }
 ```
 It is important to load data from the Redux store and dispatch changes appropriately through the ControlPanel. Here are some key changes in state requiring special care and specific dispatch actions:
@@ -75,6 +75,13 @@ After ControlPanel receives the new props, it checks if there are any more inter
 ### Retrieving the Next ID
 The state of the ControlPanel must be reset with its own function `resetState`. The current IDState must also be saved back to the IDLibrary with the `saveToLibrary` dispatch action. After that, the IDState and ImageState are restored to initial values in preparation for the next ID to be loaded with `restoreID` and `restoreImage`.
 
+### Inter Stage and End Stage
+Inter Stage handles the necessary dispatch actions, updates to the state and navigation for all process types but the full process. End Stage handles the same actions at the final stage of annotation for an InternalID or Back ID, typically after `OCR_EDIT` and `FR_COMPARE_CHECK`. This ensures that users must finish labelling the Front ID and the Back ID before moving on to `FR_LIVENESS_CHECK` and `FR_COMPARE_MATCH`.
+
 ## Saving Annotation Output
-When saving the annotation output, the entire IDLibrary is posted in the API call, but not before calling `DatabaseUtil.extractOutput` on each individual IDState to convert it into a compatible format. On the server side, the response body is parsed and merged with the existing JSON file if present. Merging will never erase original content in the event that the updated data is incomplete, but will only save those fields that are not empty into its corresponding location in the output JSON file.
+After all IDs have been processed, users are redirected to `Output`, which will call the `returnOutput` API upon mounting. When saving the annotation output, the entire IDLibrary is posted in the API call, but not before calling `DatabaseUtil.extractOutput` on each individual IDState to convert it into a compatible format. On the server side, the response body is parsed and merged with the existing JSON file if present. Merging will never erase original content in the event that the updated data is incomplete, but will only save those fields that are not empty into its corresponding location in the output JSON file. The status of the POST request is then displayed in a table.
+
+## References
+- [LeafletJS](https://leafletjs.com/reference-1.7.1.html): used by `SegLabeller`, `LandmarkLabeller`
+- [eKYC](https://ekyc-demo-api.wiseai.tech/ekyc/complete/reference)
 
