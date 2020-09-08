@@ -639,7 +639,7 @@ class ControlPanel extends React.Component<IProps, IState> {
             this.props.updateBackIDFlags(this.state.selectedBackIDFlags);
             if (this.props.currentID.selfieVideo!.name !== 'notfound') {
                 this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
-            } else if (this.props.currentID.selfieImage!.name !== 'notfound' && this.props.currentID.originalID!.croppedImage!.name !== 'notfound') {
+            } else if (this.props.currentID.selfieImage!.name !== 'notfound' && this.props.currentID.croppedFace!.name !== 'notfound') {
                 this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
             } else {
                 this.loadNextID(true);
@@ -1113,7 +1113,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <Button variant="secondary" className="common-button" onClick={backStage}>Back</Button>
                 {/* SKIP_VALIDATION: comment out disabled attribute */}
                 <Button className="common-button"
-                    // disabled={this.props.currentImage.landmark.filter((each) => each.position === undefined).length > 0}
+                    disabled={this.props.currentImage.landmark.filter((each) => each.position === undefined).length > 0}
                     onClick={submitLandmark}>Done</Button>
             </div>
         );
@@ -1164,7 +1164,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                             <Form.Group key={each.name + "OCR"}>
                                 <Form.Label>{DatabaseUtil.beautifyWord(each.name)}</Form.Label>
                                 {/* SKIP_VALIDATION: Remove required */}
-                                <Form.Control type="text" defaultValue={each.value}
+                                <Form.Control required type="text" defaultValue={each.value}
                                 ref={(ref: any) => {refs.push({name: each.name, codeName: each.codeName, mapToLandmark: each.mapToLandmark,ref})}} />
                             </Form.Group>
                         );
@@ -1250,7 +1250,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
         
         // SKIP_VALIDATION: comment out validate()
-        // validate();
+        validate();
 
         return (
             <div>
