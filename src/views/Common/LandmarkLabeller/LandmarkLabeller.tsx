@@ -51,7 +51,7 @@ interface IState {
 
     ocrBoxes: Box[],
     drawnOCRs: {
-        name: string,
+        codeName: string,
         word: OCRWord
     }[],
 }
@@ -275,7 +275,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     this.props.currentStage !== CurrentStage.LANDMARK_EDIT,
                     true,
                     undefined,
-                    this.props.currentStage !== CurrentStage.LANDMARK_EDIT ? false : this.props.currentSymbol === landmark.name);
+                    this.props.currentStage !== CurrentStage.LANDMARK_EDIT ? false : this.props.currentSymbol === landmark.codeName);
                 let box: Box = {
                     id: landmark.id,
                     codeName: landmark.codeName,
@@ -306,7 +306,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
     renderCommittedOCRs = () => {
         let newBoxes: Box[] = [];
-        let drawnOCRs: {name: string, word: OCRWord}[] = [];
+        let drawnOCRs: {codeName: string, word: OCRWord}[] = [];
 
         if (this.state.ocrBoxes.length > 0) {
             this.state.ocrBoxes.forEach((each) => this.removeMapElements(each))
@@ -329,7 +329,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                         false,
                         label.id,
                         this.props.currentStage !== CurrentStage.OCR_EDIT ? false :
-                        this.props.currentSymbol === ocr.name && this.props.currentWord.id === label.id);
+                        this.props.currentSymbol === ocr.codeName && this.props.currentWord.id === label.id);
                     let box: Box = {
                         id: label.id,
                         codeName: ocr.codeName,
@@ -351,7 +351,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                         resizeBoxes: createdBox.resizeBoxes
                     };
                     newBoxes.push(box);
-                    drawnOCRs.push({name: ocr.name, word: label});
+                    drawnOCRs.push({codeName: ocr.codeName, word: label});
                 }
             })
         });
@@ -360,7 +360,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
     ocrWordDrawn() {
         return this.state.drawnOCRs.find((each) => 
-        each.name === this.props.currentSymbol
+        each.codeName === this.props.currentSymbol
         && each.word.id === this.props.currentWord.id
         && each.word.value === this.props.currentWord.value);
     }
@@ -447,9 +447,9 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             isDrawing: true,
             currentBox: {
                 id: this.props.currentStage === CurrentStage.OCR_EDIT ? this.props.currentWord.id
-                : this.props.currentImageState.landmark.find((each) => each.name === this.props.currentSymbol)!.id,
+                : this.props.currentImageState.landmark.find((each) => each.codeName === this.props.currentSymbol)!.id,
                 name: this.props.currentSymbol,
-                codeName: '',
+                codeName: this.props.currentSymbol,
                 position: {
                     x1: e.latlng.lng * this.state.ratio,
                     y1: e.latlng.lat * this.state.ratio,
@@ -463,12 +463,12 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
     handleNextLandmark = () => {
         let landmark = this.props.currentImageState.landmark.filter((each) => each.position === undefined).sort((a, b) => a.id - b.id);
         if (landmark === undefined || landmark.length === 0) return false;
-        this.props.setCurrentSymbol(landmark[0].name);
+        this.props.setCurrentSymbol(landmark[0].codeName);
         return true;
     }
 
     handleNextOCR = () => {
-        let ocr = this.props.currentImageState.ocr.find((each) => each.name === this.props.currentSymbol);
+        let ocr = this.props.currentImageState.ocr.find((each) => each.codeName === this.props.currentSymbol);
         if (ocr === undefined) return false;
         let word = ocr.labels.filter((each) => each.position === undefined).sort((a, b) => a.id - b.id);
         if (word === undefined || word.length === 0) return false;
@@ -476,9 +476,9 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         return true;
     }
 
-    getLandmarkFromOCR = (name: string)  => {
-        if (name === undefined) return undefined;
-        return this.state.landmarkBoxes.find((each) => each.name === name);
+    getLandmarkFromOCR = (codeName: string)  => {
+        if (codeName === undefined) return undefined;
+        return this.state.landmarkBoxes.find((each) => each.codeName === codeName);
     }
 
     handleMouseMove = (e: any) => {
@@ -527,7 +527,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             currentBox: {
                 id: this.state.currentBox.id,
                 name: this.props.currentSymbol,
-                codeName: '',
+                codeName: this.props.currentSymbol,
                 position: {
                     ...this.state.currentBox.position,
                     x2: e.latlng.lng * this.state.ratio,
@@ -573,8 +573,8 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 currentPos.x1! / this.state.ratio, 
                 e.latlng.lat, 
                 e.latlng.lng, 
+                this.props.currentImageState.landmark.find((each) => each.codeName === this.props.currentSymbol)!.name,
                 this.props.currentSymbol,
-                this.props.currentImageState.landmark.find((each) => each.name === this.props.currentSymbol)!.codeName,
                 this.props.currentSymbol,
                 false,
                 true,
@@ -608,8 +608,8 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 currentPos.x1! / this.state.ratio, 
                 latlng[0], 
                 latlng[1],
-                this.props.currentSymbol, 
-                this.props.currentImageState.ocr.find((each) => each.name === this.props.currentSymbol)!.codeName,
+                this.props.currentImageState.ocr.find((each) => each.codeName === this.props.currentSymbol)!.name,
+                this.props.currentSymbol,
                 this.props.currentImageState.currentWord!.value,
                 false,
                 false,
@@ -619,7 +619,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             let boxes = this.state.ocrBoxes;
             boxes.push(newBox);
             let drawnOCRs = this.state.drawnOCRs;
-            drawnOCRs.push({name: this.props.currentSymbol, word: this.props.currentWord});
+            drawnOCRs.push({codeName: this.props.currentSymbol, word: this.props.currentWord});
 
             this.setState({
                 isDrawing: false,
@@ -633,7 +633,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 },
                 ocrBoxes: boxes,
                 drawnOCRs: drawnOCRs
-            }, () => this.props.updateOCRData(newBox.id, newBox.name, newBox.value!, {
+            }, () => this.props.updateOCRData(newBox.id, newBox.codeName, newBox.value!, {
                 x1: newBox.position.x1!,
                 x2: newBox.position.x2!,
                 x3: newBox.position.x3!,
@@ -780,7 +780,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             for (let i = 0; i < this.state.landmarkBoxes.length; i++) {
                 if ((this.state.landmarkBoxes[i].rectangle!.getBounds().contains(e.latlng))
                 // || this.state.landmarkBoxes[i].wrapper!.getBounds().contains(e.latlng))
-                && this.state.landmarkBoxes[i].name === symbol) {
+                && this.state.landmarkBoxes[i].codeName === symbol) {
                     return i;
                 }
             }
@@ -840,7 +840,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             for (let i = 0; i < this.state.ocrBoxes.length; i++) {
                 if ((this.state.ocrBoxes[i].rectangle!.getBounds().contains(e.latlng))
                 // || this.state.ocrBoxes[i].wrapper!.getBounds().contains(e.latlng))
-                && this.state.ocrBoxes[i].name === symbol
+                && this.state.ocrBoxes[i].codeName === symbol
                 && this.state.ocrBoxes[i].value === value) {
                     return i;
                 }
@@ -1080,7 +1080,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 );
                 let boxes = this.state.landmarkBoxes;
                 for (var i = 0; i < boxes.length; i++) {
-                    if (boxes[i].id === box.id && boxes[i].name === box.name) {
+                    if (boxes[i].id === box.id && boxes[i].codeName === box.codeName) {
                         boxes.splice(i, 1, newBox);
                         break;
                     }
@@ -1126,7 +1126,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 );
                 let boxes = this.state.ocrBoxes;
                 for (var j = 0; j < boxes.length; j++) {
-                    if (boxes[j].id === box.id && boxes[j].name === box.name && boxes[j].value === box.value) {
+                    if (boxes[j].id === box.id && boxes[j].codeName === box.codeName && boxes[j].value === box.value) {
                         boxes.splice(j, 1, newBox);
                         break;
                     }
@@ -1143,7 +1143,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                         position: {}
                     },
                     ocrBoxes: boxes,
-                }, () => this.props.updateOCRData(newBox.id, newBox.name, newBox.value!, {
+                }, () => this.props.updateOCRData(newBox.id, newBox.codeName, newBox.value!, {
                     x1: newBox.position.x1!,
                     x2: newBox.position.x2!,
                     x3: newBox.position.x3!,
@@ -1178,11 +1178,11 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     false,
                     isLandmark,
                     box.id,
-                    this.props.currentSymbol === box.name
+                    this.props.currentSymbol === box.codeName
                 );
                 let boxes = this.state.landmarkBoxes;
                 for (var i = 0; i < boxes.length; i++) {
-                    if (boxes[i].id === box.id && boxes[i].name === box.name) {
+                    if (boxes[i].id === box.id && boxes[i].codeName === box.codeName) {
                         boxes.splice(i, 1, newBox);
                         break;
                     }
@@ -1217,11 +1217,11 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     false,
                     isLandmark,
                     box.id,
-                    this.props.currentSymbol === box.name && this.props.currentWord.id === box.id
+                    this.props.currentSymbol === box.codeName && this.props.currentWord.id === box.id
                 );
                 let boxes = this.state.ocrBoxes;
                 for (var j = 0; j < boxes.length; j++) {
-                    if (boxes[j].id === box.id && boxes[j].name === box.name && boxes[j].value === box.value) {
+                    if (boxes[j].id === box.id && boxes[j].codeName === box.codeName && boxes[j].value === box.value) {
                         boxes.splice(j, 1, newBox);
                         break;
                     }
@@ -1237,7 +1237,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                         position: {}
                     },
                     ocrBoxes: boxes,
-                }, () => this.props.updateOCRData(newBox.id, newBox.name, newBox.value!, {
+                }, () => this.props.updateOCRData(newBox.id, newBox.codeName, newBox.value!, {
                     x1: newBox.position.x1!,
                     x2: newBox.position.x2!,
                     x3: newBox.position.x3!,
@@ -1259,13 +1259,13 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
         this.removeMapElements(this.state.landmarkBoxes[boxIndex]);
 
-        let name = this.state.landmarkBoxes[boxIndex].name;
-        let index = this.state.drawnLandmarks.indexOf(name);
+        let codeName = this.state.landmarkBoxes[boxIndex].codeName;
+        let index = this.state.drawnLandmarks.indexOf(codeName);
         let drawn = this.state.drawnLandmarks;
         drawn.splice(index, 1);
         let boxes = this.state.landmarkBoxes;
         boxes.splice(index, 1);
-        this.setState({landmarkBoxes: boxes, drawnLandmarks: drawn, isDrawing: false, isMoving: false, isResizing: false}, () => {this.props.deleteLandmarkPosition(name)});
+        this.setState({landmarkBoxes: boxes, drawnLandmarks: drawn, isDrawing: false, isMoving: false, isResizing: false}, () => {this.props.deleteLandmarkPosition(codeName)});
     }
 
     deleteOcrBox = (e: any) => {
@@ -1276,16 +1276,16 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
         this.removeMapElements(this.state.ocrBoxes[boxIndex]);
 
-        let name = this.state.ocrBoxes[boxIndex].name;
+        let codeName = this.state.ocrBoxes[boxIndex].codeName;
         let value = this.state.ocrBoxes[boxIndex].value!;
         let id = this.state.ocrBoxes[boxIndex].id;
-        let index = this.state.drawnOCRs.findIndex((each) => each.name === name && each.word.value === value && each.word.id === id);
+        let index = this.state.drawnOCRs.findIndex((each) => each.codeName === codeName && each.word.value === value && each.word.id === id);
         let drawn = this.state.drawnOCRs;
         drawn.splice(index, 1);
         let boxes = this.state.ocrBoxes;
         boxes.splice(boxIndex, 1);
         this.setState({ocrBoxes: boxes, drawnOCRs: drawn, isDrawing: false, isMoving: false, isResizing: false}, () => {
-            this.props.updateOCRData(id, name, value);
+            this.props.updateOCRData(id, codeName, value);
             this.handleNextOCR();
         });
     }

@@ -9,10 +9,16 @@
             ["id_num", "name"]
         ],
         "displayNames": [
-            ["kadPengenalanMalaysiaLandmark", "securityChip", "mscLogo", "ghostImage", "gender", "citizen", "name", "address", "facialImage", "myKadLogo", "myKadNumber", "hibiscusLogo", "malaysiaFlag", "religion"],
-            ["coatOfArmsLandmark", "crown", "klccTower", "touchNGo", "signature", "chipLogo", "serialNumber", "kPPN", "malaysiaLogo", "ATMLogo", "myKadNumber"],
+            ["kadPengenalanMalaysiaLandmark", "securityChip", "mscLogo", "ghostImage", "gender", "citizen", "name", "address", "facialImage", "mykadLogo", "mykadNumber", "hibiscusLogo", "malaysiaFlag", "religion"],
+            ["coatOfArmsLandmark", "crown", "klccTower", "touchNGo", "signature", "chipLogo", "serialNumber", "kPPN", "malaysiaLogo", "ATMLogo", "mykadNumber"],
             ["passportNumber", "name"],
             ["IDNumber", "name"]
+        ],
+        "outputNames": [
+            ["kpmLogo", "securityChip", "mscLogo", "ghost", "gender", "nationality", "name", "address", "face", "mykadLogo", "idNum", "hibiscusLogo", "mysFlag", "religion"],
+            ["coatOfArm", "crown", "twintowerLogo", "touchngoLogo", "signature", "chipLogo", "serialNum", "kppn", "mysLogo", "atmLogo", "idNum"],
+            ["idNum", "name"],
+            ["idNum", "name"]
         ]
     },
     "ocr": {
@@ -24,8 +30,8 @@
             ["id_num"]
         ],
         "displayNames": [
-            ["myKadNumber", "name", "address", "gender", "citizen"],
-            ["myKadNumber"],
+            ["mykadNumber", "name", "address", "gender", "citizen"],
+            ["mykadNumber"],
             ["passportNumber", "name"],
             ["IDNumber"]
         ],
@@ -34,6 +40,12 @@
             ["ic_num"],
             ["passport_num", "name"],
             ["id_num"]
+        ],
+        "outputNames": [
+            ["idNum", "name", "address", "gender", "nationality"],
+            ["idNum"],
+            ["passportNum", "name"],
+            ["idNum"]
         ]
     },
     "flags": {

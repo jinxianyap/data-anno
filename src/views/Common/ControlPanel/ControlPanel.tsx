@@ -49,7 +49,7 @@ interface IProps {
     // Landmark
     setCurrentSymbol: (symbol?: string, landmark?: string) => ImageActionTypes;
     addLandmarkData: (landmark: LandmarkData) => ImageActionTypes;
-    updateLandmarkFlags: (name: string, flags: string[]) => ImageActionTypes;
+    updateLandmarkFlags: (codeName: string, flags: string[]) => ImageActionTypes;
 
     // OCR
     setCurrentWord: (word: OCRWord) => ImageActionTypes;
@@ -1026,7 +1026,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         const getLandmarkFlags = () => {
             const setFlag = (selected: string[]) => {
                 for (var i = 0; i < this.state.currentLandmarks.length; i++) {
-                    if (this.state.currentLandmarks[i].name === this.state.selectedLandmark) {
+                    if (this.state.currentLandmarks[i].codeName === this.state.selectedLandmark) {
                         let landmarks = this.state.currentLandmarks;
                         let landmark = landmarks[i];
                         landmark.flags = selected;
@@ -1039,7 +1039,7 @@ class ControlPanel extends React.Component<IProps, IState> {
 
             let selectedFlags: string[] = [];
             for (var i = 0; i < this.state.currentLandmarks.length; i++) {
-                if (this.state.currentLandmarks[i].name === this.state.selectedLandmark) {
+                if (this.state.currentLandmarks[i].codeName === this.state.selectedLandmark) {
                     selectedFlags = this.state.currentLandmarks[i].flags;
                     break;
                 }
@@ -1077,7 +1077,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         const submitLandmark = (e: any) => {
             e.preventDefault();
             this.state.currentLandmarks.forEach((each) => {
-                this.props.updateLandmarkFlags(each.name, each.flags);
+                this.props.updateLandmarkFlags(each.codeName, each.flags);
             });
             if (this.props.processType === ProcessType.LANDMARK) {
                 if (this.props.internalID.processStage === IDProcess.MYKAD_FRONT) {
@@ -1096,11 +1096,11 @@ class ControlPanel extends React.Component<IProps, IState> {
 
         const getClassName = (each: any) => {
             let name = "landmark-tab ";
-            let landmark = this.props.currentImage.landmark.find((item) => item.name === each.name && item.position !== undefined);
+            let landmark = this.props.currentImage.landmark.find((item) => item.codeName === each.codeName && item.position !== undefined);
             if (landmark !== undefined) {
                 name += "labelled-landmark ";
             }
-            if (this.props.currentImage.currentSymbol === each.name) {
+            if (this.props.currentImage.currentSymbol === each.codeName) {
                 name += "selected-landmark";
             }
             return name;
@@ -1118,7 +1118,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                             eventKey={idx.toString()}
                                             className={getClassName(each)}
                                             key={idx}
-                                            onClick={() => setLandmark(each.name)}>
+                                            onClick={() => setLandmark(each.codeName)}>
                                                 {DatabaseUtil.beautifyWord(each.name)}
                                         </Accordion.Toggle>
                                         <Accordion.Collapse eventKey={idx.toString()}>
@@ -1166,9 +1166,9 @@ class ControlPanel extends React.Component<IProps, IState> {
                     count: each.ref.value.split(' ').length
                 };
                 
-                if (currentOCR.find((ocr) => ocr.name === each.name)!.value !== each.ref.value) {
+                if (currentOCR.find((ocr) => ocr.codeName === each.codeName)!.value !== each.ref.value) {
                     for (var i = 0; i < currentOCR.length; i++) {
-                        if (currentOCR[i].name === each.name) {
+                        if (currentOCR[i].codeName === each.codeName) {
                             let curr = currentOCR[i];
                             curr.value = each.ref.value;
                             currentOCR.splice(i, 1);
@@ -1188,7 +1188,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 {
                     this.state.currentOCR.map((each, idx) => {
                         return (
-                            <Form.Group key={each.name + "OCR"}>
+                            <Form.Group key={each.codeName + "OCR"}>
                                 <Form.Label>{DatabaseUtil.beautifyWord(each.name)}</Form.Label>
                                 {/* SKIP_VALIDATION: Remove required */}
                                 <Form.Control required type="text" defaultValue={each.value}
@@ -1214,14 +1214,14 @@ class ControlPanel extends React.Component<IProps, IState> {
         const getClassNameLandmark = (each: any) => {
             let name = "landmark-tab ";
             let ocrFilled = false;
-            let ocrsLabelled = this.props.currentImage.ocr.find((ocr) => ocr.mapToLandmark === each.mapToLandmark && ocr.name === each.name);
+            let ocrsLabelled = this.props.currentImage.ocr.find((ocr) => ocr.mapToLandmark === each.mapToLandmark && ocr.codeName === each.codeName);
             if (ocrsLabelled !== undefined) {
                 ocrFilled = ocrsLabelled.labels.filter((label) => label.position === undefined).length === 0;
             }
             if (ocrFilled) {
                 name += "labelled-landmark ";
             }
-            if (this.props.currentImage.currentSymbol === each.name) {
+            if (this.props.currentImage.currentSymbol === each.codeName) {
                 name += "selected-landmark";
             }
             return name;
@@ -1293,7 +1293,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                         key={index}
                                         className={getClassNameLandmark(each)}
                                         onClick={() => {
-                                            this.props.setCurrentSymbol(each.name, each.mapToLandmark);
+                                            this.props.setCurrentSymbol(each.codeName, each.mapToLandmark);
                                             this.props.setCurrentWord(each.labels[0]);}}>
                                         {DatabaseUtil.beautifyWord(each.name)}
                                     </Accordion.Toggle>
@@ -1309,7 +1309,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                                         key={idx}
                                                         value={label.value}
                                                         onClick={() => {
-                                                            this.props.setCurrentSymbol(each.name, each.mapToLandmark);
+                                                            this.props.setCurrentSymbol(each.codeName, each.mapToLandmark);
                                                             this.props.setCurrentWord(label)}}
                                                         >{label.id}: {label.value}</Button>
                                                 );

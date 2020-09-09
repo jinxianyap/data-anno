@@ -129,7 +129,7 @@ interface DeleteLandmarkPosition {
 interface UpdateLandmarkFlags {
     type: typeof Action.UPDATE_LANDMARK_FLAGS;
     payload: {
-        name: string,
+        codeName: string,
         flags: string[]
     }
 }
@@ -153,7 +153,7 @@ interface UpdateOCRData {
     type: typeof Action.UPDATE_OCR_DATA;
     payload: {
         id: number,
-        name: string,
+        codeName: string,
         value: string,
         position?: Position
     }

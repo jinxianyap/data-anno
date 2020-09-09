@@ -113,7 +113,7 @@ export function imageReducer(
             let landmarks = state.landmark;
 
             for (var c = 0; c < landmarks.length; c++) {
-                if (landmarks[c].name === action.payload.name) {
+                if (landmarks[c].codeName === action.payload.codeName) {
                     let newLandmark = landmarks[c];
                     newLandmark.flags = action.payload.flags;
                     landmarks[c] = newLandmark;
@@ -195,7 +195,7 @@ export function imageReducer(
             let ocr = state.ocr;
 
             for (var e = 0; e < ocr.length; e++) {
-                if (ocr[e].name === action.payload.name) {
+                if (ocr[e].codeName === action.payload.codeName) {
                     let currentOcr = ocr[e];
                     let labels = currentOcr.labels;
                     for (var f = 0; f < labels.length; f++) {

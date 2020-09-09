@@ -73,11 +73,11 @@ export function deleteLandmarkPosition(landmark: string): ImageActionTypes {
     }
 }
 
-export function updateLandmarkFlags(name: string, flags: string[]): ImageActionTypes {
+export function updateLandmarkFlags(codeName: string, flags: string[]): ImageActionTypes {
     return {
         type: Action.UPDATE_LANDMARK_FLAGS,
         payload: {
-            name: name,
+            codeName: codeName,
             flags: flags
         }
     }
@@ -101,12 +101,12 @@ export function setCurrentWord(word: OCRWord): ImageActionTypes {
     }
 }
 
-export function updateOCRData(id: number, name: string, value: string, position?: Position): ImageActionTypes {
+export function updateOCRData(id: number, codeName: string, value: string, position?: Position): ImageActionTypes {
     return {
         type: Action.UPDATE_OCR_DATA,
         payload: {
             id: id,
-            name: name,
+            codeName: codeName,
             value: value,
             position: position
         }
