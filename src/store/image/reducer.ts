@@ -38,7 +38,11 @@ export function imageReducer(
             if (action.payload.passesCrop !== undefined) {
                 action.payload.currentImage.passesCrop = action.payload.passesCrop;
             }
-            return action.payload.currentImage;
+            if (action.payload.currentImage === undefined) {
+                return state;
+            } else {
+                return action.payload.currentImage;
+            }
         }
         case Action.SAVE_SEG_CHECK: {
             return {

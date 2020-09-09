@@ -29,7 +29,7 @@ class LivenessAndMatch extends React.Component<IProps, IState> {
 
     componentDidMount() {
         if (this.props.currentStage === CurrentStage.FR_COMPARE_CHECK && this.props.id.index !== this.state.croppedImageIndex) {
-            if (this.props.id.croppedFace!.name !== 'notfound') {
+            if (this.props.id.croppedFace !== undefined && this.props.id.croppedFace!.name !== 'notfound') {
                 GeneralUtil.loadImage("frCompareFace", this.props.id.croppedFace!, "frCompareID");
             } else if (this.props.internalID.originalID!.croppedImage!.name !== 'notfound') {
                 GeneralUtil.loadImage("frCompareFace", this.props.internalID.originalID!.croppedImage!, "frCompareID");

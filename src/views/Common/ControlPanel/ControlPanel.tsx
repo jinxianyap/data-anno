@@ -1016,11 +1016,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
 
         const backStage = () => {
-            if (this.state.passesCrop) {
-                this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
-            } else {
-                this.props.progressNextStage(CurrentStage.SEGMENTATION_EDIT);
-            }
+            this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
         }
 
         const getLandmarkFlags = () => {
@@ -1131,12 +1127,6 @@ class ControlPanel extends React.Component<IProps, IState> {
                             })
                         }
                 </Accordion>
-                {/* <Button
-                    style={{width: "100%"}}
-                    value="0"
-                    className="block-button" 
-                    onClick={() => this.setState({showAddLandmarkModal: true})}>+</Button> */}
-                {/* <AddTypeModal showModal={this.state.showAddLandmarkModal} item='landmarks' add={addLandmark} closeModal={() => this.setState({showAddLandmarkModal: false})}/> */}
                 <Button variant="secondary" className="common-button" onClick={backStage}>Back</Button>
                 {/* SKIP_VALIDATION: comment out disabled attribute */}
                 <Button className="common-button"

@@ -42,21 +42,29 @@ export class DatabaseUtil {
         }
     }
 
-    private static translateTerm(doc: string, type: string, key: string, map?: boolean): string {
+    private static translateTermFromCodeName(doc: string, type: string, key: string, output?: boolean, map?: boolean): string {
         switch (type) {
             case ('landmark'): { 
                 let idx = options.landmark.keys.findIndex((each) => each === doc);
                 if (idx === -1) return '';
                 let i = options.landmark.codeNames[idx].findIndex((each) => each === key);
                 if (i === -1) return '';
-                return options.landmark.displayNames[idx][i]; 
+                if (output) {
+                    return options.landmark.outputNames[idx][i];
+                } else {
+                    return options.landmark.displayNames[idx][i]; 
+                }
             }
             case ('ocr'): { 
                 let idx = options.ocr.keys.findIndex((each) => each === doc);
                 if (idx === -1) return '';
                 let i = options.ocr.codeNames[idx].findIndex((each) => each === key);
                 if (i === -1) return '';
-                return map ? options.ocr.mapToLandmark[idx][i] : options.ocr.displayNames[idx][i]; 
+                if (output) {
+                    return options.ocr.outputNames[idx][i];
+                } else {
+                    return map ? options.ocr.mapToLandmark[idx][i] : options.ocr.displayNames[idx][i]; 
+                }
             }
             default: break;
         }
@@ -116,7 +124,7 @@ export class DatabaseUtil {
                         id: idx,
                         type: 'landmark',
                         codeName: each.id,
-                        name: this.translateTerm(docKey, 'landmark', each.id),
+                        name: this.translateTermFromCodeName(docKey, 'landmark', each.id),
                         flags: flags,
                         position: {
                             x1: each.coords[0],
@@ -137,8 +145,8 @@ export class DatabaseUtil {
                         id: idx,
                         type: 'OCR',
                         codeName: each.field,
-                        mapToLandmark: this.translateTerm(docKey, 'ocr', each.field, true),
-                        name: this.translateTerm(docKey, 'ocr', each.field),
+                        mapToLandmark: this.translateTermFromCodeName(docKey, 'ocr', each.field, false, true),
+                        name: this.translateTermFromCodeName(docKey, 'ocr', each.field),
                         labels: text.map((lbl, idx) => { 
                             let pos = undefined;
                             if (each.coords !== undefined && each.coords[idx] !== undefined && each.coords[idx].length > 0) {
@@ -248,6 +256,18 @@ export class DatabaseUtil {
     }
 
     public static extractOutput(ID: IDState, face?: boolean): any {
+        const translateLandmarkName = (landmark: LandmarkData, front: boolean) => {
+            let outputName = this.translateTermFromCodeName(front ? 'MyKadFront' : 'MyKadBack', 'landmark', landmark.codeName, true);
+            landmark.name = outputName;
+            return landmark;
+        }
+
+        const translateOCRName = (ocr: OCRData, front: boolean) => {
+            let outputName = this.translateTermFromCodeName(front ? 'MyKadFront' : 'MyKadBack', 'ocr', ocr.codeName, true);
+            ocr.name = outputName;
+            return ocr;
+        }
+
         return {
             dateCreated: ID.dateCreated,
             sessionID: ID.sessionID,
@@ -266,12 +286,12 @@ export class DatabaseUtil {
                 backID: ID.internalIDs.map((each) => each.backID!.IDBox)
             },
             landmarks: {
-                originalID: ID.internalIDs.map((each) => each.originalID!.landmark),
-                backID: ID.internalIDs.map((each) => each.backID!.landmark)
+                originalID: ID.internalIDs.map((each) => each.originalID!.landmark.map((lm) => translateLandmarkName(lm, true))),
+                backID: ID.internalIDs.map((each) => each.backID!.landmark.map((lm) => translateLandmarkName(lm, false)))
             },
             ocr: {
-                originalID: ID.internalIDs.map((each) => each.originalID!.ocr),
-                backID: ID.internalIDs.map((each) => each.backID!.ocr),
+                originalID: ID.internalIDs.map((each) => each.originalID!.ocr.map((ocr) => translateOCRName(ocr, true))),
+                backID: ID.internalIDs.map((each) => each.backID!.ocr.map((ocr) => translateOCRName(ocr, false))),
             },
 
             videoLiveness: ID.videoLiveness,
