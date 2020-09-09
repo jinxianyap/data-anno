@@ -27,6 +27,7 @@ export class DatabaseUtil {
             videoStills: session.face_video_stills !== undefined ? session.face_video_stills.map((each: any, idx: number) => 
                 this.dataURLtoFile(each, id + "_face_" + (idx + 1) + ".jpg")
             ) : undefined,
+            dirty: false,
             dataLoaded: false,
             processed: false,
             index: index,
@@ -259,7 +260,7 @@ export class DatabaseUtil {
             processStage: ID.internalIDs.map((each) => each.processStage),
             documentType: ID.internalIDs.map((each) => each.documentType),
 
-            imageProps: ID.givenData!.imageProps,
+            imageProps: ID.givenData !== undefined ? ID.givenData.imageProps : undefined,
             segmentation: {
                 originalID: ID.internalIDs.map((each) => each.originalID!.IDBox),
                 backID: ID.internalIDs.map((each) => each.backID!.IDBox)

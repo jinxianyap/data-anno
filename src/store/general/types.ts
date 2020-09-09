@@ -39,6 +39,9 @@ interface LoadFromDatabase {
     }
 }
 
+interface GetPreviousID {
+    type: typeof Action.GET_PREV_ID;
+}
 interface GetNextID {
     type: typeof Action.GET_NEXT_ID;
 }
@@ -57,6 +60,7 @@ interface RestoreGeneral {
 export type GeneralActionTypes = SaveSetupOptions
     | ProgressToStage
     | LoadFromDatabase
+    | GetPreviousID
     | GetNextID
     | SaveToLibrary
     | RestoreGeneral

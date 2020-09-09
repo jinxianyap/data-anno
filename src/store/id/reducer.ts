@@ -6,6 +6,7 @@ import { ImageState, IDBox } from '../image/types';
 const axios = require('axios');
 
 const initialState: IDState = {
+    dirty: false,
     processed: false,
     dateCreated: '',
     sessionID: '',
@@ -45,7 +46,14 @@ export function IDReducer(
     switch (action.type) {
         case Action.LOAD_NEXT_ID: {
             return {
-                ...action.payload.ID
+                ...action.payload.ID,
+                internalIDs: action.payload.ID.internalIDs.map((each) => {
+                    if (each.processStage === IDProcess.MYKAD_BACK) {
+                        each.processStage = IDProcess.MYKAD_FRONT;
+                    }
+                    return each;
+                }),
+                dirty: true,
             }
         }
         case Action.CREATE_NEW_ID: {

@@ -2,13 +2,13 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { CurrentStage, IDProcess, ProcessType } from '../../../utils/enums';
 import { AppState } from '../../../store';
-import { Form, Button, ButtonGroup, ToggleButton, ToggleButtonGroup, Card, Accordion, Spinner } from 'react-bootstrap';
+import { Form, Modal, Button, ButtonGroup, ToggleButton, ToggleButtonGroup, Card, Accordion, Spinner } from 'react-bootstrap';
 import options from '../../../options.json';
 import './ControlPanel.scss';
 import { GeneralActionTypes } from '../../../store/general/types';
 import { IDActionTypes, IDState, InternalIDState } from '../../../store/id/types';
 import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord, LandmarkData, Position } from '../../../store/image/types';
-import { progressNextStage, getNextID, saveToLibrary } from '../../../store/general/actionCreators';
+import { progressNextStage, getPreviousID, getNextID, saveToLibrary } from '../../../store/general/actionCreators';
 import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, updateFrontIDFlags, updateBackIDFlags, restoreID } from '../../../store/id/actionCreators';
 import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, addLandmarkData, updateLandmarkFlags, addOCRData, setFaceCompareMatch, restoreImage } from '../../../store/image/actionCreators';
 import { DatabaseUtil } from '../../../utils/DatabaseUtil';
@@ -32,6 +32,7 @@ interface IProps {
 
     // Moving between stages
     progressNextStage: (nextStage: CurrentStage) => GeneralActionTypes;
+    getPreviousID: () => GeneralActionTypes;
     getNextID: () => GeneralActionTypes;
     loadImageState: (currentImage: ImageState, passesCrop?: boolean) => ImageActionTypes;
 
@@ -69,6 +70,7 @@ interface IProps {
 
 interface IState {
     // ownStage: CurrentStage;
+    showSaveAndQuitModal: boolean;
     // Seg Check
     loadedSegCheckImage: boolean;
     showAddDocTypeModal: boolean;
@@ -148,6 +150,7 @@ class ControlPanel extends React.Component<IProps, IState> {
     constructor(props: IProps) {
         super(props);
         this.state = {
+            showSaveAndQuitModal: false,
             // ownStage: CurrentStage.SEGMENTATION_CHECK,
             loadedSegCheckImage: false,
             showAddDocTypeModal: false,
@@ -183,23 +186,29 @@ class ControlPanel extends React.Component<IProps, IState> {
             case (CurrentStage.SEGMENTATION_CHECK): {
                 if (this.props.indexedID === undefined) break;
                 if (previousProps.indexedID.index !== this.props.indexedID.index) {
-                    GeneralUtil.toggleOverlay(true);
-                    axios.post('/loadSessionData', {
-                        database: this.props.database,
-                        date: this.props.indexedID.dateCreated,
-                        sessionID:  this.props.indexedID.sessionID
-                    }).then((res: any) => {
-                        if (res.status === 200) {
-                            DatabaseUtil.loadSessionData(res.data, this.props.indexedID).then((completeID) => {
-                                this.props.loadNextID(completeID);
-                                this.loadSegCheckImage();
-                                this.setState({loadedSegCheckImage: true}, () => GeneralUtil.toggleOverlay(false));
-                            });
-                        }
-                    }).catch((err: any) => {
-                        console.error(err);
-                        GeneralUtil.toggleOverlay(false);
-                    });
+                    if (!this.props.indexedID.dataLoaded) {
+                        GeneralUtil.toggleOverlay(true);
+                        axios.post('/loadSessionData', {
+                            database: this.props.database,
+                            date: this.props.indexedID.dateCreated,
+                            sessionID:  this.props.indexedID.sessionID
+                        }).then((res: any) => {
+                            if (res.status === 200) {
+                                DatabaseUtil.loadSessionData(res.data, this.props.indexedID).then((completeID) => {
+                                    this.props.loadNextID(completeID);
+                                    this.loadSegCheckImage();
+                                    this.setState({loadedSegCheckImage: true}, () => GeneralUtil.toggleOverlay(false));
+                                });
+                            }
+                        }).catch((err: any) => {
+                            console.error(err);
+                            // GeneralUtil.toggleOverlay(false);
+                        });
+                    } else {
+                        this.props.loadNextID(this.props.indexedID);
+                        this.loadSegCheckImage();
+                        this.setState({loadedSegCheckImage: true}, () => GeneralUtil.toggleOverlay(false));
+                    }
                     break;
                 }
                 // initial load of doctypes and overall flags from config json, initial load of image
@@ -211,7 +220,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
                 if (this.props.processType !== ProcessType.SEGMENTATION) {
                     // first time
-                    if (previousProps.internalID === undefined && this.props.internalID !== undefined) {
+                    if (previousProps.currentID.index === this.props.currentID.index && 
+                        previousProps.internalID === undefined && this.props.internalID !== undefined) {
                         if (this.props.internalID.processStage !== IDProcess.MYKAD_BACK) {
                             this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
                         }
@@ -242,7 +252,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                         if (this.props.currentID.internalIndex >= this.props.currentID.internalIDs.length
                             || this.props.currentID.backIDsProcessed === this.props.currentID.internalIDs.length) {
                             // next ID
-                            this.loadNextID();
+                            this.loadNextID(false);
                         }
                     // coming from seg edit of front id
                     } 
@@ -323,13 +333,14 @@ class ControlPanel extends React.Component<IProps, IState> {
                 if (!this.state.videoFlagsLoaded) {
                     this.loadVideoFlags();
                 };
-                if (this.props.currentID.internalIndex > 0 && this.props.currentID.videoLiveness !== undefined) {
+                if (this.props.processType !== ProcessType.LIVENESS && 
+                    this.props.currentID.internalIDs.length > 0 && this.props.currentID.videoLiveness !== undefined) {
                     this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
                 }
                 if (previousProps.currentID.videoLiveness !== this.props.currentID.videoLiveness) {
-                    if (this.props.internalID === undefined || 
+                    if (this.props.processType === ProcessType.LIVENESS || this.props.internalID === undefined || 
                         this.props.internalID && this.props.internalID.originalID!.croppedImage!.name === 'notfound') {
-                        this.loadNextID();
+                        this.loadNextID(false);
                     } else {
                         this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
                     }
@@ -340,7 +351,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 if (previousProps.internalID) {
                     if (this.props.currentID.internalIndex >= this.props.currentID.internalIDs.length) {
                         console.log('next id');
-                        this.loadNextID();
+                        this.loadNextID(false);
                     } else if (this.props.currentID.internalIndex < this.props.currentID.internalIDs.length) {
                         if (previousProps.internalID.originalID!.faceCompareMatch !== undefined && !this.props.internalID.processed) {
                             console.log('next internal id');
@@ -358,7 +369,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 if (previousProps.currentStage !== CurrentStage.INTER_STAGE
                     || previousProps.currentID.internalIndex !== this.props.currentID.internalIndex) {
                     if (this.props.currentID.internalIndex >= this.props.currentID.internalIDs.length) {
-                        this.loadNextID();
+                        this.loadNextID(false);
                     } else {
                         switch (this.props.processType) {
                             case (ProcessType.SEGMENTATION): {
@@ -497,9 +508,13 @@ class ControlPanel extends React.Component<IProps, IState> {
                 flags: each.flags,
                 type: 'landmark'
             };
-            if (this.props.currentID.givenData !== undefined) {
+            
+            let stLandmark = this.props.currentImage.landmark.find((lm) => each.codeName === lm.codeName);
+            if (stLandmark !== undefined && stLandmark.position !== undefined) {
+                landmark.position = stLandmark.position;
+            } else if (this.props.currentID.givenData !== undefined) {
                 // if db csv already has ocr data
-                if (this.props.currentID.originalIDProcessed) {
+                if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
                     if (this.props.currentID.givenData.backID !== undefined) {
                         let dbLandmark = this.props.currentID.givenData.backID.landmark.find((lm) => lm.codeName === each.codeName);
                         if (dbLandmark !== undefined) {
@@ -532,7 +547,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 if (this.props.currentID.givenData !== undefined) {
                     // if db csv already has ocr data
                     let ocrsToUpdate: OCRData[] = [];
-                    if (this.props.currentID.originalIDProcessed) {
+                    if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
                         if (this.props.currentID.givenData.backID !== undefined) {
                             ocrsToUpdate = this.props.currentID.givenData.backID.ocr.filter((each) => each.labels.some((lbl) => lbl.position !== undefined));
                             let dbOCR = this.props.currentID.givenData.backID.ocr.find((lm) => lm.codeName === options.ocr.codeNames[idx][i]);
@@ -645,14 +660,18 @@ class ControlPanel extends React.Component<IProps, IState> {
         const skipSegCheck = () => {
             this.props.updateFrontIDFlags(this.state.selectedFrontIDFlags);
             this.props.updateBackIDFlags(this.state.selectedBackIDFlags);
-            if (this.props.currentID.selfieVideo!.name !== 'notfound' && this.props.processType === ProcessType.WHOLE) {
-                this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
-            } else if (this.props.currentID.selfieImage!.name !== 'notfound'
-                && this.props.currentID.croppedFace!.name !== 'notfound'
-                && this.props.processType === ProcessType.WHOLE) {
-                this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
+            if ((this.props.processType === ProcessType.WHOLE || this.props.processType === ProcessType.LIVENESS)) {
+                if (this.props.currentID.selfieVideo!.name !== 'notfound') {
+                    this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
+                } else if (this.props.currentID.selfieImage!.name !== 'notfound'
+                    && this.props.currentID.croppedFace!.name !== 'notfound'
+                    && this.props.processType !== ProcessType.LIVENESS) {
+                    this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
+                } else {
+                    this.loadNextID(false, true);
+                }
             } else {
-                this.loadNextID(true);
+                this.loadNextID(false, true);
             }
         }
 
@@ -761,7 +780,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                             this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
                         } else {
                             this.props.saveToInternalID(this.props.currentImage, true);
-                            this.loadNextID();
+                            this.loadNextID(false);
                         }
                     }
                 } else if (this.props.internalID !== undefined && this.props.internalID.processStage !== IDProcess.MYKAD_BACK) {
@@ -1346,10 +1365,14 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
 
         const backStage = () => {
-            if (this.props.internalID.documentType === 'MyKad') {
+            if (this.props.currentID.internalIDs.length === 0) {
+                this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+            } else if (this.props.internalID.documentType === 'MyKad') {
                 this.props.loadImageState(this.props.internalID.backID!);
+                this.props.progressNextStage(CurrentStage.OCR_EDIT);
+            } else {
+                this.props.progressNextStage(CurrentStage.OCR_EDIT);
             }
-            this.props.progressNextStage(CurrentStage.OCR_EDIT);
         }
 
         const submitLiveness = () => {
@@ -1451,7 +1474,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
     }
 
-    loadNextID = (beforeSegCheckDone?: boolean) => {
+    loadNextID = (prev: boolean, beforeSegCheckDone?: boolean) => {
         this.resetState();
         if (beforeSegCheckDone) {
             let id = this.props.currentID;
@@ -1464,7 +1487,11 @@ class ControlPanel extends React.Component<IProps, IState> {
         this.props.restoreID();
         this.props.restoreImage();
         this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
-        this.props.getNextID();
+        if (prev) {
+            this.props.getPreviousID();
+        } else {
+            this.props.getNextID();
+        }
     }
 
     resetState = () => {
@@ -1559,15 +1586,66 @@ class ControlPanel extends React.Component<IProps, IState> {
             }
         }
 
-        return (
-            <div>
-                <div id="folder-number">
-                    <Button variant="light"><GrFormPrevious /></Button>
-                    <p style={{width: "fit-content", display: "inline-block"}}>Folder:   {this.props.currentIndex + 1}/{this.props.totalIDs}</p>
-                    <Button variant="light"><GrFormNext /></Button>
-                </div>
-                <div id="controlPanel">
+        const navigateIDs = () => {
+            // const handleClick = (prev: boolean) => {
+                // switch (this.props.currentStage) {
+                //     case (CurrentStage.LANDMARK_EDIT): {
+                //         this.state.currentLandmarks.forEach((each) => {
+                //             this.props.updateLandmarkFlags(each.name, each.flags);
+                //         });
+                //         this.props.saveToInternalID(this.props.currentImage, this.props.internalID.processStage !== IDProcess.MYKAD_FRONT);
+                //         break;
+                //     }
+                //     case (CurrentStage.OCR_DETAILS): {
 
+                //     }
+                // }
+                // need to save state first?
+                // this.loadNextID(prev);
+            // }
+
+            const saveAndQuit = () => {
+                let id = this.props.currentID;
+                id.frontIDFlags = this.state.selectedFrontIDFlags;
+                id.backIDFlags = this.state.selectedBackIDFlags;
+                this.props.saveToLibrary(id);
+                this.setState({showSaveAndQuitModal: false}, () => this.props.progressNextStage(CurrentStage.OUTPUT));
+            }
+
+            return (
+                <div id="folder-number">
+                    <Button variant="light" 
+                        onClick={() => this.loadNextID(true)}
+                        disabled={this.props.currentIndex === 0} 
+                        className="nav-button"><GrFormPrevious /></Button>
+                    <p>Folder:   {this.props.currentIndex + 1}/{this.props.totalIDs}</p>
+                    <Button variant="light" 
+                        onClick={() => this.loadNextID(false)}
+                        disabled={this.props.currentIndex + 1 === this.props.totalIDs}
+                        className="nav-button"><GrFormNext /></Button>
+                    <Button variant="secondary" id="quit-button" onClick={() => this.setState({showSaveAndQuitModal: true})}>Quit</Button>
+                    <Modal show={this.state.showSaveAndQuitModal} onHide={() => this.setState({showSaveAndQuitModal: false})}>
+                        <Modal.Header closeButton>
+                        <Modal.Title>Save And Quit</Modal.Title>
+                        </Modal.Header>
+                        <Modal.Body>Are you sure you would like to proceed?</Modal.Body>
+                        <Modal.Footer>
+                        <Button variant="secondary" onClick={() => this.setState({showSaveAndQuitModal: false})}>
+                            Cancel
+                        </Button>
+                        <Button variant="primary" onClick={saveAndQuit}>
+                            Confirm
+                        </Button>
+                        </Modal.Footer>
+                    </Modal>
+                </div>
+            );
+        }
+
+        return (
+            <div style={{height: "100%"}}>
+                {navigateIDs()}
+                <div id="controlPanel">
                     {showIndex()}
                     {controlFunctions()}
                 </div>
@@ -1578,6 +1656,7 @@ class ControlPanel extends React.Component<IProps, IState> {
 
 const mapDispatchToProps = {
     progressNextStage,
+    getPreviousID,
     getNextID,
     loadNextID,
     createNewID,

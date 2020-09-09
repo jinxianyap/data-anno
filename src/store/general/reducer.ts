@@ -40,7 +40,19 @@ export function generalReducer(
                 loadedIDs: true
             }
         }
+        case Action.GET_PREV_ID: {
+            if (state.IDLibrary[state.currentIndex - 1] !== undefined) {
+                state.IDLibrary[state.currentIndex - 1].dirty = true;
+            }
+            return {
+                ...state,
+                currentIndex: state.currentIndex - 1
+            }
+        }
         case Action.GET_NEXT_ID: {
+            if (state.IDLibrary[state.currentIndex + 1] !== undefined) {
+                state.IDLibrary[state.currentIndex + 1].dirty = true;
+            }
             return {
                 ...state,
                 currentIndex: state.currentIndex + 1
@@ -48,8 +60,9 @@ export function generalReducer(
         }
         case Action.SAVE_TO_LIBRARY: {
             let lib = state.IDLibrary;
-            let idx = lib.findIndex((each) => each.index === action.payload.id.index);
-            lib.splice(idx, 1, action.payload.id);
+            let id = action.payload.id;
+            let idx = lib.findIndex((each) => each.index === id.index);
+            lib.splice(idx, 1, id);
             return {
                 ...state,
                 IDLibrary: lib

@@ -68,6 +68,7 @@ class SegCheck extends React.Component<IProps, IState> {
     componentDidUpdate(previousProps: IProps) {
         if (this.props.noMoreIDs) {
             this.props.progressNextStage(CurrentStage.OUTPUT);
+            return;
         }
         if (!previousProps.originalProcessed && this.props.originalProcessed) {
             let originalImage = this.state.originalImage!;
@@ -79,7 +80,8 @@ class SegCheck extends React.Component<IProps, IState> {
                 croppedImage: croppedImage
             })
         }
-        if (!this.props.originalProcessed && this.state.originalImage === undefined && this.state.croppedImage === undefined) {
+        if (!this.props.originalProcessed && this.state.originalImage === undefined && this.state.croppedImage === undefined
+            && this.props.originalID !== undefined) {
             this.setState({
                 originalImage: GeneralUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
                 croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID")

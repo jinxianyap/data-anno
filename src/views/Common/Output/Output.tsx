@@ -4,7 +4,7 @@ import { AppState } from '../../../store';
 import { connect } from 'react-redux';
 import { IDState } from '../../../store/id/types';
 import { DatabaseUtil } from '../../../utils/DatabaseUtil';
-import { CurrentStage } from '../../../utils/enums';
+import { CurrentStage, ProcessType } from '../../../utils/enums';
 import { progressNextStage } from '../../../store/general/actionCreators';
 import { GeneralActionTypes } from '../../../store/general/types';
 import { GeneralUtil } from '../../../utils/GeneralUtil';
@@ -12,7 +12,9 @@ const axios = require('axios');
 
 interface IProps {
     IDLibrary: IDState[],
+    index: number,
     database: string,
+    processType: ProcessType,
     progressNextStage: (stage: CurrentStage) => GeneralActionTypes;
 }
 
@@ -37,11 +39,17 @@ class Output extends React.Component<IProps, IState> {
     }
 
     componentDidMount() {
-        console.log(this.props.IDLibrary.map(DatabaseUtil.extractOutput));
+        let lib = [];
+        if (this.props.processType === ProcessType.FACE) {
+            lib = this.props.IDLibrary.filter(((each) => each.videoLiveness !== undefined || each.internalIDs.length > 0));
+        } else {
+            lib = this.props.IDLibrary.filter(((each) => each.dirty)).map(DatabaseUtil.extractOutput)
+        }
+        console.log(lib);
         GeneralUtil.toggleOverlay(true);
         axios.post('/returnOutput', {
             database: this.props.database,
-            library: this.props.IDLibrary.map(DatabaseUtil.extractOutput),
+            library: lib,
             overwrite: true
         }).then((res: any) => {
             if (res.status === 200) {
@@ -103,6 +111,8 @@ const mapDispatchToProps = {
 const mapStateToProps = (state: AppState) => {
     return {
         database: state.general.setupOptions.database,
+        processType: state.general.setupOptions.processType,
+        index: state.general.currentIndex,
         IDLibrary: state.general.IDLibrary
     }
 }

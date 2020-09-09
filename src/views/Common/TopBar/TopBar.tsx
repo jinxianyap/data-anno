@@ -22,6 +22,8 @@ const TopBar: React.FC<IProps> = ({processType, currentStage}) => {
             case (ProcessType.SEGMENTATION): { values = values.slice(0, 3); length = 46; break; }
             case (ProcessType.LANDMARK): { values = values.slice(0, 4); length = 54; break; }
             case (ProcessType.OCR): { values = values.slice(0, 6); length -= 28; break; }
+            case (ProcessType.LIVENESS): { values = values.slice(0, 7); length -= 15; break; }
+            case (ProcessType.FACE): { values = values.slice(6, 8); length = 28; break; }
         }
 
         return (

@@ -3,6 +3,7 @@ import { IDProcess, Rotation } from '../../utils/enums';
 import { ImageState, IDBox, LandmarkData, OCRData, ImageProps } from '../image/types';
 
 export type IDState = {
+    dirty: boolean;
     processed: boolean;
     dateCreated: string;
     sessionID: string;

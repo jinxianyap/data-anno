@@ -176,6 +176,8 @@ class SetupView extends React.Component<IProps, IState> {
                                 <option key="seg" value={ProcessType.SEGMENTATION}>Up to Segmentation</option>
                                 <option key="landmark" value={ProcessType.LANDMARK}>Up to Landmark</option>
                                 <option key="ocr" value={ProcessType.OCR}>Up To OCR</option>
+                                <option key="liveness" value={ProcessType.LIVENESS}>Up To Liveness</option>
+                                <option key="face" value={ProcessType.FACE}>Liveness &amp; Face Comparison Only</option>
                             </Form.Control>
                         </Form.Group>
 

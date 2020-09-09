@@ -161,7 +161,7 @@ function updateDataWithJSON(result, data) {
                     if (ocr !== undefined) {
                         each.text = ocr.labels.map((lbl) => lbl.value).join(" ");
                         each.coords = ocr.labels.map((lbl) => {
-                            if (lbl.position !== undefined) {
+                            if (lbl.position !== undefined && data.imageProps !== undefined) {
                                 return [lbl.position.x1, 
                                     data.imageProps.height - lbl.position.y1, 
                                     lbl.position.x2,
@@ -174,7 +174,7 @@ function updateDataWithJSON(result, data) {
                     return each;
                 })
             }
-            ocrResults.spoof_results.is_card_spoof = data.frontIDFlags.includes('spoof');
+            ocrResults.spoof_results.is_card_spoof = data.frontIDFlags !== undefined ? data.frontIDFlags.includes('spoof') : false;
         }
         return ocrResults
     }
@@ -378,26 +378,26 @@ function mergeJSONData(initial, updated) {
         documentType: updated.documentType,
 
         imageProps: updated.imageProps,
-        segmentation: {
+        segmentation: updated.segmentation !== undefined ? {
             originalID: updated.segmentation.originalID.IDBox,
             backID: updated.segmentation.backID.IDBox
-        },
-        landmarks: {
+        } : initial.segmentation,
+        landmarks: updated.landmarks !== undefined ? {
             originalID: mergeLandmarks(initial.landmarks.originalID, updated.landmarks.originalID),
             backID: mergeLandmarks(initial.landmarks.backID, updated.landmarks.backID)
-        },
-        ocr: {
+        } : initial.landmarks,
+        ocr: updated.ocr !== undefined ? {
             originalID: mergeOCRs(initial.ocr.originalID, updated.ocr.originalID),
             backID: mergeOCRs(initial.ocr.backID, updated.ocr.backID),
-        },
+        } : initial.ocr,
 
         videoLiveness: updated.videoLiveness !== undefined ? updated.videoLiveness : initial.videoLiveness,
         videoFlags: updated.videoFlags !== undefined ? updated.videoFlags : initial.videoFlags,
-        faceCompareMatch: updated.faceCompareMatch.map((each, idx) => {
+        faceCompareMatch: updated.faceCompareMatch !== undefined ? updated.faceCompareMatch.map((each, idx) => {
             return each !== undefined 
                 ? each
                 : initial.faceCompareMatch[idx];
-        })
+        }) : initial.faceCompareMatch
     }
 }
 

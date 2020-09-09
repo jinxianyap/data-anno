@@ -30,6 +30,12 @@ export function loadFromDatabase(IDs: IDState[]): GeneralActionTypes {
     }
 }
 
+export function getPreviousID(): GeneralActionTypes {
+    return {
+        type: Action.GET_PREV_ID
+    }
+}
+
 export function getNextID(): GeneralActionTypes {
     return {
         type: Action.GET_NEXT_ID
