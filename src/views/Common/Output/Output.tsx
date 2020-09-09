@@ -41,7 +41,7 @@ class Output extends React.Component<IProps, IState> {
     componentDidMount() {
         let lib = [];
         if (this.props.processType === ProcessType.FACE) {
-            lib = this.props.IDLibrary.filter(((each) => each.videoLiveness !== undefined || each.internalIDs.length > 0));
+            lib = this.props.IDLibrary.filter(((each) => each.videoLiveness !== undefined || each.faceCompareMatch !== undefined));
         } else {
             lib = this.props.IDLibrary.filter(((each) => each.dirty)).map(DatabaseUtil.extractOutput)
         }

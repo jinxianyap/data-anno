@@ -17,8 +17,6 @@ import { GeneralUtil } from '../../../utils/GeneralUtil';
 import { GrFormNext, GrFormPrevious } from 'react-icons/gr';
 const axios = require('axios');
 
-var fs = require('browserify-fs');
-
 interface IProps {
     database: string;
     processType: ProcessType;

@@ -29,6 +29,7 @@ export type IDState = {
 
     videoLiveness?: boolean;
     videoFlags?: string[];
+    faceCompareMatch?: boolean; // only for ProcessType.FACE
 
     internalIndex: number;
     internalIDs: InternalIDState[];
@@ -158,6 +159,13 @@ interface RestoreID {
     type: typeof Action.RESTORE_ID;
 }
 
+interface SetIDFaceMatch {
+    type: typeof Action.SET_ID_FACE_MATCH;
+    payload: {
+        match: boolean
+    }
+}
+
 export type IDActionTypes = SaveDocumentType
     | SetImageRotation
     | LoadNextID
@@ -171,3 +179,4 @@ export type IDActionTypes = SaveDocumentType
     | UpdateFrontIDFlags
     | UpdateBackIDFlags
     | RestoreID
+    | SetIDFaceMatch

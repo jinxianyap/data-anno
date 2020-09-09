@@ -123,3 +123,12 @@ export function restoreID(): IDActionTypes {
         type: Action.RESTORE_ID
     }
 }
+
+export function setIDFaceMatch(match: boolean): IDActionTypes {
+    return {
+        type: Action.SET_ID_FACE_MATCH,
+        payload: {
+            match: match
+        }
+    }
+}

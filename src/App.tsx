@@ -1,7 +1,7 @@
 import React from 'react';
 import './App.scss';
 import SetupView from './views/SetupView/SetupView';
-import { CurrentStage } from './utils/enums';
+import { CurrentStage, ProcessType } from './utils/enums';
 import { AppState } from './store';
 import { connect } from 'react-redux';
 import SegCheck from './views/SegCheck/SegCheck';
@@ -13,6 +13,7 @@ import SegEdit from './views/SegEdit/SegEdit';
 import LandmarkOCR from './views/LandmarkOCR/LandmarkOCR';
 import LivenessAndMatch from './views/LivenessAndMatch/LivenessAndMatch';
 import Output from './views/Common/Output/Output';
+import FacePanel from './views/Common/FacePanel/FacePanel';
 
 interface IProps {
   state: AppState,
@@ -55,7 +56,11 @@ const App: React.FC<IProps> = ({state, currentStage}) => {
                     {paintContent()}
                   </Col>
                   <Col style={{padding: 0, height: "100%"}}>
-                    <ControlPanel />
+                    {
+                      state.general.setupOptions.processType === ProcessType.FACE
+                        ? <FacePanel />
+                        : <ControlPanel />
+                    }
                   </Col>
                 </Row>)
               : <div />

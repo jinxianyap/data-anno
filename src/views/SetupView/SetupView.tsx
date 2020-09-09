@@ -116,7 +116,11 @@ class SetupView extends React.Component<IProps, IState> {
                     }
                     this.props.loadFromDatabase(IDs);
 
-                    this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+                    if (st.processType === ProcessType.FACE) {
+                        this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
+                    } else {
+                        this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+                    }
                 }
             })
         }

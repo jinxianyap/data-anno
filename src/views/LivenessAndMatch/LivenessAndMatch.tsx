@@ -15,7 +15,7 @@ interface IProps {
 }
 
 interface IState {
-    croppedImageLoaded: boolean
+    croppedImageIndex: number
 }
 
 class LivenessAndMatch extends React.Component<IProps, IState> {
@@ -23,12 +23,12 @@ class LivenessAndMatch extends React.Component<IProps, IState> {
     constructor(props: IProps) {
         super(props);
         this.state = {
-            croppedImageLoaded: false
+            croppedImageIndex: -1
         };
     }
 
     componentDidMount() {
-        if (this.props.currentStage === CurrentStage.FR_COMPARE_CHECK && !this.state.croppedImageLoaded) {
+        if (this.props.currentStage === CurrentStage.FR_COMPARE_CHECK && this.props.id.index !== this.state.croppedImageIndex) {
             if (this.props.id.croppedFace!.name !== 'notfound') {
                 GeneralUtil.loadImage("frCompareFace", this.props.id.croppedFace!, "frCompareID");
             } else if (this.props.internalID.originalID!.croppedImage!.name !== 'notfound') {
@@ -39,12 +39,13 @@ class LivenessAndMatch extends React.Component<IProps, IState> {
             } else if (this.props.id.videoStills!.length > 0) {
                 GeneralUtil.loadImage("frCompareSelfie", this.props.id.videoStills![0], "frCompareSelfieImage");
             }
-            this.setState({croppedImageLoaded: true});
+            this.setState({croppedImageIndex: this.props.id.index});
         }
     }
 
-    componentDidUpdate() {
-        if (this.props.currentStage === CurrentStage.FR_COMPARE_CHECK && !this.state.croppedImageLoaded) {
+    componentDidUpdate(previousProps: IProps) {
+        if (this.props.currentStage === CurrentStage.FR_COMPARE_CHECK 
+            && (this.props.id.index !== this.state.croppedImageIndex || this.props.id.index !== previousProps.id.index || previousProps.currentStage === CurrentStage.FR_LIVENESS_CHECK)) {
             if (this.props.id.croppedFace!.name !== 'notfound') {
                 GeneralUtil.loadImage("frCompareFace", this.props.id.croppedFace!, "frCompareID");
             } else if (this.props.internalID.originalID!.croppedImage!.name !== 'notfound') {
@@ -55,7 +56,7 @@ class LivenessAndMatch extends React.Component<IProps, IState> {
             } else if (this.props.id.videoStills!.length > 0) {
                 GeneralUtil.loadImage("frCompareSelfie", this.props.id.videoStills![0], "frCompareSelfieImage");
             }
-            this.setState({croppedImageLoaded: true});
+            this.setState({croppedImageIndex: this.props.id.index});
         }
     }
 
@@ -64,7 +65,7 @@ class LivenessAndMatch extends React.Component<IProps, IState> {
             return (
                 <Container className="setupView">
                     {
-                        this.props.id.selfieVideo!.name !== 'notfound' ?
+                        this.props.id.selfieVideo !== undefined && this.props.id.selfieVideo!.name !== 'notfound' ?
                         <ReactPlayer
                             url={URL.createObjectURL(this.props.id.selfieVideo)}
                             playing={true}

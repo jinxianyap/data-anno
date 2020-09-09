@@ -272,6 +272,12 @@ export function IDReducer(
                 ...initialState
             }
         }
+        case Action.SET_ID_FACE_MATCH: {
+            return {
+                ...state,
+                faceCompareMatch: action.payload.match
+            }
+        }
         default:
             return state;
     }
