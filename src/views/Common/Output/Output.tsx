@@ -41,9 +41,13 @@ class Output extends React.Component<IProps, IState> {
     componentDidMount() {
         let lib = [];
         if (this.props.processType === ProcessType.FACE) {
-            lib = this.props.IDLibrary.filter(((each) => each.videoLiveness !== undefined || each.faceCompareMatch !== undefined));
+            lib = this.props.IDLibrary
+                .filter(((each) => each.videoLiveness !== undefined || each.faceCompareMatch !== undefined))
+                .map((each) => DatabaseUtil.extractOutput(each, true));
         } else {
-            lib = this.props.IDLibrary.filter(((each) => each.dirty)).map(DatabaseUtil.extractOutput)
+            lib = this.props.IDLibrary
+                .filter(((each) => each.dirty))
+                .map((each) => DatabaseUtil.extractOutput(each, false))
         }
         console.log(lib);
         GeneralUtil.toggleOverlay(true);
@@ -84,9 +88,9 @@ class Output extends React.Component<IProps, IState> {
                             </thead>
                             <tbody>
                             {
-                                this.state.saveOutputStatus.map((each) => {
+                                this.state.saveOutputStatus.map((each, idx) => {
                                     return (
-                                        <tr>
+                                        <tr key={idx}>
                                             <td>{each.sessionID}</td>
                                             <td>{each.success.toString()}</td>
                                         </tr>

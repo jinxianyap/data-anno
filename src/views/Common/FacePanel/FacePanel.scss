@@ -4,4 +4,23 @@
     width: 100%;
     border-left: 1px solid lightgrey;
     padding: 2rem;
+
+    .individual-card {
+        padding: 1rem;
+        margin: 1rem 0;
+
+        .card-body {
+            padding: 0;
+        }
+    }
+    
+    .block-button {
+        margin: 0.1rem 0;
+        width: calc(100% - 0.1rem - 0.1rem);
+    }
+
+    .common-button {
+        margin: 0.1rem;
+        width: calc(50% - 0.1rem - 0.1rem);
+    }
 }

@@ -99,6 +99,11 @@ class FacePanel extends React.Component<IProps, IState> {
                     if (res.status === 200) {
                         DatabaseUtil.loadSessionData(res.data, this.props.indexedID).then((completeID) => {
                             this.props.loadNextID(completeID);
+                            this.setState({
+                                selectedVideoFlags: completeID.videoFlags !== undefined ? completeID.videoFlags : [],
+                                passesLiveness: completeID.videoLiveness,
+                                livenessValidation: completeID.videoLiveness !== undefined ? true : false
+                            })
                             GeneralUtil.toggleOverlay(false);
                         });
                     }
@@ -108,6 +113,11 @@ class FacePanel extends React.Component<IProps, IState> {
                 });
             } else {
                 this.props.loadNextID(this.props.indexedID);
+                this.setState({
+                    selectedVideoFlags: this.props.indexedID.videoFlags !== undefined ? this.props.indexedID.videoFlags : [],
+                    passesLiveness: this.props.indexedID.videoLiveness,
+                    livenessValidation: this.props.indexedID.videoLiveness !== undefined ? true : false
+                })
                 GeneralUtil.toggleOverlay(false);
             }
             return;
@@ -269,7 +279,7 @@ class FacePanel extends React.Component<IProps, IState> {
                     <Card.Title>Match</Card.Title>
                     <Card.Body>
                         <ToggleButtonGroup type="radio" name="passessFRMatchButtons" style={{display: "block", width: "100%"}}
-                            value={this.props.currentImage.faceCompareMatch} onChange={(val) => this.props.setIDFaceMatch(val)}>
+                            value={this.props.currentID.faceCompareMatch} onChange={(val) => this.props.setIDFaceMatch(val)}>
                             <ToggleButton variant="light" className="common-button" value={false}>No Match</ToggleButton>
                             <ToggleButton variant="light" className="common-button" value={true}>Match</ToggleButton>
                         </ToggleButtonGroup>
@@ -330,23 +340,6 @@ class FacePanel extends React.Component<IProps, IState> {
         }
 
         const navigateIDs = () => {
-            // const handleClick = (prev: boolean) => {
-                // switch (this.props.currentStage) {
-                //     case (CurrentStage.LANDMARK_EDIT): {
-                //         this.state.currentLandmarks.forEach((each) => {
-                //             this.props.updateLandmarkFlags(each.name, each.flags);
-                //         });
-                //         this.props.saveToInternalID(this.props.currentImage, this.props.internalID.processStage !== IDProcess.MYKAD_FRONT);
-                //         break;
-                //     }
-                //     case (CurrentStage.OCR_DETAILS): {
-
-                //     }
-                // }
-                // need to save state first?
-                // this.loadNextID(prev);
-            // }
-
             const saveAndQuit = () => {
                 this.props.saveToLibrary(this.props.currentID);
                 this.setState({showSaveAndQuitModal: false}, () => this.props.progressNextStage(CurrentStage.OUTPUT));

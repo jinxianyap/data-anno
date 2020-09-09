@@ -247,7 +247,7 @@ export class DatabaseUtil {
         })
     }
 
-    public static extractOutput(ID: IDState): any {
+    public static extractOutput(ID: IDState, face?: boolean): any {
         return {
             dateCreated: ID.dateCreated,
             sessionID: ID.sessionID,
@@ -276,7 +276,7 @@ export class DatabaseUtil {
 
             videoLiveness: ID.videoLiveness,
             videoFlags: ID.videoFlags,
-            faceCompareMatch: ID.internalIDs.map((each) => each.originalID!.faceCompareMatch)
+            faceCompareMatch: face ? [ID.faceCompareMatch] : ID.internalIDs.map((each) => each.originalID!.faceCompareMatch)
         }
     }
 
