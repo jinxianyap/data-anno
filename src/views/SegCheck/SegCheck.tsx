@@ -82,21 +82,30 @@ class SegCheck extends React.Component<IProps, IState> {
         if (!previousProps.originalProcessed && this.props.originalProcessed) {
             let originalImage = this.state.originalImage!;
             let croppedImage = this.state.croppedImage!;
-            originalImage.src = GeneralUtil.getSource(this.props.backID!.image);
-            croppedImage.src = GeneralUtil.getSource(this.props.backID!.croppedImage!);
+            if (this.props.currentID !== undefined) {
+                let intId = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
+                if (intId !== undefined) {
+                    if (intId.processStage === IDProcess.MYKAD_BACK) {
+                        originalImage.src = GeneralUtil.getSource(this.props.backID!.image);
+                        croppedImage.src = GeneralUtil.getSource(this.props.backID!.croppedImage!);
+                    } else {
+                        originalImage.src = GeneralUtil.getSource(this.props.originalID!.image);
+                        croppedImage.src = GeneralUtil.getSource(this.props.originalID!.croppedImage!);
+                    }
+                }
+            }
+
             this.setState({
                 originalImage: originalImage,
                 croppedImage: croppedImage
             })
-        }
-        if (!this.props.originalProcessed && this.state.originalImage === undefined && this.state.croppedImage === undefined
+        } else if (!this.props.originalProcessed && this.state.originalImage === undefined && this.state.croppedImage === undefined
             && this.props.originalID !== undefined) {
             this.setState({
                 originalImage: GeneralUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
                 croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID")
             })
-        }
-        if (!previousProps.currentID!.dataLoaded && this.props.currentID!.dataLoaded) {
+        } else if (!previousProps.currentID!.dataLoaded && this.props.currentID!.dataLoaded) {
             if (!this.state.originalImage || !this.state.croppedImage) return;
             let originalImage = this.state.originalImage!;
             let croppedImage = this.state.croppedImage!;

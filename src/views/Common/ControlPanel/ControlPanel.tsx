@@ -1608,6 +1608,14 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     frCompareCheck = () => {
+        const backStage = () => {
+            if (this.props.currentID.selfieVideo !== undefined && this.props.currentID.selfieVideo.name !== 'notfound') {
+                this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
+            } else {
+                this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+            }
+        }
+
         const submitFaceCompareResults = () => {
             this.props.saveToInternalID(this.props.currentImage, true);
             this.resetState();
@@ -1626,7 +1634,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                         </ToggleButtonGroup>
                     </Card.Body>
                 </Card>
-                <Button variant="secondary" className="common-button" onClick={() => this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK)}>
+                <Button variant="secondary" className="common-button" onClick={backStage}>
                     Back
                 </Button>
                 <Button className="common-button" onClick={submitFaceCompareResults} disabled={this.props.currentImage.faceCompareMatch === undefined}>

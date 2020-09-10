@@ -2,6 +2,7 @@
 
 export class GeneralUtil {
     public static loadImage(elemID: string, imageFile: File, imageID: string): HTMLImageElement {
+        if (imageFile === undefined) return new Image();
         let location = document.getElementById(elemID);
         let image = new Image();
         image.classList.add("pairDisplayImage");
