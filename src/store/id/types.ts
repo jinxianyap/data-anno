@@ -173,6 +173,12 @@ interface ClearInternalIDs {
     type: typeof Action.CLEAR_INTERNAL_IDS;
 }
 
+
+interface BackToOriginal {
+    type: typeof Action.BACK_TO_ORIGINAL;
+}
+
+
 export type IDActionTypes = SaveDocumentType
     | SetImageRotation
     | LoadNextID
@@ -188,3 +194,4 @@ export type IDActionTypes = SaveDocumentType
     | RestoreID
     | SetIDFaceMatch
     | ClearInternalIDs
+    | BackToOriginal

@@ -138,3 +138,9 @@ export function clearInternalIDs(): IDActionTypes {
         type: Action.CLEAR_INTERNAL_IDS
     }
 }
+
+export function backToOriginal(): IDActionTypes {
+    return {
+        type: Action.BACK_TO_ORIGINAL
+    }
+}

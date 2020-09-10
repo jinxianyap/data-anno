@@ -9,7 +9,7 @@ import { GeneralActionTypes } from '../../../store/general/types';
 import { IDActionTypes, IDState, InternalIDState } from '../../../store/id/types';
 import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord, LandmarkData, Position } from '../../../store/image/types';
 import { progressNextStage, getPreviousID, getNextID, saveToLibrary } from '../../../store/general/actionCreators';
-import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, updateFrontIDFlags, updateBackIDFlags, restoreID, clearInternalIDs } from '../../../store/id/actionCreators';
+import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, backToOriginal, saveToInternalID, updateFrontIDFlags, updateBackIDFlags, restoreID, clearInternalIDs } from '../../../store/id/actionCreators';
 import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, addLandmarkData, updateLandmarkFlags, addOCRData, setFaceCompareMatch, restoreImage } from '../../../store/image/actionCreators';
 import { DatabaseUtil } from '../../../utils/DatabaseUtil';
 import { HOST, PORT, TRANSFORM } from '../../../config';
@@ -46,6 +46,7 @@ interface IProps {
     updateBackIDFlags: (flags: string[]) => IDActionTypes;
     saveSegCheck: (passesCrop: boolean) => ImageActionTypes;
     clearInternalIDs: () => IDActionTypes;
+    backToOriginal: () => IDActionTypes;
 
     // Landmark
     setCurrentSymbol: (symbol?: string, landmark?: string) => ImageActionTypes;
@@ -719,7 +720,8 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
 
         const setFlag = (flags: string[]) => {
-            if (this.props.currentID.originalIDProcessed) {
+            if (this.props.currentID.originalIDProcessed && this.props.internalID !== undefined
+                && this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
                 this.setState({selectedBackIDFlags: flags});
             } else {
                 this.setState({selectedFrontIDFlags: flags});
@@ -767,6 +769,15 @@ class ControlPanel extends React.Component<IProps, IState> {
                     }
                 </div>
             )
+        }
+
+        const backStage = () => {
+            this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+            this.props.backToOriginal();
+            this.setState({passesCrop: undefined, loadedSegCheckImage: true}, () => {
+                this.props.loadImageState(this.props.internalID.originalID!);
+                this.initializeSegCheckData();
+            });
         }
 
         const skipSegCheck = () => {
@@ -1018,6 +1029,14 @@ class ControlPanel extends React.Component<IProps, IState> {
                         onClick={skipSegCheck}>
                         Skip
                     </Button>)
+                    : <div />
+                }
+                {
+                    this.props.currentID.originalIDProcessed && this.props.internalID !== undefined
+                    && this.props.internalID.processStage === IDProcess.MYKAD_BACK ?
+                    <Button variant="secondary" className="block-button" id="segcheck-back-btn" onClick={backStage}>
+                        Back
+                    </Button>
                     : <div />
                 }
 
@@ -1847,6 +1866,7 @@ const mapDispatchToProps = {
     saveDocumentType,
     saveSegCheck,
     clearInternalIDs,
+    backToOriginal,
     loadImageState,
     setCurrentSymbol,
     setCurrentWord,

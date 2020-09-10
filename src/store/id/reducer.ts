@@ -286,6 +286,19 @@ export function IDReducer(
                 internalIndex: 0
             }
         }
+        case Action.BACK_TO_ORIGINAL: {
+            let idx = state.internalIndex;
+            let ids = state.internalIDs;
+            let intId = ids[idx];
+            if (intId.processStage === IDProcess.MYKAD_BACK) {
+                intId.processStage = IDProcess.MYKAD_FRONT;
+                ids.splice(idx, 1, intId);
+            }
+            return {
+                ...state,
+                internalIDs: ids
+            }
+        }
         default:
             return state;
     }

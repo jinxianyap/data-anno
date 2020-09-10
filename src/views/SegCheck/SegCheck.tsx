@@ -28,6 +28,7 @@ interface IState {
     croppedImageRotation: Rotation;
     originalImage?: HTMLImageElement;
     croppedImage?: HTMLImageElement;
+    front: boolean;
     isRotating: boolean;
     ccw: boolean;
 }
@@ -37,6 +38,7 @@ class SegCheck extends React.Component<IProps, IState> {
     constructor(props: IProps) {
         super(props);
         this.state = {
+            front: true,
             originalImageRotation: Rotation.ROT0,
             croppedImageRotation: Rotation.ROT0,
             isRotating: false,
@@ -58,23 +60,32 @@ class SegCheck extends React.Component<IProps, IState> {
             if (internalID.processStage === IDProcess.MYKAD_BACK) {
                 this.setState({
                     originalImage: GeneralUtil.loadImage("segCheckID", this.props.backID!.image, "segCheckBackID"),
-                    croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.backID!.croppedImage!, "segCheckCroppedID")
+                    croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.backID!.croppedImage!, "segCheckCroppedID"),
+                    front: false
                 })
             } else {
                 this.setState({
                     originalImage: GeneralUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
-                    croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID")
+                    croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID"),
+                    front: true
                 })
             }
         } else if (this.props.originalID !== undefined) {
             this.setState({
                 originalImage: GeneralUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
-                croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID")
+                croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID"),
+                front: true
             })
         }
     }
 
     componentDidUpdate(previousProps: IProps) {
+        console.log('here');
+        console.log(previousProps);
+        console.log(this.props);
+        if (this.state.originalImage !== undefined) {
+        console.log(this.state.originalImage.src);
+        }
         if (this.props.noMoreIDs) {
             this.props.progressNextStage(CurrentStage.OUTPUT);
             return;
@@ -82,28 +93,33 @@ class SegCheck extends React.Component<IProps, IState> {
         if (!previousProps.originalProcessed && this.props.originalProcessed) {
             let originalImage = this.state.originalImage!;
             let croppedImage = this.state.croppedImage!;
+            let front = true;
             if (this.props.currentID !== undefined) {
                 let intId = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
                 if (intId !== undefined) {
                     if (intId.processStage === IDProcess.MYKAD_BACK) {
                         originalImage.src = GeneralUtil.getSource(this.props.backID!.image);
                         croppedImage.src = GeneralUtil.getSource(this.props.backID!.croppedImage!);
+                        front = false;
                     } else {
                         originalImage.src = GeneralUtil.getSource(this.props.originalID!.image);
                         croppedImage.src = GeneralUtil.getSource(this.props.originalID!.croppedImage!);
+                        front = true;
                     }
                 }
             }
 
             this.setState({
                 originalImage: originalImage,
-                croppedImage: croppedImage
+                croppedImage: croppedImage,
+                front: front
             })
         } else if (!this.props.originalProcessed && this.state.originalImage === undefined && this.state.croppedImage === undefined
             && this.props.originalID !== undefined) {
             this.setState({
                 originalImage: GeneralUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
-                croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID")
+                croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID"),
+                front: true
             })
         } else if (!previousProps.currentID!.dataLoaded && this.props.currentID!.dataLoaded) {
             if (!this.state.originalImage || !this.state.croppedImage) return;
@@ -113,8 +129,33 @@ class SegCheck extends React.Component<IProps, IState> {
             croppedImage.src = GeneralUtil.getSource(this.props.originalID!.croppedImage!);
             this.setState({
                 originalImage: originalImage,
-                croppedImage: croppedImage
+                croppedImage: croppedImage,
+                front: true
             })
+        } else if (this.props.originalProcessed && this.props.currentID !== undefined && this.props.currentID.internalIDs.length > 0
+            && previousProps.currentID !== undefined && previousProps.currentID.internalIDs.length > 0) {
+                if (!this.state.originalImage || !this.state.croppedImage) return;
+            let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
+            let originalImage = this.state.originalImage!;
+            let croppedImage = this.state.croppedImage!;
+
+            if (internalID.processStage === IDProcess.MYKAD_BACK && this.state.front) {
+                originalImage.src = GeneralUtil.getSource(this.props.backID!.image);
+                croppedImage.src = GeneralUtil.getSource(this.props.backID!.croppedImage!);
+                this.setState({
+                    originalImage: originalImage,
+                    croppedImage: croppedImage,
+                    front: false
+                })
+            } else if (internalID.processStage === IDProcess.MYKAD_FRONT && !this.state.front) {
+                originalImage.src = GeneralUtil.getSource(this.props.originalID!.image);
+                croppedImage.src = GeneralUtil.getSource(this.props.originalID!.croppedImage!);
+                this.setState({
+                    originalImage: originalImage,
+                    croppedImage: croppedImage,
+                    front: true
+                })
+            }
         }
 
         if (this.state.isRotating) {
