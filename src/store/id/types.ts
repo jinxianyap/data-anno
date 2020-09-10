@@ -47,19 +47,22 @@ export type InternalIDState = {
 }
 
 export type GivenData = {
-    imageProps?: ImageProps;
     originalID?: {
+        imageProps?: ImageProps;
         spoof: boolean;
-        segmentation?: IDBox,
-        landmark: LandmarkData[],
-        ocr: OCRData[],
+        flags: string[];
+        segmentation?: ({documentType: string, passesCrop: boolean, IDBox: IDBox} | undefined)[],
+        landmark: LandmarkData[][],
+        ocr: OCRData[][],
         faceCompareMatch?: boolean
     },
     backID?: {
+        imageProps?: ImageProps;
         spoof: boolean;
-        segmentation?: IDBox,
-        landmark: LandmarkData[],
-        ocr: OCRData[]
+        flags: string[];
+        segmentation?: ({passesCrop: boolean, IDBox: IDBox} | undefined)[],
+        landmark: LandmarkData[][],
+        ocr: OCRData[][]
     },
     liveness?: boolean
 }

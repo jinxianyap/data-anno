@@ -47,6 +47,7 @@ export function IDReducer(
         case Action.LOAD_NEXT_ID: {
             return {
                 ...action.payload.ID,
+                internalIndex: 0,
                 internalIDs: action.payload.ID.internalIDs.map((each) => {
                     if (each.processStage === IDProcess.MYKAD_BACK) {
                         each.processStage = IDProcess.MYKAD_FRONT;

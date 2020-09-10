@@ -1,6 +1,6 @@
-import { IDState, GivenData } from '../store/id/types';
-import { ImageState, LandmarkData, OCRData, OCRWord, ImageProps } from '../store/image/types';
-import { Rotation } from './enums';
+import { IDState, GivenData, InternalIDState } from '../store/id/types';
+import { ImageState, LandmarkData, OCRData, OCRWord, ImageProps, IDBox } from '../store/image/types';
+import { Rotation, IDProcess } from './enums';
 import { DummyImage } from './dummy';
 import options from '../options.json';
 
@@ -92,125 +92,202 @@ export class DatabaseUtil {
         let docKey = ['MyKadFront', 'MyKadBack'];
 
         const load = async (docKey: string, front: boolean, given: GivenData) => {
-            let rawData = front ? session.raw_data.front_ocr : session.raw_data.back_ocr;
-            if (rawData !== undefined) {
-                let landmarks = [];
-                let ocr = [];
+            let frontSeg: {documentType: string, IDBox: IDBox, passesCrop: boolean}[] = [];
+            let backSeg: {IDBox: IDBox, passesCrop: boolean}[] = [];
+            let frontImgProps: ImageProps = {height: -1, width: -1};
+            let backImgProps: ImageProps = {height: -1, width: -1};
+            let landmarks = [];
+            let ocr = [];
 
+            let segData = session.raw_data.segmentation !== undefined ? 
+                (front ? session.raw_data.segmentation.originalID : session.raw_data.segmentation.backID) : undefined;
+            if (segData !== undefined) {
+                if (front) {
+                    frontSeg = segData.map((e: any, idx: number) => {
+                        let each = e.coords;
+                        if (each === undefined) {
+                            return undefined;
+                        }
+                        return {
+                            documentType: e.documentType,
+                            passesCrop: e. passesCrop,
+                            IDBox: {
+                                id: idx,
+                                position: {x1: each[0],
+                                    x2: each[0] + each[2],
+                                    x3: each[0] + each[2],
+                                    x4: each[0],
+                                    y1: each[1] + each[3],
+                                    y2: each[1] + each[3],
+                                    y3: each[1],
+                                    y4: each[1]}
+                            }
+                        }
+                    })
+                } else {
+                    backSeg = segData.map((e: any, idx: number) => {
+                        let each = e.coords;
+                        if (each === undefined) {
+                            return undefined;
+                        }
+                        return {
+                            passesCrop: e.passesCrop,
+                            IDBox: {
+                                id: idx,
+                                position: {x1: each[0],
+                                    x2: each[0] + each[2],
+                                    x3: each[0] + each[2],
+                                    x4: each[0],
+                                    y1: each[1] + each[3],
+                                    y2: each[1] + each[3],
+                                    y3: each[1],
+                                    y4: each[1]}
+                            }
+                        }
+                    })
+                }
+            }
+
+            let ocrData = front ? session.raw_data.front_ocr : session.raw_data.back_ocr;
+            if (ocrData !== undefined) {
                 let ocrSrc = front ? session.mykad_front_ocr : session.mykad_back_ocr;
-                let imgProps: ImageProps = await new Promise((res, rej) => {
-                    let img = new Image();
-                    img.onload = () => {
-                        let props: ImageProps = {
-                            height: img.height,
-                            width: img.width
+                let imgProps: ImageProps = {height: -1, width: -1};
+                if (ocrData.imageProps !== undefined) {
+                    imgProps.height = ocrData.imageProps.height;
+                    imgProps.width = ocrData.imageProps.width;
+                } else if (ocrSrc !== undefined) {
+                    imgProps = await new Promise((res, rej) => {
+                        let img = new Image();
+                        img.onload = () => {
+                            let props: ImageProps = {
+                                height: img.height,
+                                width: img.width
+                            }
+                            res(props);
                         }
-                        res(props);
-                    }
-                    img.src = ocrSrc;
-                })
-                given.imageProps = imgProps;
+                        img.src = ocrSrc;
+                    })
+                }
 
-                landmarks = rawData.landmarks.map((each: any, idx: number) => {
-                    let flags: string[] = [];
-                    let glare = rawData.glare_results.find((glare: any) => glare.field === each.id);
-                    if (glare !== undefined) {
-                        if (glare.glare) {
-                            flags = ['glare'];
-                        }
-                    }
+                if (front) {
+                    frontImgProps = imgProps;
+                } else {
+                    backImgProps = imgProps;
+                }
 
-                    let landmark: LandmarkData = {
-                        id: idx,
-                        type: 'landmark',
-                        codeName: each.id,
-                        name: this.translateTermFromCodeName(docKey, 'landmark', each.id),
-                        flags: flags,
-                        position: {
-                            x1: each.coords[0],
-                            x2: each.coords[2],
-                            x3: each.coords[2],
-                            x4: each.coords[0],
-                            y1: imgProps.height - each.coords[1],
-                            y2: imgProps.height - each.coords[1],
-                            y3: imgProps.height - each.coords[3],
-                            y4: imgProps.height - each.coords[3]
+                const handleLandmarks = (each: any) => {
+                    if (each === null) return null;
+                    return each.map((lm: any, idx: number) => {
+                        let flags: string[] = [];
+                        let glare = ocrData.glare_results.find((glare: any) => glare.field === lm.id);
+                        if (glare !== undefined) {
+                            if (glare.glare) {
+                                flags = ['glare'];
+                            }
                         }
-                    }
-                    return landmark;
-                }).filter((each: LandmarkData) => each.name !== '');
-                ocr = rawData.ocr_results.map((each: any, idx: number) => {
-                    let text: string[] = each.text.split('\n').join(' ').split(' ');
-                    let ocr: OCRData = {
-                        id: idx,
-                        type: 'OCR',
-                        codeName: each.field,
-                        mapToLandmark: this.translateTermFromCodeName(docKey, 'ocr', each.field, false, true),
-                        name: this.translateTermFromCodeName(docKey, 'ocr', each.field),
-                        labels: text.map((lbl, idx) => { 
-                            let pos = undefined;
-                            if (each.coords !== undefined && each.coords[idx] !== undefined && each.coords[idx].length > 0) {
-                                pos = {
-                                    x1: each.coords[idx][0],
-                                    x2: each.coords[idx][2],
-                                    x3: each.coords[idx][2],
-                                    x4: each.coords[idx][0],
-                                    y1: imgProps.height - each.coords[idx][1],
-                                    y2: imgProps.height - each.coords[idx][1],
-                                    y3: imgProps.height - each.coords[idx][3],
-                                    y4: imgProps.height - each.coords[idx][3],
+
+                        if (imgProps.height === -1 || imgProps.width === -1) {
+                            if (front && frontSeg[idx] !== undefined) {
+                                imgProps = {
+                                    height: frontSeg[idx].IDBox.position.y1 - frontSeg[idx].IDBox.position.y4, 
+                                    width: frontSeg[idx].IDBox.position.x2 - frontSeg[idx].IDBox.position.x1
+                                }
+                            } else if (!front && backSeg[idx] !== undefined) {
+                                imgProps = {
+                                    height: backSeg[idx].IDBox.position.y1 - backSeg[idx].IDBox.position.y4, 
+                                    width: backSeg[idx].IDBox.position.x2 - backSeg[idx].IDBox.position.x1
                                 }
                             }
-                            let word: OCRWord = {
-                                id: idx,
-                                value: lbl,
-                                position: pos
-                            };
-                            return word;
-                        }),
-                        count: text.length
-                    }
-                    return ocr;
-                }).filter((each: OCRData) => each.name !== '' && each.mapToLandmark !== '');
-                if (front) {
-                    let bounds = rawData.landmarks.find((each: any) => each.id === 'mykad');
-                    given.originalID = {
-                        spoof: rawData.spoof_results.is_card_spoof,
-                        segmentation: bounds !== undefined ? {
-                            id: 0,
-                            position: {x1: bounds.coords[0],
-                                x2: bounds.coords[0] + bounds.coords[2],
-                                x3: bounds.coords[0] + bounds.coords[2],
-                                x4: bounds.coords[0],
-                                y1: bounds.coords[1] + bounds.coords[3],
-                                y2: bounds.coords[1] + bounds.coords[3],
-                                y3: bounds.coords[1],
-                                y4: bounds.coords[1]}
-                        } : undefined,
-                        landmark: landmarks,
-                        ocr: ocr,
-                        // faceCompareMatch: rawData.
-                    }
-                } else {
-                    let bounds = rawData.landmarks.find((each: any) => each.id === 'mykad_back');
-                    given.backID = {
-                        spoof: rawData.spoof_results.is_card_spoof,
-                        segmentation: bounds !== undefined ? {
-                            id: 0,
-                            position: {x1: bounds.coords[0],
-                                x2: bounds.coords[0] + bounds.coords[2],
-                                x3: bounds.coords[0] + bounds.coords[2],
-                                x4: bounds.coords[0],
-                                y1: bounds.coords[1] + bounds.coords[3],
-                                y2: bounds.coords[1] + bounds.coords[3],
-                                y3: bounds.coords[1],
-                                y4: bounds.coords[1]}
-                        } : undefined,
-                        landmark: landmarks,
-                        ocr: ocr
+                        }
+    
+                        let landmark: LandmarkData = {
+                            id: idx,
+                            type: 'landmark',
+                            codeName: lm.id,
+                            name: this.translateTermFromCodeName(docKey, 'landmark', lm.id),
+                            flags: flags,
+                            position: {
+                                x1: lm.coords[0],
+                                x2: lm.coords[2],
+                                x3: lm.coords[2],
+                                x4: lm.coords[0],
+                                y1: imgProps.height - lm.coords[1],
+                                y2: imgProps.height - lm.coords[1],
+                                y3: imgProps.height - lm.coords[3],
+                                y4: imgProps.height - lm.coords[3]
+                            }
+                        }
+                        return landmark;
+                    }).filter((each: LandmarkData) => each.name !== '');
+                }
+
+                const handleOCRs = (each: any) => {
+                    if (each === null) return null;
+                    return each.map((o: any, idx: number) => {
+                        let text: string[] = o.text.split('\n').join(' ').split(' ');
+                        let ocr: OCRData = {
+                            id: idx,
+                            type: 'OCR',
+                            codeName: o.field,
+                            mapToLandmark: this.translateTermFromCodeName(docKey, 'ocr', o.field, false, true),
+                            name: this.translateTermFromCodeName(docKey, 'ocr', o.field),
+                            labels: text.map((lbl, idx) => { 
+                                let pos = undefined;
+                                if (o.coords !== undefined && o.coords[idx] !== undefined && o.coords[idx].length > 0) {
+                                    pos = {
+                                        x1: o.coords[idx][0],
+                                        x2: o.coords[idx][2],
+                                        x3: o.coords[idx][2],
+                                        x4: o.coords[idx][0],
+                                        y1: imgProps.height - o.coords[idx][1],
+                                        y2: imgProps.height - o.coords[idx][1],
+                                        y3: imgProps.height - o.coords[idx][3],
+                                        y4: imgProps.height - o.coords[idx][3],
+                                    }
+                                }
+                                let word: OCRWord = {
+                                    id: idx,
+                                    value: lbl,
+                                    position: pos
+                                };
+                                return word;
+                            }),
+                            count: text.length
+                        }
+                        return ocr;
+                    }).filter((each: OCRData) => each.name !== '' && each.mapToLandmark !== '');
+                }
+
+                if (ocrData.landmarks !== undefined && ocrData.ocr_results !== undefined) {
+                    if (session.raw_data.source === 'json') {
+                        landmarks = ocrData.landmarks.map((each: any) => handleLandmarks(each)).filter((each: any) => each !== null);
+                        ocr = ocrData.ocr_results.map((each: any) => handleOCRs(each)).filter((each: any) => each !== null);
+                    } else if (session.raw_data.source === 'csv') {
+                        landmarks = [handleLandmarks(ocrData.landmarks)].filter((each: any) => each !== null);
+                        ocr = [handleOCRs(ocrData.ocr_results)].filter((each: any) => each !== null);
                     }
                 }
-                return given;
+            }
+
+            if (front) {
+                given.originalID = {
+                    imageProps: frontImgProps,
+                    spoof: ocrData !== undefined && ocrData.spoof_results !== undefined ? ocrData.spoof_results.is_card_spoof : false,
+                    flags: ocrData !== undefined && ocrData.flags !== undefined ? ocrData.flags : [],
+                    segmentation: frontSeg,
+                    landmark: landmarks,
+                    ocr: ocr,
+                    // faceCompareMatch: rawData.
+                }
+            } else {
+                given.backID = {
+                    imageProps: backImgProps,
+                    spoof: ocrData !== undefined && ocrData.spoof_results !== undefined ? ocrData.spoof_results.is_card_spoof : false,
+                    flags: ocrData !== undefined && ocrData.flags !== undefined ? ocrData.flags : [],
+                    segmentation: backSeg,
+                    landmark: landmarks,
+                    ocr: ocr
+                }
             }
             return given;
         }
@@ -248,8 +325,8 @@ export class DatabaseUtil {
                         this.dataURLtoFile(each, sessionID + "_face_" + (idx + 1) + ".jpg")
                     ) : undefined,
                     givenData: givenData,
-                    frontIDFlags: givenData.originalID !== undefined && givenData.originalID!.spoof ? ['spoof'] : [],
-                    backIDFlags: givenData.backID !== undefined && givenData.backID!.spoof ? ['spoof'] : []
+                    frontIDFlags: givenData.originalID !== undefined ? givenData.originalID!.flags : [],
+                    backIDFlags: givenData.backID !== undefined ? givenData.backID!.flags : []
                 });
             });
         })
@@ -280,10 +357,13 @@ export class DatabaseUtil {
             processStage: ID.internalIDs.map((each) => each.processStage),
             documentType: ID.internalIDs.map((each) => each.documentType),
 
-            imageProps: ID.givenData !== undefined ? ID.givenData.imageProps : undefined,
+            imageProps: {
+                originalID: ID.givenData !== undefined ? ID.givenData.originalID!.imageProps : undefined,
+                backID: ID.givenData !== undefined ? ID.givenData.backID!.imageProps : undefined
+            },
             segmentation: {
-                originalID: ID.internalIDs.map((each) => each.originalID!.IDBox),
-                backID: ID.internalIDs.map((each) => each.backID!.IDBox)
+                originalID: ID.internalIDs.map((each) => {return {IDBox: each.originalID!.IDBox, passesCrop: each.originalID!.passesCrop}}),
+                backID: ID.internalIDs.map((each) => {return {IDBox: each.backID!.IDBox, passesCrop: each.backID!.passesCrop}})
             },
             landmarks: {
                 originalID: ID.internalIDs.map((each) => each.originalID!.landmark.map((lm) => translateLandmarkName(lm, true))),

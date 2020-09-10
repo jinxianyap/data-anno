@@ -136,50 +136,113 @@ function updateDataWithJSON(result, data) {
             let landmarks = front ? data.landmarks.originalID : data.landmarks.backID;
             let ocrs = front ? data.ocr.originalID : data.ocr.backID;
             if (landmarks !== undefined && landmarks.length > 0) {
-                ocrResults.glare_results = ocrResults.glare_results.map((each) => {
-                    let landmark = landmarks[0].find((lm) => lm.codeName === each.field);
-                    if (landmark !== undefined) {
-                        each.glare = landmark.flags.includes('glare');
-                    }
-                    return each;
-                })
-        
-                ocrResults.landmarks = ocrResults.landmarks.map((each) => {
-                    let landmark = landmarks[0].find((lm) => lm.codeName === each.id);
-                    if (landmark !== undefined && data.imageProps !== undefined) {
-                        each.coords = [landmark.position.x1, 
-                            data.imageProps.height - landmark.position.y1, 
-                            landmark.position.x2,
-                            data.imageProps.height - landmark.position.y4];
-                    }
-                    return each;
-                })
-            }
-            if (ocrs !== undefined && ocrs.length > 0) {
-                ocrResults.ocr_results = ocrResults.ocr_results.map((each) => {
-                    let ocr = ocrs[0].find((o) => o.codeName === each.field);
-                    if (ocr !== undefined) {
-                        each.text = ocr.labels.map((lbl) => lbl.value).join(" ");
-                        each.coords = ocr.labels.map((lbl) => {
-                            if (lbl.position !== undefined && data.imageProps !== undefined) {
-                                return [lbl.position.x1, 
-                                    data.imageProps.height - lbl.position.y1, 
-                                    lbl.position.x2,
-                                    data.imageProps.height - lbl.position.y4];
-                            } else {
-                                return [];
+                if (ocrResults.glare_results !== undefined) {
+                    ocrResults.glare_results = landmarks.map((lm) => {
+                        return ocrResults.glare_results.map((each) => {
+                            let landmark = lm.find((llm) => llm.codeName === each.field);
+                            if (landmark !== undefined) {
+                                each.glare = landmark.flags.includes('glare');
                             }
+                            return each;
                         })
-                    }
-                    return each;
-                })
+                    });
+                }
+
+                if (ocrResults.landmarks !== undefined) {
+                    ocrResults.landmarks = landmarks.map((lm) => {
+                        return ocrResults.landmarks.map((each) => {
+                            let landmark = lm.find((llm) => llm.codeName === each.id);
+                            if (landmark !== undefined) {
+                                if (front && data.imageProps.originalID !== undefined && data.imageProps.originalID.height !== undefined) {
+                                    each.coords = [landmark.position.x1, 
+                                        data.imageProps.originalID.height - landmark.position.y1, 
+                                        landmark.position.x2,
+                                        data.imageProps.originalID.height - landmark.position.y4];
+                                } else if (!front && data.imageProps.backID !== undefined && data.imageProps.backID.height !== undefined) {
+                                    each.coords = [landmark.position.x1, 
+                                        data.imageProps.backID.height - landmark.position.y1, 
+                                        landmark.position.x2,
+                                        data.imageProps.backID.height - landmark.position.y4];
+                                }
+                            }
+                            return each;
+                        })
+                    })  
+                }
+            } else {
+                ocrResults.glare_results = [ocrResults.glare_results];
+                ocrResults.landmarks = [ocrResults.landmarks];
             }
-            ocrResults.spoof_results.is_card_spoof = data.frontIDFlags !== undefined ? data.frontIDFlags.includes('spoof') : false;
+
+            if (ocrs !== undefined && ocrs.length > 0 && ocrResults.ocr_results !== undefined) {
+                ocrResults.ocr_results = ocrs.map((currOcr) => {
+                    return ocrResults.ocr_results.map((each) => {
+                        let ocr = currOcr.find((o) => o.codeName === each.field);
+                        if (ocr !== undefined) {
+                            each.text = ocr.labels.map((lbl) => lbl.value).join(" ");
+                            each.coords = ocr.labels.map((lbl) => {
+                                if (lbl.position !== undefined) {
+                                    if (front && data.imageProps.originalID !== undefined && data.imageProps.originalID.height !== undefined) {
+                                        return [lbl.position.x1, 
+                                            data.imageProps.originalID.height - lbl.position.y1, 
+                                            lbl.position.x2,
+                                            data.imageProps.originalID.height - lbl.position.y4];
+                                    } else if (!front && data.imageProps.backID !== undefined && data.imageProps.backID.height !== undefined) {
+                                        return [lbl.position.x1, 
+                                            data.imageProps.backID.height - lbl.position.y1, 
+                                            lbl.position.x2,
+                                            data.imageProps.backID.height - lbl.position.y4];
+                                    }
+                                } else {
+                                    return [];
+                                }
+                            })
+                        }
+                        return each;
+                    })
+                })   
+            } else {
+                ocrResults.ocr_results = [ocrResults.ocr_results];
+            }
+            if (ocrResults.spoof_results !== undefined) {
+                if (front) {
+                    ocrResults.spoof_results.is_card_spoof = data.frontIDFlags !== undefined ? data.frontIDFlags.includes('spoof') : false;
+                } else {
+                    ocrResults.spoof_results.is_card_spoof = data.backIDFlags !== undefined ? data.backIDFlags.includes('spoof') : false;
+                }
+            }
+            ocrResults.flags = front ? data.frontIDFlags : data.backIDFlags;
+            ocrResults.imageProps = front ? data.imageProps.originalID : data.imageProps.backID;
         }
         return ocrResults
     }
 
     let newResult = {};
+    newResult.segmentation = {
+        originalID: data.segmentation.originalID !== undefined ? data.segmentation.originalID.filter((each) => each.IDBox !== null).map((each, idx) => {
+            return {
+                documentType: data.documentType[idx],
+                passesCrop: each.passesCrop,
+                coords: [each.IDBox.position.x1, 
+                    data.imageProps.originalID.height - each.IDBox.position.y1, 
+                    each.IDBox.position.x2,
+                    data.imageProps.originalID.height - each.IDBox.position.y4]
+            }
+        }) : [],
+        backID: data.segmentation.backID !== undefined ? data.segmentation.backID.filter((each) =>  each.IDBox !== null).map((each) => {
+            if (each.passesCrop === undefined || each.IDBox === undefined) {
+                return {};
+            }
+            return {
+                passesCrop: each.passesCrop,
+                coords: [each.IDBox.position.x1, 
+                data.imageProps.backID.height - each.IDBox.position.y1, 
+                each.IDBox.position.x2,
+                data.imageProps.backID.height - each.IDBox.position.y4],
+            }
+        }) : []
+    }
+
     newResult.front_ocr = updateOCR(result.front_ocr, true);
     newResult.back_ocr = updateOCR(result.back_ocr, false);
     let dataExists = data.faceCompareMatch.length > 0 && data.faceCompareMatch[0] !== null;
@@ -191,11 +254,11 @@ function updateDataWithJSON(result, data) {
         }
     
     }
-
+    newResult.source = 'json';
     return newResult;
 }
 
-function getCSVData(filepath, session, res, rej) {
+function getCSVData(filepath, session, res, rej) {9
     csv()
     .fromFile(filepath)
     .then(async (json)=>{
@@ -275,6 +338,8 @@ function getCSVData(filepath, session, res, rej) {
                     }
                 })
             }
+        } else {
+            result.front_ocr = {};
         }
 
         // back ocr data
@@ -291,7 +356,10 @@ function getCSVData(filepath, session, res, rej) {
                     spoof_results: result_ocr.spoof_results
                 }
             }
+        } else {
+            result.back_ocr = {};
         }
+        result.source = 'csv';
         session.raw_data = result;
         res(session);
     })
@@ -377,10 +445,13 @@ function mergeJSONData(initial, updated) {
         processStage: updated.processStage,
         documentType: updated.documentType,
 
-        imageProps: updated.imageProps,
+        imageProps: {
+            originalID: updated.imageProps.originalID,
+            backID: updated.imageProps.backID
+        },
         segmentation: updated.segmentation !== undefined ? {
-            originalID: updated.segmentation.originalID.IDBox,
-            backID: updated.segmentation.backID.IDBox
+            originalID: updated.segmentation.originalID,
+            backID: updated.segmentation.backID
         } : initial.segmentation,
         landmarks: updated.landmarks !== undefined ? {
             originalID: mergeLandmarks(initial.landmarks.originalID, updated.landmarks.originalID),

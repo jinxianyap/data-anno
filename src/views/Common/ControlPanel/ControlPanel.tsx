@@ -483,15 +483,14 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     initializeSegCheckData = () => {
-        console.log('init);');
         if (this.props.currentID.sessionID === '') return;
         let docType: string = '';
         let cropResult: boolean | undefined = undefined;
         let frontIDFlags: string[] = this.props.currentID.frontIDFlags !== undefined ? this.props.currentID.frontIDFlags : [];
         let backIDFlags: string[] = this.props.currentID.backIDFlags !== undefined ? this.props.currentID.backIDFlags : [];
-        console.log(this.props.currentID);
+
         if (this.props.currentID.internalIDs.length > 0) {
-            if (this.props.currentID.originalIDProcessed) {
+            if (this.props.currentID.originalIDProcessed && this.props.internalID !== undefined) {
                 if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
                     cropResult = this.props.internalID.backID!.passesCrop;
                 } else {
@@ -505,10 +504,30 @@ class ControlPanel extends React.Component<IProps, IState> {
                     cropResult = false;
                 }
             }
+        } else if (this.props.currentID.givenData !== undefined) {
+            if (this.props.currentID.originalIDProcessed) {
+                if (this.props.currentID.givenData.backID !== undefined && this.props.currentID.givenData.backID.segmentation !== undefined) {
+                    let seg = this.props.currentID.givenData.backID.segmentation;
+                    if (seg.length <= 1) {
+                        cropResult = seg[0] !== undefined ? seg[0]!.passesCrop : undefined;
+                    } else {
+                        cropResult = false;
+                    }
+                }
+            } else {
+                if (this.props.currentID.givenData.originalID !== undefined && this.props.currentID.givenData.originalID.segmentation !== undefined) {
+                    let seg = this.props.currentID.givenData.originalID.segmentation;
+                    if (seg.length <= 1) {
+                        cropResult = seg[0] !== undefined ? seg[0]!.passesCrop : undefined;
+                        docType = seg[0] !== undefined ? seg[0]!.documentType : '';
+                    } else {
+                        cropResult = false;
+                        docType = seg[this.props.currentID.internalIndex] !== undefined ? seg[this.props.currentID.internalIndex]!.documentType : '';
+                    }
+                }
+            }
         }
-        console.log(cropResult);
-        console.log(frontIDFlags);
-        console.log(backIDFlags);
+
         if (docType !== '' ) {
             this.setState({passesCrop: cropResult, selectedFrontIDFlags: frontIDFlags, selectedBackIDFlags: backIDFlags, singleDocumentType: docType});
         } else {
@@ -567,16 +586,22 @@ class ControlPanel extends React.Component<IProps, IState> {
                 // if db csv already has ocr data
                 if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
                     if (this.props.currentID.givenData.backID !== undefined) {
-                        let dbLandmark = this.props.currentID.givenData.backID.landmark.find((lm) => lm.codeName === each.codeName);
-                        if (dbLandmark !== undefined) {
-                            landmark.position = dbLandmark.position;
+                        let givenLandmarks = this.props.currentID.givenData.backID.landmark[this.props.currentID.internalIndex];
+                        if (givenLandmarks !== undefined) {
+                            let dbLandmark = givenLandmarks.find((lm) => lm.codeName === each.codeName);
+                            if (dbLandmark !== undefined) {
+                                landmark.position = dbLandmark.position;
+                            }
                         }
                     }
                 } else {
                     if (this.props.currentID.givenData.originalID !== undefined) {
-                        let dbLandmark = this.props.currentID.givenData.originalID.landmark.find((lm) => lm.codeName === each.codeName);
-                        if (dbLandmark !== undefined) {
-                            landmark.position = dbLandmark.position;
+                        let givenLandmarks = this.props.currentID.givenData.originalID.landmark[this.props.currentID.internalIndex];
+                        if (givenLandmarks !== undefined) {
+                            let dbLandmark = givenLandmarks.find((lm) => lm.codeName === each.codeName);
+                            if (dbLandmark !== undefined) {
+                                landmark.position = dbLandmark.position;
+                            }
                         }
                     }
                 }
@@ -635,18 +660,24 @@ class ControlPanel extends React.Component<IProps, IState> {
                 // if db csv already has ocr data
                 if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
                     if (this.props.currentID.givenData.backID !== undefined) {
-                        let dbOcr = this.props.currentID.givenData.backID.ocr.find((o) => o.codeName === each.codeName);
-                        if (dbOcr !== undefined) {
-                            ocr.count = dbOcr.count;
-                            ocr.labels = dbOcr.labels;
+                        let givenOcrs = this.props.currentID.givenData.backID.ocr[this.props.currentID.internalIndex];
+                        if (givenOcrs !== undefined) {
+                            let dbOcr = givenOcrs.find((o) => o.codeName === each.codeName);
+                            if (dbOcr !== undefined) {
+                                ocr.count = dbOcr.count;
+                                ocr.labels = dbOcr.labels;
+                            }
                         }
                     }
                 } else {
                     if (this.props.currentID.givenData.originalID !== undefined) {
-                        let dbOcr = this.props.currentID.givenData.originalID.ocr.find((o) => o.codeName === each.codeName);
-                        if (dbOcr !== undefined) {
-                            ocr.count = dbOcr.count;
-                            ocr.labels = dbOcr.labels;
+                        let givenOcrs = this.props.currentID.givenData.originalID.ocr[this.props.currentID.internalIndex];
+                        if (givenOcrs !== undefined) {
+                            let dbOcr = givenOcrs.find((o) => o.codeName === each.codeName);
+                            if (dbOcr !== undefined) {
+                                ocr.count = dbOcr.count;
+                                ocr.labels = dbOcr.labels;
+                            }
                         }
                     }
                 }
@@ -699,7 +730,8 @@ class ControlPanel extends React.Component<IProps, IState> {
             let dividedFlags: string[][] = [];
             let values = this.state.selectedFrontIDFlags;
 
-            if (this.props.currentID.originalIDProcessed && this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
+            if (this.props.currentID.originalIDProcessed && this.props.internalID !== undefined && 
+                this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
                 values = this.state.selectedBackIDFlags;
             }
 
@@ -786,8 +818,29 @@ class ControlPanel extends React.Component<IProps, IState> {
                         this.props.refreshIDs(false);
                         if (this.state.passesCrop) {
                             let preBox = undefined;
-                            if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.originalID !== undefined) {
-                                preBox = this.props.currentID.givenData!.originalID!.segmentation;
+                            if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.originalID !== undefined
+                                && this.props.currentID.givenData.originalID.segmentation !== undefined) {
+                                if (this.props.currentID.givenData.originalID.segmentation.length > 0) {
+                                    preBox = this.props.currentID.givenData.originalID.segmentation[0] !== undefined ?
+                                                this.props.currentID.givenData.originalID.segmentation[0]!.IDBox : undefined;
+                                } else if (this.props.currentID.givenData.originalID.imageProps !== undefined) {
+                                    let imgProps = this.props.currentID.givenData.originalID.imageProps;
+                                    if (imgProps.height >= 0 && imgProps.width >= 0) {
+                                        preBox = {
+                                            id: 0,
+                                            position: {
+                                                x1: 0,
+                                                x2: imgProps.width,
+                                                x3: imgProps.width,
+                                                x4: 0,
+                                                y1: imgProps.height,
+                                                y2: imgProps.height,
+                                                y3: 0,
+                                                y4: 0
+                                            }
+                                        }
+                                    }
+                                }
                             }
                             this.props.createNewID(preBox !== undefined ? preBox : box, true);
                             this.props.saveDocumentType(0, this.state.singleDocumentType);
@@ -814,8 +867,29 @@ class ControlPanel extends React.Component<IProps, IState> {
                         this.props.refreshIDs(true);
                         if (this.state.passesCrop) {
                             let preBox = undefined;
-                            if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.backID !== undefined) {
-                                preBox = this.props.currentID.givenData!.backID!.segmentation;
+                            if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.backID !== undefined
+                                    && this.props.currentID.givenData.backID.segmentation !== undefined) {
+                                if (this.props.currentID.givenData.backID.segmentation.length > 0) {
+                                    preBox = this.props.currentID.givenData.backID.segmentation[0] !== undefined ?
+                                                this.props.currentID.givenData.backID.segmentation[0]!.IDBox : undefined;
+                                } else if (this.props.currentID.givenData.backID.imageProps !== undefined) {
+                                    let imgProps = this.props.currentID.givenData.backID.imageProps;
+                                    if (imgProps.height >= 0 && imgProps.width >= 0) {
+                                        preBox = {
+                                            id: 0,
+                                            position: {
+                                                x1: 0,
+                                                x2: imgProps.width,
+                                                x3: imgProps.width,
+                                                x4: 0,
+                                                y1: imgProps.height,
+                                                y2: imgProps.height,
+                                                y3: 0,
+                                                y4: 0
+                                            }
+                                        }
+                                    }
+                                }
                             }
                             this.props.setIDBox(preBox !== undefined ? preBox : box, this.props.currentID.backID!.croppedImage!);
                             this.props.loadImageState(this.props.internalID.backID!, this.state.passesCrop);
@@ -849,8 +923,29 @@ class ControlPanel extends React.Component<IProps, IState> {
                 this.props.updateFrontIDFlags(this.state.selectedFrontIDFlags);
                 if (this.props.internalID === undefined) {
                     let preBox = undefined;
-                    if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.originalID !== undefined) {
-                        preBox = this.props.currentID.givenData!.originalID!.segmentation;
+                    if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.originalID !== undefined
+                        && this.props.currentID.givenData.originalID.segmentation !== undefined) {
+                        if (this.props.currentID.givenData.originalID.segmentation.length > 0) {
+                            preBox = this.props.currentID.givenData.originalID.segmentation[0] !== undefined ?
+                                        this.props.currentID.givenData.originalID.segmentation[0]!.IDBox : undefined;
+                        } else if (this.props.currentID.givenData.originalID.imageProps !== undefined) {
+                            let imgProps = this.props.currentID.givenData.originalID.imageProps;
+                            if (imgProps.height >= 0 && imgProps.width >= 0) {
+                                preBox = {
+                                    id: 0,
+                                    position: {
+                                        x1: 0,
+                                        x2: imgProps.width,
+                                        x3: imgProps.width,
+                                        x4: 0,
+                                        y1: imgProps.height,
+                                        y2: imgProps.height,
+                                        y3: 0,
+                                        y4: 0
+                                    }
+                                }
+                            }
+                        }
                     }
                     this.props.createNewID(preBox !== undefined ? preBox : box, true);
                     this.props.saveDocumentType(0, this.state.singleDocumentType);
@@ -915,7 +1010,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 : <div />}
                 {
                     (!this.props.currentID.originalIDProcessed && this.state.selectedFrontIDFlags.length > 0) || 
-                    (this.props.currentID.originalIDProcessed && 
+                    (this.props.currentID.originalIDProcessed && this.props.internalID !== undefined &&
                         ((this.props.internalID.processStage === IDProcess.MYKAD_BACK && this.state.selectedBackIDFlags.length > 0) ||
                         (this.props.internalID.processStage !==IDProcess.MYKAD_BACK && this.state.selectedFrontIDFlags.length > 0)))
                     ?
@@ -1008,7 +1103,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                         if (res.status === 200) {
                             let image: File = DatabaseUtil.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename + "_cropped");
                             this.props.saveCroppedImage(image, i);
-                            console.log(res);
+
                             cropsDone++;
                             if (cropsDone === this.props.currentID.internalIDs.length) {
                                 this.setState({isCropping: false});
