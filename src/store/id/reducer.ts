@@ -278,6 +278,13 @@ export function IDReducer(
                 faceCompareMatch: action.payload.match
             }
         }
+        case Action.CLEAR_INTERNAL_IDS: {
+            return {
+                ...state,
+                internalIDs: [],
+                internalIndex: 0
+            }
+        }
         default:
             return state;
     }

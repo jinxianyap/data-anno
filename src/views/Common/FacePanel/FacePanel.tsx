@@ -351,7 +351,7 @@ class FacePanel extends React.Component<IProps, IState> {
                         onClick={() => this.setState({previous: true}, () => this.loadNextID(true))}
                         disabled={this.props.currentIndex === 0} 
                         className="nav-button"><GrFormPrevious /></Button>
-                    <p>Folder:   {this.props.currentIndex + 1}/{this.props.totalIDs}</p>
+                    <p>Session:   {this.props.currentIndex + 1}/{this.props.totalIDs}</p>
                     <Button variant="light" 
                         onClick={() => this.setState({previous: false}, () => this.loadNextID(false))}
                         disabled={this.props.currentIndex + 1 === this.props.totalIDs}

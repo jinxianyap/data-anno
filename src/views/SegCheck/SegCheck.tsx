@@ -5,7 +5,7 @@ import { AppState } from '../../store';
 import { GeneralUtil } from '../../utils/GeneralUtil';
 import { Container, Row, Col, Button } from 'react-bootstrap';
 import './SegCheck.scss';
-import { CurrentStage, Rotation } from '../../utils/enums';
+import { CurrentStage, Rotation, IDProcess } from '../../utils/enums';
 import { GeneralActionTypes } from '../../store/general/types';
 import { progressNextStage } from '../../store/general/actionCreators';
 import { setImageRotation } from '../../store/id/actionCreators';
@@ -53,10 +53,19 @@ class SegCheck extends React.Component<IProps, IState> {
     componentDidMount() {
         if (this.props.noMoreIDs) return;
         if (this.props.originalProcessed) {
-            this.setState({
-                originalImage: GeneralUtil.loadImage("segCheckID", this.props.backID!.image, "segCheckBackID"),
-                croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.backID!.croppedImage!, "segCheckCroppedID")
-            })
+            if (this.props.currentID === undefined) return;
+            let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
+            if (internalID.processStage === IDProcess.MYKAD_BACK) {
+                this.setState({
+                    originalImage: GeneralUtil.loadImage("segCheckID", this.props.backID!.image, "segCheckBackID"),
+                    croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.backID!.croppedImage!, "segCheckCroppedID")
+                })
+            } else {
+                this.setState({
+                    originalImage: GeneralUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
+                    croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID")
+                })
+            }
         } else if (this.props.originalID !== undefined) {
             this.setState({
                 originalImage: GeneralUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),

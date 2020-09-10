@@ -9,7 +9,7 @@ import { GeneralActionTypes } from '../../../store/general/types';
 import { IDActionTypes, IDState, InternalIDState } from '../../../store/id/types';
 import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord, LandmarkData, Position } from '../../../store/image/types';
 import { progressNextStage, getPreviousID, getNextID, saveToLibrary } from '../../../store/general/actionCreators';
-import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, updateFrontIDFlags, updateBackIDFlags, restoreID } from '../../../store/id/actionCreators';
+import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, saveToInternalID, updateFrontIDFlags, updateBackIDFlags, restoreID, clearInternalIDs } from '../../../store/id/actionCreators';
 import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, addLandmarkData, updateLandmarkFlags, addOCRData, setFaceCompareMatch, restoreImage } from '../../../store/image/actionCreators';
 import { DatabaseUtil } from '../../../utils/DatabaseUtil';
 import { HOST, PORT, TRANSFORM } from '../../../config';
@@ -45,6 +45,7 @@ interface IProps {
     updateFrontIDFlags: (flags: string[]) => IDActionTypes;
     updateBackIDFlags: (flags: string[]) => IDActionTypes;
     saveSegCheck: (passesCrop: boolean) => ImageActionTypes;
+    clearInternalIDs: () => IDActionTypes;
 
     // Landmark
     setCurrentSymbol: (symbol?: string, landmark?: string) => ImageActionTypes;
@@ -195,6 +196,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                 DatabaseUtil.loadSessionData(res.data, this.props.indexedID).then((completeID) => {
                                     this.props.loadNextID(completeID);
                                     this.loadSegCheckImage();
+                                    this.initializeSegCheckData();
                                     this.setState({loadedSegCheckImage: true}, () => GeneralUtil.toggleOverlay(false));
                                 });
                             }
@@ -205,14 +207,19 @@ class ControlPanel extends React.Component<IProps, IState> {
                     } else {
                         this.props.loadNextID(this.props.indexedID);
                         this.loadSegCheckImage();
+                        this.initializeSegCheckData();
                         this.setState({loadedSegCheckImage: true}, () => GeneralUtil.toggleOverlay(false));
                     }
                     break;
+                }
+                if (previousProps.currentStage !== this.props.currentStage || previousProps.currentID.sessionID !== this.props.currentID.sessionID) {
+                    this.initializeSegCheckData();
                 }
                 // initial load of doctypes and overall flags from config json, initial load of image
                 if (this.state.documentTypes.length === 0) this.loadSegCheckData();
                 if (!this.state.loadedSegCheckImage) {
                     this.loadSegCheckImage();
+                    this.initializeSegCheckData();
                     this.setState({loadedSegCheckImage: true});
                     break;
                 }
@@ -319,9 +326,20 @@ class ControlPanel extends React.Component<IProps, IState> {
                 if (!this.state.OCRLoaded) {
                     this.loadOCRDetails();
                 } else {
+
                     this.state.OCR.forEach((each) => {
-                        if (each.docType === this.props.internalID.processStage && each.details !== this.state.currentOCR) {
-                            this.setState({currentOCR: each.details});
+                        if (each.docType === this.props.internalID.processStage) {
+                            if (each.details.length !== this.state.currentOCR.length) {
+                                let ocrs = this.initializeOCRData(each.details);
+                                this.setState({currentOCR: ocrs});
+                            } else if (each.details.some((d) => {
+                                    let curr = this.state.currentOCR.find((ocr) => ocr.codeName === d.codeName);
+                                    return curr === undefined
+                                })) {
+                                // check if set of ocrs are correct given same length
+                                let ocrs = this.initializeOCRData(each.details);
+                                this.setState({currentOCR: ocrs});
+                            }
                         }
                     })
                 }
@@ -430,6 +448,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     .then((completeID) => {
                         this.props.loadNextID(completeID);
                         this.loadSegCheckData();
+                        this.initializeSegCheckData();
                         GeneralUtil.toggleOverlay(false);
                     })
                 }
@@ -461,6 +480,40 @@ class ControlPanel extends React.Component<IProps, IState> {
             singleDocumentType: options.documentTypes[0],
             overallFlags: flags
         });
+    }
+
+    initializeSegCheckData = () => {
+        console.log('init);');
+        if (this.props.currentID.sessionID === '') return;
+        let docType: string = '';
+        let cropResult: boolean | undefined = undefined;
+        let frontIDFlags: string[] = this.props.currentID.frontIDFlags !== undefined ? this.props.currentID.frontIDFlags : [];
+        let backIDFlags: string[] = this.props.currentID.backIDFlags !== undefined ? this.props.currentID.backIDFlags : [];
+        console.log(this.props.currentID);
+        if (this.props.currentID.internalIDs.length > 0) {
+            if (this.props.currentID.originalIDProcessed) {
+                if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
+                    cropResult = this.props.internalID.backID!.passesCrop;
+                } else {
+                    cropResult = this.props.internalID.originalID!.passesCrop;
+                }
+            } else {
+                if (this.props.currentID.internalIDs.length === 1) {
+                    cropResult = this.props.currentID.internalIDs[0].originalID!.passesCrop;
+                    docType = this.props.currentID.internalIDs[0].documentType !== undefined ? this.props.currentID.internalIDs[0].documentType : '';
+                } else {
+                    cropResult = false;
+                }
+            }
+        }
+        console.log(cropResult);
+        console.log(frontIDFlags);
+        console.log(backIDFlags);
+        if (docType !== '' ) {
+            this.setState({passesCrop: cropResult, selectedFrontIDFlags: frontIDFlags, selectedBackIDFlags: backIDFlags, singleDocumentType: docType});
+        } else {
+            this.setState({passesCrop: cropResult, selectedFrontIDFlags: frontIDFlags, selectedBackIDFlags: backIDFlags});
+        }
     }
 
     loadLandmarkData = () => {
@@ -541,36 +594,11 @@ class ControlPanel extends React.Component<IProps, IState> {
         options.ocr.keys.forEach((each, idx) => {
             let ocr: {name: string, codeName: string, mapToLandmark: string, value?: string}[] = [];
             for (var i = 0; i < options.ocr.codeNames[idx].length; i++) {
-                let value = undefined;
-                if (this.props.currentID.givenData !== undefined) {
-                    // if db csv already has ocr data
-                    let ocrsToUpdate: OCRData[] = [];
-                    if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
-                        if (this.props.currentID.givenData.backID !== undefined) {
-                            ocrsToUpdate = this.props.currentID.givenData.backID.ocr.filter((each) => each.labels.some((lbl) => lbl.position !== undefined));
-                            let dbOCR = this.props.currentID.givenData.backID.ocr.find((lm) => lm.codeName === options.ocr.codeNames[idx][i]);
-                            if (dbOCR !== undefined) {
-                                value = dbOCR.labels.map((each) => each.value).join(' ');
-                            }
-                        }
-                    } else {
-                        if (this.props.currentID.givenData.originalID !== undefined) {
-                            ocrsToUpdate = this.props.currentID.givenData.originalID.ocr.filter((each) => each.labels.some((lbl) => lbl.position !== undefined));
-                            let dbOCR = this.props.currentID.givenData.originalID.ocr.find((lm) => lm.codeName ===  options.ocr.codeNames[idx][i]);
-                            if (dbOCR !== undefined) {
-                                value = dbOCR.labels.map((each) => each.value).join(' ');
-                            }
-                        }
-                    }
-                    if (ocrsToUpdate.length > 0) {
-                        ocrsToUpdate.forEach(this.props.addOCRData);
-                    }
-                }
                 ocr.push({
                     name: options.ocr.displayNames[idx][i],
                     codeName: options.ocr.codeNames[idx][i],
                     mapToLandmark: options.ocr.mapToLandmark[idx][i],
-                    value: value
+                    value: undefined
                 });
             }
             docOCR.push({
@@ -579,11 +607,60 @@ class ControlPanel extends React.Component<IProps, IState> {
             });
 
             if (this.props.internalID.processStage === each) {
-                currentOCR = ocr;
+                currentOCR = this.initializeOCRData(ocr);
             }
         });
 
         this.setState({OCR: docOCR, currentOCR: currentOCR, OCRLoaded: true});
+    }
+
+    initializeOCRData = (ocrs: {name: string, codeName: string, mapToLandmark: string, value?: string}[]) => {
+        let newOcrs: {name: string, codeName: string, mapToLandmark: string, value?: string}[] = [];
+        ocrs.forEach((each, idx) => {
+            let ocr: OCRData = {
+                id: idx,
+                name: each.name,
+                codeName: each.codeName,
+                type: 'OCR',
+                mapToLandmark: each.mapToLandmark,
+                count: 0,
+                labels: []
+            };
+            
+            let stOcr = this.props.currentImage.ocr.find((lm) => each.codeName === lm.codeName);
+            if (stOcr !== undefined && stOcr.labels.some((e) => e.position !== undefined)) {
+                ocr.labels = stOcr.labels;
+                ocr.count = stOcr.count;
+            } else if (this.props.currentID.givenData !== undefined) {
+                // if db csv already has ocr data
+                if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
+                    if (this.props.currentID.givenData.backID !== undefined) {
+                        let dbOcr = this.props.currentID.givenData.backID.ocr.find((o) => o.codeName === each.codeName);
+                        if (dbOcr !== undefined) {
+                            ocr.count = dbOcr.count;
+                            ocr.labels = dbOcr.labels;
+                        }
+                    }
+                } else {
+                    if (this.props.currentID.givenData.originalID !== undefined) {
+                        let dbOcr = this.props.currentID.givenData.originalID.ocr.find((o) => o.codeName === each.codeName);
+                        if (dbOcr !== undefined) {
+                            ocr.count = dbOcr.count;
+                            ocr.labels = dbOcr.labels;
+                        }
+                    }
+                }
+            }
+            // if not, just initialize with the correct set of landmarks with each position as undefined
+            this.props.addOCRData(ocr);
+            newOcrs.push({
+                name: ocr.name,
+                codeName: ocr.codeName,
+                mapToLandmark: ocr.mapToLandmark,
+                value: ocr.labels.map((lbl) => lbl.value).join(' ')
+            });
+        });
+        return newOcrs;
     }
 
     loadVideoFlags = () => {
@@ -620,6 +697,11 @@ class ControlPanel extends React.Component<IProps, IState> {
 
         const getCategoryFlags = (flags: string[]) => {
             let dividedFlags: string[][] = [];
+            let values = this.state.selectedFrontIDFlags;
+
+            if (this.props.currentID.originalIDProcessed && this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
+                values = this.state.selectedBackIDFlags;
+            }
 
             for (let i = 0; i < flags.length; i += 3) {
                 dividedFlags.push(flags.slice(i, i + 3));
@@ -632,7 +714,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                             return (
                                 <div style={{width: "100%"}}>
                                     <ToggleButtonGroup key={i} type="checkbox" onChange={(val) => setFlag(val)}
-                                        value={this.props.currentID.originalIDProcessed ? this.state.selectedBackIDFlags : this.state.selectedFrontIDFlags}
+                                        value={values}
                                         style={{marginBottom: "1rem"}}>
                                     {
                                         divFlag.map((flag, idx) => {
@@ -658,6 +740,10 @@ class ControlPanel extends React.Component<IProps, IState> {
         const skipSegCheck = () => {
             this.props.updateFrontIDFlags(this.state.selectedFrontIDFlags);
             this.props.updateBackIDFlags(this.state.selectedBackIDFlags);
+            if (!this.props.currentID.originalIDProcessed) {
+                // only when processing front ID: to clear out internal IDs in case any were created before skipping
+                this.props.clearInternalIDs();
+            }
             if ((this.props.processType === ProcessType.WHOLE || this.props.processType === ProcessType.LIVENESS)) {
                 if (this.props.currentID.selfieVideo!.name !== 'notfound') {
                     this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
@@ -760,6 +846,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 //     this.props.loadImageState(this.props.internalID.backID!, this.state.passesCrop);
                 //     this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
                 // } 
+                this.props.updateFrontIDFlags(this.state.selectedFrontIDFlags);
                 if (this.props.internalID === undefined) {
                     let preBox = undefined;
                     if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.originalID !== undefined) {
@@ -767,8 +854,6 @@ class ControlPanel extends React.Component<IProps, IState> {
                     }
                     this.props.createNewID(preBox !== undefined ? preBox : box, true);
                     this.props.saveDocumentType(0, this.state.singleDocumentType);
-                    this.props.updateFrontIDFlags(this.state.selectedFrontIDFlags);
-                    this.props.updateBackIDFlags(this.state.selectedBackIDFlags);
 
                     if (this.props.processType === ProcessType.SEGMENTATION) {
                         let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
@@ -785,6 +870,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
                 }
             } else {
+                this.props.updateFrontIDFlags(this.state.selectedFrontIDFlags);
                 this.props.progressNextStage(CurrentStage.SEGMENTATION_EDIT);
             }
         }
@@ -828,8 +914,10 @@ class ControlPanel extends React.Component<IProps, IState> {
                     </Card>
                 : <div />}
                 {
-                    !this.props.currentID.originalIDProcessed && this.state.selectedFrontIDFlags.length > 0 || 
-                    this.props.currentID.originalIDProcessed && this.state.selectedBackIDFlags.length > 0
+                    (!this.props.currentID.originalIDProcessed && this.state.selectedFrontIDFlags.length > 0) || 
+                    (this.props.currentID.originalIDProcessed && 
+                        ((this.props.internalID.processStage === IDProcess.MYKAD_BACK && this.state.selectedBackIDFlags.length > 0) ||
+                        (this.props.internalID.processStage !==IDProcess.MYKAD_BACK && this.state.selectedFrontIDFlags.length > 0)))
                     ?
                     (<Button variant="primary" className="block-button" id="segcheck-skip-btn"
                         onClick={skipSegCheck}>
@@ -920,6 +1008,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                         if (res.status === 200) {
                             let image: File = DatabaseUtil.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename + "_cropped");
                             this.props.saveCroppedImage(image, i);
+                            console.log(res);
                             cropsDone++;
                             if (cropsDone === this.props.currentID.internalIDs.length) {
                                 this.setState({isCropping: false});
@@ -1130,7 +1219,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <Button variant="secondary" className="common-button" onClick={backStage}>Back</Button>
                 {/* SKIP_VALIDATION: comment out disabled attribute */}
                 <Button className="common-button"
-                    disabled={this.props.currentImage.landmark.filter((each) => each.position === undefined).length > 0}
+                    disabled={this.props.currentImage.landmark.filter((each) => each.codeName !== 'religion' && each.position === undefined).length > 0}
                     onClick={submitLandmark}>Done</Button>
             </div>
         );
@@ -1474,12 +1563,12 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
         this.props.restoreID();
         this.props.restoreImage();
-        this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
         if (prev) {
             this.props.getPreviousID();
         } else {
             this.props.getNextID();
         }
+        this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
     }
 
     resetState = () => {
@@ -1606,7 +1695,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                         onClick={() => this.loadNextID(true)}
                         disabled={this.props.currentIndex === 0} 
                         className="nav-button"><GrFormPrevious /></Button>
-                    <p>Folder:   {this.props.currentIndex + 1}/{this.props.totalIDs}</p>
+                    <p>Session:   {this.props.currentIndex + 1}/{this.props.totalIDs}</p>
                     <Button variant="light" 
                         onClick={() => this.loadNextID(false)}
                         disabled={this.props.currentIndex + 1 === this.props.totalIDs}
@@ -1654,6 +1743,7 @@ const mapDispatchToProps = {
     refreshIDs,
     saveDocumentType,
     saveSegCheck,
+    clearInternalIDs,
     loadImageState,
     setCurrentSymbol,
     setCurrentWord,

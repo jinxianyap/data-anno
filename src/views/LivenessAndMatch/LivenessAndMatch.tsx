@@ -31,12 +31,12 @@ class LivenessAndMatch extends React.Component<IProps, IState> {
         if (this.props.currentStage === CurrentStage.FR_COMPARE_CHECK && this.props.id.index !== this.state.croppedImageIndex) {
             if (this.props.id.croppedFace !== undefined && this.props.id.croppedFace!.name !== 'notfound') {
                 GeneralUtil.loadImage("frCompareFace", this.props.id.croppedFace!, "frCompareID");
-            } else if (this.props.internalID.originalID!.croppedImage!.name !== 'notfound') {
+            } else if (this.props.internalID !== undefined && this.props.internalID.originalID!.croppedImage!.name !== 'notfound') {
                 GeneralUtil.loadImage("frCompareFace", this.props.internalID.originalID!.croppedImage!, "frCompareID");
             }
-            if (this.props.id.selfieImage!.name !== 'notfound') {
+            if (this.props.id.selfieImage !== undefined && this.props.id.selfieImage!.name !== 'notfound') {
                 GeneralUtil.loadImage("frCompareSelfie", this.props.id.selfieImage!, "frCompareSelfieImage");
-            } else if (this.props.id.videoStills!.length > 0) {
+            } else if (this.props.id.videoStills !== undefined && this.props.id.videoStills!.length > 0) {
                 GeneralUtil.loadImage("frCompareSelfie", this.props.id.videoStills![0], "frCompareSelfieImage");
             }
             this.setState({croppedImageIndex: this.props.id.index});

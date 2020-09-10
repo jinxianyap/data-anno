@@ -166,6 +166,10 @@ interface SetIDFaceMatch {
     }
 }
 
+interface ClearInternalIDs {
+    type: typeof Action.CLEAR_INTERNAL_IDS;
+}
+
 export type IDActionTypes = SaveDocumentType
     | SetImageRotation
     | LoadNextID
@@ -180,3 +184,4 @@ export type IDActionTypes = SaveDocumentType
     | UpdateBackIDFlags
     | RestoreID
     | SetIDFaceMatch
+    | ClearInternalIDs

@@ -132,3 +132,9 @@ export function setIDFaceMatch(match: boolean): IDActionTypes {
         }
     }
 }
+
+export function clearInternalIDs(): IDActionTypes {
+    return {
+        type: Action.CLEAR_INTERNAL_IDS
+    }
+}
