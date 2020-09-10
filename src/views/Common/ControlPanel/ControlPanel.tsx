@@ -1715,22 +1715,31 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     loadNextID = (prev: boolean, beforeSegCheckDone?: boolean) => {
         this.resetState();
+        let id = this.props.currentID;
         if (beforeSegCheckDone) {
-            let id = this.props.currentID;
             id.frontIDFlags = this.state.selectedFrontIDFlags;
             id.backIDFlags = this.state.selectedBackIDFlags;
             this.props.saveToLibrary(id);
         } else {
-            this.props.saveToLibrary(this.props.currentID);
+            this.props.saveToLibrary(id);
         }
-        this.props.restoreID();
-        this.props.restoreImage();
-        if (prev) {
-            this.props.getPreviousID();
-        } else {
-            this.props.getNextID();
-        }
-        this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+        axios.post('/saveOutput', {
+            database: this.props.database,
+            ID: DatabaseUtil.extractOutput(id, this.props.processType === ProcessType.FACE),
+            overwrite: true
+        }).then((res: any) => {
+            console.log(res);
+            this.props.restoreID();
+            this.props.restoreImage();
+            if (prev) {
+                this.props.getPreviousID();
+            } else {
+                this.props.getNextID();
+            }
+            this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+        }).catch((err: any) => {
+            console.error(err);
+        })
     }
 
     resetState = () => {

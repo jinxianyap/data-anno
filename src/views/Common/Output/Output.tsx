@@ -51,7 +51,7 @@ class Output extends React.Component<IProps, IState> {
         }
         console.log(lib);
         GeneralUtil.toggleOverlay(true);
-        axios.post('/returnOutput', {
+        axios.post('/saveBulkOutput', {
             database: this.props.database,
             library: lib,
             overwrite: true

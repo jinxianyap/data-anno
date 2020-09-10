@@ -442,12 +442,12 @@ function mergeJSONData(initial, updated) {
         documentType: updated.documentType,
 
         imageProps: {
-            originalID: updated.imageProps.originalID,
-            backID: updated.imageProps.backID
+            originalID: updated.imageProps !== undefined ? updated.imageProps.originalID : undefined,
+            backID: updated.imageProps !== undefined ? updated.imageProps.backID : undefined
         },
         segmentation: updated.segmentation !== undefined ? {
-            originalID: updated.segmentation.originalID,
-            backID: updated.segmentation.backID
+            originalID: updated.segmentation.originalID.length > 0 ? updated.segmentation.originalID : initial.segmentation.originalID,
+            backID: updated.segmentation.backID.length > 0 ? updated.segmentation.backID : initial.segmentation.backID
         } : initial.segmentation,
         landmarks: updated.landmarks !== undefined ? {
             originalID: mergeLandmarks(initial.landmarks.originalID, updated.landmarks.originalID),
@@ -575,7 +575,77 @@ app.get('/getDatabases', (req, res) => {
     }
 })
 
-app.post('/returnOutput', async (req, res) => {
+app.post('/saveOutput', async (req, res) => {
+    let { ID, database, overwrite } = req.body;
+    let today = fromDateToString(new Date(), true);
+    let topLevel = testFolder + "annotation_output/"
+    let route = topLevel + database + "/";
+
+    let dbs = fs.readdirSync(topLevel);
+    if (dbs) {
+        if (!dbs.includes(database)) {
+            fs.mkdirSync(route, {recursive: true}, (err) => {
+                if (err) throw err;
+                res.status(500).send();
+            })
+        }
+    } else {
+        res.status(500).send();
+    }
+
+    if (!overwrite) {
+        route = testFolder + "annotation_output/" + database + "/output_" + today + "/";
+        fs.mkdirSync(route, {recursive: true}, (err) => {
+            if (err) throw err;
+        });
+    }
+
+    await new Promise((res, rej) => {
+            let date = ID.dateCreated.split('T')[0].split('-').join('');
+            let dateRoute = route + date + "/";
+            let dates = fs.readdirSync(route);
+            if (dates) {
+                if (!dates.includes(date)) {
+                    fs.mkdirSync(dateRoute, {recursive: true}, (err) => {
+                        if (err) throw err;
+                        res.status(500).send();
+                    });
+                }
+                try {
+                    let sessionRoute = dateRoute + ID.sessionID + ".json";
+                    ID.lastModified = (new Date()).toLocaleString();
+                    try {
+                        let sessions = fs.readdirSync(dateRoute);
+                        if (sessions.includes(ID.sessionID + ".json")) {
+                            let data = fs.readFileSync(sessionRoute);
+                            let initialData = JSON.parse(data);
+                            let updatedData = mergeJSONData(initialData, ID);
+                            console.log("merge " + ID.sessionID);
+                            fs.writeFileSync(sessionRoute, JSON.stringify(updatedData), 'utf8');
+                            res({sessionID: ID.sessionID, success: true});
+                        } else {
+                            console.log("new file " + ID.sessionID);
+                            fs.writeFileSync(sessionRoute, JSON.stringify(ID), 'utf8');
+                            res({sessionID: ID.sessionID, success: true})
+                        }
+                    } catch(err) {
+                        throw err;
+                    }
+                } catch(err) {
+                    console.error(err);
+                    res({sessionID: ID.sessionID, success: false});
+                }
+            } else {
+                res({sessionID: ID.sessionID, success: false});
+            }
+        }).then((result) => {
+            res.status(200).send(result);
+        }).catch((err) =>
+            res.status(500).send(err)
+        );
+})
+
+app.post('/saveBulkOutput', async (req, res) => {
     let { library, database, overwrite } = req.body;
     let today = fromDateToString(new Date(), true);
     let topLevel = testFolder + "annotation_output/"
