@@ -277,7 +277,6 @@ export class DatabaseUtil {
                     segmentation: frontSeg,
                     landmark: landmarks,
                     ocr: ocr,
-                    // faceCompareMatch: rawData.
                 }
             } else {
                 given.backID = {
@@ -287,6 +286,14 @@ export class DatabaseUtil {
                     segmentation: backSeg,
                     landmark: landmarks,
                     ocr: ocr
+                }
+            }
+
+            if (session.raw_data.face_compare !== undefined) {
+                given.face = {
+                    liveness: session.raw_data.face_compare.liveness,
+                    videoFlags: session.raw_data.face_compare.videoFlags,
+                    match: session.raw_data.face_compare.faceCompareMatch
                 }
             }
             return given;
@@ -326,7 +333,9 @@ export class DatabaseUtil {
                     ) : undefined,
                     givenData: givenData,
                     frontIDFlags: givenData.originalID !== undefined ? givenData.originalID!.flags : [],
-                    backIDFlags: givenData.backID !== undefined ? givenData.backID!.flags : []
+                    backIDFlags: givenData.backID !== undefined ? givenData.backID!.flags : [],
+                    // videoLiveness: givenData.face !== undefined ? givenData.face.liveness : undefined,
+                    // videoFlags: givenData.face !== undefined ? givenData.face.videoFlags : [],
                 });
             });
         })
@@ -376,7 +385,7 @@ export class DatabaseUtil {
 
             videoLiveness: ID.videoLiveness,
             videoFlags: ID.videoFlags,
-            faceCompareMatch: face ? [ID.faceCompareMatch] : ID.internalIDs.map((each) => each.originalID!.faceCompareMatch)
+            faceCompareMatch: face ? [ID.faceCompareMatch] : ID.internalIDs.map((each) => each.faceCompareMatch)
         }
     }
 

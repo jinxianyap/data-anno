@@ -35,7 +35,6 @@ function cloneImageState(original: ImageState, IDBox?: IDBox, passesCrop?: boole
         ocr: getDeepCopy(original.ocr),
         ocrToLandmark: getDeepCopy(original.ocrToLandmark),
         currentWord: getDeepCopy(original.currentWord),
-        faceCompareMatch: getDeepCopy(original.faceCompareMatch)
     }
 }
 
@@ -167,16 +166,15 @@ export function IDReducer(
             }
             internalID.documentType = action.payload.documentType;
             internalID.processStage = stage;
+            internalID.faceCompareMatch = undefined;
             internalID.originalID!.landmark = [];
             internalID.originalID!.ocr = [];
             internalID.originalID!.currentSymbol = undefined;
             internalID.originalID!.currentWord = undefined;
-            internalID.originalID!.faceCompareMatch = undefined;
             internalID.backID!.landmark = [];
             internalID.backID!.ocr = [];
             internalID.backID!.currentSymbol = undefined;
             internalID.backID!.currentWord = undefined;
-            internalID.backID!.faceCompareMatch = undefined;
             IDs.splice(action.payload.internalIndex, 1, internalID);
             return {
                 ...state,
@@ -292,6 +290,19 @@ export function IDReducer(
             let intId = ids[idx];
             if (intId.processStage === IDProcess.MYKAD_BACK) {
                 intId.processStage = IDProcess.MYKAD_FRONT;
+                ids.splice(idx, 1, intId);
+            }
+            return {
+                ...state,
+                internalIDs: ids
+            }
+        }
+        case Action.SET_FACE_COMPARE_MATCH: {
+            let idx = state.internalIndex;
+            let ids = state.internalIDs;
+            let intId = ids[idx];
+            if (intId !== undefined) {
+                intId.faceCompareMatch = action.payload.match;
                 ids.splice(idx, 1, intId);
             }
             return {

@@ -18,8 +18,6 @@ export type ImageState = {
     ocr: OCRData[];
     ocrToLandmark?: string;
     currentWord?: OCRWord;
-
-    faceCompareMatch?: boolean
 }
 
 export type IDBox = {
@@ -159,13 +157,6 @@ interface UpdateOCRData {
     }
 }
 
-interface SetFaceCompareMatch {
-    type: typeof Action.SET_FACE_COMPARE_MATCH;
-    payload: {
-        match: boolean
-    }
-}
-
 interface RestoreImage {
     type: typeof Action.RESTORE_IMAGE;
 }
@@ -182,5 +173,4 @@ export type ImageActionTypes = LoadImageState
     | AddOCRData
     | UpdateOCRData
     | SetCurrentWord
-    | SetFaceCompareMatch
     | RestoreImage

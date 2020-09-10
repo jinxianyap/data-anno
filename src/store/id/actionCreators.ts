@@ -144,3 +144,12 @@ export function backToOriginal(): IDActionTypes {
         type: Action.BACK_TO_ORIGINAL
     }
 }
+
+export function setFaceCompareMatch(match: boolean): IDActionTypes {
+    return {
+        type: Action.SET_FACE_COMPARE_MATCH,
+        payload: {
+            match: match
+        }
+    }
+}

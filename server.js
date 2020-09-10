@@ -245,14 +245,10 @@ function updateDataWithJSON(result, data) {
 
     newResult.front_ocr = updateOCR(result.front_ocr, true);
     newResult.back_ocr = updateOCR(result.back_ocr, false);
-    let dataExists = data.faceCompareMatch.length > 0 && data.faceCompareMatch[0] !== null;
-    if (dataExists) {
-        newResult.face_compare = {
-            success: data.faceCompareMatch[0],
-            confidence: data.faceCompareMatch.map((each) => each) ? 100 : 0,
-            liveness: data.videoLiveness === true ? 100 : 0
-        }
-    
+    newResult.face_compare = {
+        faceCompareMatch: data.faceCompareMatch,
+        liveness: data.videoLiveness,
+        videoFlags: data.videoFlags
     }
     newResult.source = 'json';
     return newResult;

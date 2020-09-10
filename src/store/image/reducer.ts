@@ -223,13 +223,6 @@ export function imageReducer(
                 ocr: ocr
             }
         }
-
-        case Action.SET_FACE_COMPARE_MATCH: {
-            return {
-                ...state,
-                faceCompareMatch: action.payload.match
-            }
-        }
         case Action.RESTORE_IMAGE: {
             return {
                 ...initialState

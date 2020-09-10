@@ -9,8 +9,8 @@ import { GeneralActionTypes } from '../../../store/general/types';
 import { IDActionTypes, IDState, InternalIDState } from '../../../store/id/types';
 import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord, LandmarkData, Position } from '../../../store/image/types';
 import { progressNextStage, getPreviousID, getNextID, saveToLibrary } from '../../../store/general/actionCreators';
-import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, backToOriginal, saveToInternalID, updateFrontIDFlags, updateBackIDFlags, restoreID, clearInternalIDs } from '../../../store/id/actionCreators';
-import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, addLandmarkData, updateLandmarkFlags, addOCRData, setFaceCompareMatch, restoreImage } from '../../../store/image/actionCreators';
+import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, setFaceCompareMatch, backToOriginal, saveToInternalID, updateFrontIDFlags, updateBackIDFlags, restoreID, clearInternalIDs } from '../../../store/id/actionCreators';
+import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, addLandmarkData, updateLandmarkFlags, addOCRData, restoreImage } from '../../../store/image/actionCreators';
 import { DatabaseUtil } from '../../../utils/DatabaseUtil';
 import { HOST, PORT, TRANSFORM } from '../../../config';
 import { GeneralUtil } from '../../../utils/GeneralUtil';
@@ -59,7 +59,7 @@ interface IProps {
 
     // Video Liveness & Match
     updateVideoData: (liveness: boolean, flags: string[]) => IDActionTypes;
-    setFaceCompareMatch: (match: boolean) => ImageActionTypes;
+    setFaceCompareMatch: (match: boolean) => IDActionTypes;
 
     // Saving to store
     saveToInternalID: (imageState: ImageState, next: boolean) => IDActionTypes;
@@ -349,7 +349,9 @@ class ControlPanel extends React.Component<IProps, IState> {
             case (CurrentStage.FR_LIVENESS_CHECK): {
                 if (!this.state.videoFlagsLoaded) {
                     this.loadVideoFlags();
-                };
+                } else if (previousProps.currentStage !== this.props.currentStage && this.state.passesLiveness === undefined) {
+                    this.initializeLiveness();
+                }
                 if (this.props.processType !== ProcessType.LIVENESS && 
                     this.props.currentID.internalIDs.length > 0 && this.props.currentID.videoLiveness !== undefined) {
                     this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
@@ -364,13 +366,19 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
                 break;
             }
+            case (CurrentStage.FR_COMPARE_CHECK): {
+                if (previousProps.currentStage !== this.props.currentStage && this.state.faceCompareMatch === undefined) {
+                    this.initializeFaceCompareMatch();
+                }
+                break;
+            }
             case (CurrentStage.END_STAGE): {
                 if (previousProps.internalID) {
                     if (this.props.currentID.internalIndex >= this.props.currentID.internalIDs.length) {
                         console.log('next id');
                         this.loadNextID(false);
                     } else if (this.props.currentID.internalIndex < this.props.currentID.internalIDs.length) {
-                        if (previousProps.internalID.originalID!.faceCompareMatch !== undefined && !this.props.internalID.processed) {
+                        if (previousProps.internalID.faceCompareMatch !== undefined && !this.props.internalID.processed) {
                             console.log('next internal id');
                             this.loadNextInternalId();
                         } else if (this.props.internalID.processStage === IDProcess.MYKAD_FRONT) {
@@ -701,7 +709,79 @@ class ControlPanel extends React.Component<IProps, IState> {
             let flags = options.flags.video.values[idx];
             vidFlags.push({category: each, flags: flags});
         });
-        this.setState({videoFlags: vidFlags, videoFlagsLoaded: true});
+        this.setState({videoFlags: vidFlags, videoFlagsLoaded: true}, () => this.initializeLiveness());
+    }
+
+    initializeLiveness = () => {
+        if (this.state.videoFlagsLoaded && this.state.passesLiveness === undefined) {
+            if (this.props.currentID.videoLiveness !== undefined) {
+                this.setState({
+                    passesLiveness: this.props.currentID.videoLiveness,
+                    selectedVideoFlags: this.props.currentID.videoFlags !== undefined ? this.props.currentID.videoFlags: [],
+                }, this.frLivenessValidate);
+            } else if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.face !== undefined) {
+                let face = this.props.currentID.givenData.face;
+                this.setState({passesLiveness: face.liveness, selectedVideoFlags: face.videoFlags !== undefined ? face.videoFlags : []}, this.frLivenessValidate);
+            }
+        }
+    }
+
+    frLivenessValidate = () => {
+        let val = false;
+        if (this.state.passesLiveness !== undefined) {
+            if (this.state.passesLiveness) {
+                val = true;
+            } else {
+                let spoofFlags = this.state.videoFlags.find((each) => each.category === 'spoof');
+                if (spoofFlags !== undefined) {
+                    if (spoofFlags.flags.length === 0) {
+                        val = true;
+                    } else {
+                        for (let i = 0; i < spoofFlags.flags.length; i++) {
+                            if (this.state.selectedVideoFlags.includes(spoofFlags.flags[i])) {
+                                val = true;
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    val = true;
+                }
+            }
+        }
+
+        if (this.state.livenessValidation !== val) {
+            this.setState({livenessValidation: val});
+        }    
+    }
+
+    initializeFaceCompareMatch = () => {
+        if (this.state.faceCompareMatch === undefined) {
+            if (this.props.currentID.faceCompareMatch !== undefined) {
+                this.setState({faceCompareMatch: this.props.currentID.faceCompareMatch});
+            } else if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.face !== undefined) {
+                let match = this.props.currentID.givenData.face.match;
+                if (match === undefined || match.length === 0) return;
+                let value = match[this.props.currentID.internalIndex];
+                this.setState({faceCompareMatch: value}, () => {
+                    if (value !== undefined) this.props.setFaceCompareMatch(value);
+                });
+            }
+        }
+    }
+
+    createFormData = (image: File, points: any) => {
+        const data = new FormData();
+        data.append("image", image);
+        data.append("x1", points.x1.toString());
+        data.append("x2", points.x2.toString());
+        data.append("x3", points.x3.toString());
+        data.append("x4", points.x4.toString());
+        data.append("y1", points.y1.toString());
+        data.append("y2", points.y2.toString());
+        data.append("y3", points.y3.toString());
+        data.append("y4", points.y4.toString());
+        return data;
     }
 
     // Seg Check Components
@@ -1047,19 +1127,6 @@ class ControlPanel extends React.Component<IProps, IState> {
         )
     }
 
-    createFormData = (image: File, points: any) => {
-        const data = new FormData();
-        data.append("image", image);
-        data.append("x1", points.x1.toString());
-        data.append("x2", points.x2.toString());
-        data.append("x3", points.x3.toString());
-        data.append("x4", points.x4.toString());
-        data.append("y1", points.y1.toString());
-        data.append("y2", points.y2.toString());
-        data.append("y3", points.y3.toString());
-        data.append("y4", points.y4.toString());
-        return data;
-    }
 
     segEdit = () => {
         const setDocType = (e: any, id: number) => {
@@ -1523,36 +1590,7 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     frLivenessCheck = () => {
         const setFlag = (flags: string[], possibleFlags: string[]) => {
-            this.setState({selectedVideoFlags: flags}, validate);
-        }
-    
-        const validate = () => {
-            let val = false;
-            if (this.state.passesLiveness !== undefined) {
-                if (this.state.passesLiveness) {
-                    val = true;
-                } else {
-                    let spoofFlags = this.state.videoFlags.find((each) => each.category === 'spoof');
-                    if (spoofFlags !== undefined) {
-                        if (spoofFlags.flags.length === 0) {
-                            val = true;
-                        } else {
-                            for (let i = 0; i < spoofFlags.flags.length; i++) {
-                                if (this.state.selectedVideoFlags.includes(spoofFlags.flags[i])) {
-                                    val = true;
-                                    break;
-                                }
-                            }
-                        }
-                    } else {
-                        val = true;
-                    }
-                }
-            }
-
-            if (this.state.livenessValidation !== val) {
-                this.setState({livenessValidation: val});
-            }            
+            this.setState({selectedVideoFlags: flags}, this.frLivenessValidate);
         }
 
         const backStage = () => {
@@ -1576,7 +1614,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     <Card.Title>Liveness</Card.Title>
                     <Card.Body>
                         <ToggleButtonGroup type="radio" name="passesLivenessButtons" style={{display: "block", width: "100%"}}
-                            value={this.state.passesLiveness} onChange={(val) => this.setState({passesLiveness: val}, validate)}>
+                            value={this.state.passesLiveness} onChange={(val) => this.setState({passesLiveness: val}, this.frLivenessValidate)}>
                             <ToggleButton variant="light" className="common-button" value={false}>Spoof</ToggleButton>
                             <ToggleButton variant="light" className="common-button"  value={true}>Live</ToggleButton>
                         </ToggleButtonGroup>
@@ -1647,7 +1685,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                     <Card.Title>Match</Card.Title>
                     <Card.Body>
                         <ToggleButtonGroup type="radio" name="passessFRMatchButtons" style={{display: "block", width: "100%"}}
-                            value={this.props.currentImage.faceCompareMatch} onChange={(val) => this.props.setFaceCompareMatch(val)}>
+                            value={this.props.internalID !== undefined ? this.props.internalID.faceCompareMatch : undefined} 
+                            onChange={(val) => this.props.setFaceCompareMatch(val)}>
                             <ToggleButton variant="light" className="common-button" value={false}>No Match</ToggleButton>
                             <ToggleButton variant="light" className="common-button" value={true}>Match</ToggleButton>
                         </ToggleButtonGroup>
@@ -1656,7 +1695,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <Button variant="secondary" className="common-button" onClick={backStage}>
                     Back
                 </Button>
-                <Button className="common-button" onClick={submitFaceCompareResults} disabled={this.props.currentImage.faceCompareMatch === undefined}>
+                <Button className="common-button" onClick={submitFaceCompareResults}
+                disabled={this.props.internalID !== undefined ? this.props.internalID.faceCompareMatch === undefined : false}>
                     Done
                 </Button>
             </div>

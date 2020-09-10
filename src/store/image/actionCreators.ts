@@ -113,15 +113,6 @@ export function updateOCRData(id: number, codeName: string, value: string, posit
     }
 }
 
-export function setFaceCompareMatch(match: boolean): ImageActionTypes {
-    return {
-        type: Action.SET_FACE_COMPARE_MATCH,
-        payload: {
-            match: match
-        }
-    }
-}
-
 export function restoreImage(): ImageActionTypes {
     return {
         type: Action.RESTORE_IMAGE

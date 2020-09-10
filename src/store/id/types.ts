@@ -44,6 +44,7 @@ export type InternalIDState = {
     originalID?: ImageState;
     // croppedID?: ImageState;
     backID?: ImageState;
+    faceCompareMatch?: boolean;
 }
 
 export type GivenData = {
@@ -54,7 +55,6 @@ export type GivenData = {
         segmentation?: ({documentType: string, passesCrop: boolean, IDBox: IDBox} | undefined)[],
         landmark: LandmarkData[][],
         ocr: OCRData[][],
-        faceCompareMatch?: boolean
     },
     backID?: {
         imageProps?: ImageProps;
@@ -64,7 +64,11 @@ export type GivenData = {
         landmark: LandmarkData[][],
         ocr: OCRData[][]
     },
-    liveness?: boolean
+    face?: {
+        liveness?: boolean,
+        videoFlags?: string[],
+        match?: boolean[]
+    }
 }
 
 interface SaveDocumentType {
@@ -178,6 +182,13 @@ interface BackToOriginal {
     type: typeof Action.BACK_TO_ORIGINAL;
 }
 
+interface SetFaceCompareMatch {
+    type: typeof Action.SET_FACE_COMPARE_MATCH;
+    payload: {
+        match: boolean
+    }
+}
+
 
 export type IDActionTypes = SaveDocumentType
     | SetImageRotation
@@ -195,3 +206,4 @@ export type IDActionTypes = SaveDocumentType
     | SetIDFaceMatch
     | ClearInternalIDs
     | BackToOriginal
+    | SetFaceCompareMatch
