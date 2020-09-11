@@ -109,7 +109,7 @@ export class DatabaseUtil {
                             return undefined;
                         }
                         return {
-                            documentType: e.documentType,
+                            documentType: e.documentType !== undefined ? e.documentType : '',
                             passesCrop: e. passesCrop,
                             IDBox: {
                                 id: idx,
@@ -353,7 +353,7 @@ export class DatabaseUtil {
             ocr.name = outputName;
             return ocr;
         }
-
+        console.log(ID.internalIDs);
         return {
             dateCreated: ID.dateCreated,
             sessionID: ID.sessionID,

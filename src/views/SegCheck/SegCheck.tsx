@@ -13,6 +13,7 @@ import { FiRotateCw, FiRotateCcw } from 'react-icons/fi';
 import { IDActionTypes, IDState } from '../../store/id/types';
 
 interface IProps {
+    currentIndex: number;
     noMoreIDs: boolean;
     currentID?: IDState;
     originalProcessed?: boolean;
@@ -80,17 +81,12 @@ class SegCheck extends React.Component<IProps, IState> {
     }
 
     componentDidUpdate(previousProps: IProps) {
-        console.log('here');
-        console.log(previousProps);
-        console.log(this.props);
-        if (this.state.originalImage !== undefined) {
-        console.log(this.state.originalImage.src);
-        }
         if (this.props.noMoreIDs) {
             this.props.progressNextStage(CurrentStage.OUTPUT);
             return;
         }
         if (!previousProps.originalProcessed && this.props.originalProcessed) {
+            // when reverting to a previous ID that has already been processed
             let originalImage = this.state.originalImage!;
             let croppedImage = this.state.croppedImage!;
             let front = true;
@@ -116,38 +112,25 @@ class SegCheck extends React.Component<IProps, IState> {
             })
         } else if (!this.props.originalProcessed && this.state.originalImage === undefined && this.state.croppedImage === undefined
             && this.props.originalID !== undefined) {
+            // when segCheck first loads
             this.setState({
                 originalImage: GeneralUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
                 croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID"),
                 front: true
             })
-        } else if (!previousProps.currentID!.dataLoaded && this.props.currentID!.dataLoaded) {
-            if (!this.state.originalImage || !this.state.croppedImage) return;
-            let originalImage = this.state.originalImage!;
-            let croppedImage = this.state.croppedImage!;
-            originalImage.src = GeneralUtil.getSource(this.props.originalID!.image);
-            croppedImage.src = GeneralUtil.getSource(this.props.originalID!.croppedImage!);
-            this.setState({
-                originalImage: originalImage,
-                croppedImage: croppedImage,
-                front: true
-            })
-        } else if (this.props.originalProcessed && this.props.currentID !== undefined && this.props.currentID.internalIDs.length > 0
-            && previousProps.currentID !== undefined && previousProps.currentID.internalIDs.length > 0) {
-                if (!this.state.originalImage || !this.state.croppedImage) return;
-            let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
-            let originalImage = this.state.originalImage!;
-            let croppedImage = this.state.croppedImage!;
-
-            if (internalID.processStage === IDProcess.MYKAD_BACK && this.state.front) {
-                originalImage.src = GeneralUtil.getSource(this.props.backID!.image);
-                croppedImage.src = GeneralUtil.getSource(this.props.backID!.croppedImage!);
+        } else if ((!previousProps.currentID!.dataLoaded && this.props.currentID!.dataLoaded) || 
+            (previousProps.currentID!.sessionID !== this.props.currentID!.sessionID)) {
+            // when moving from one ID to another processed or unprocessed
+            if (this.state.originalImage === undefined || this.state.croppedImage === undefined) {
                 this.setState({
-                    originalImage: originalImage,
-                    croppedImage: croppedImage,
-                    front: false
+                    originalImage: GeneralUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
+                    croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID"),
+                    front: true
                 })
-            } else if (internalID.processStage === IDProcess.MYKAD_FRONT && !this.state.front) {
+            } else {
+                let originalImage = this.state.originalImage!;
+                let croppedImage = this.state.croppedImage!;
+                if (this.props.originalID === undefined) return;
                 originalImage.src = GeneralUtil.getSource(this.props.originalID!.image);
                 croppedImage.src = GeneralUtil.getSource(this.props.originalID!.croppedImage!);
                 this.setState({
@@ -155,6 +138,45 @@ class SegCheck extends React.Component<IProps, IState> {
                     croppedImage: croppedImage,
                     front: true
                 })
+            }
+        } else if (this.props.originalProcessed && this.props.currentID !== undefined && this.props.currentID.internalIDs.length > 0
+            && previousProps.currentID !== undefined && previousProps.currentID.internalIDs.length > 0) {
+                // when moving from back id to original id and v.v.
+            let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
+            let originalImage = this.state.originalImage!;
+            let croppedImage = this.state.croppedImage!;
+            if (!this.state.originalImage || !this.state.croppedImage) {
+                if (internalID.processStage === IDProcess.MYKAD_BACK && this.state.front) {
+                    this.setState({
+                        originalImage: GeneralUtil.loadImage("segCheckID", this.props.backID!.image, "segCheckOriginalID"),
+                        croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.backID!.croppedImage!, "segCheckCroppedID"),
+                        front: true
+                    })
+                } else {
+                    this.setState({
+                        originalImage: GeneralUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
+                        croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID"),
+                        front: true
+                    })
+                }
+            } else {
+                if (internalID.processStage === IDProcess.MYKAD_BACK && this.state.front) {
+                    originalImage.src = GeneralUtil.getSource(this.props.backID!.image);
+                    croppedImage.src = GeneralUtil.getSource(this.props.backID!.croppedImage!);
+                    this.setState({
+                        originalImage: originalImage,
+                        croppedImage: croppedImage,
+                        front: false
+                    })
+                } else if (internalID.processStage === IDProcess.MYKAD_FRONT && !this.state.front) {
+                    originalImage.src = GeneralUtil.getSource(this.props.originalID!.image);
+                    croppedImage.src = GeneralUtil.getSource(this.props.originalID!.croppedImage!);
+                    this.setState({
+                        originalImage: originalImage,
+                        croppedImage: croppedImage,
+                        front: true
+                    })
+                }
             }
         }
 
@@ -264,6 +286,7 @@ const mapStateToProps = (state: AppState) => {
     let ID = state.general.IDLibrary[index];
     if (index >= state.general.IDLibrary.length) {
         return {
+            currentIndex: index,
             noMoreIDs: true,
             currentID: undefined,
             originalProcessed: undefined,
@@ -274,6 +297,7 @@ const mapStateToProps = (state: AppState) => {
         }
     }
     return {
+        currentIndex: index,
         noMoreIDs: false,
         currentID: state.id,
         originalProcessed: state.id.originalIDProcessed,

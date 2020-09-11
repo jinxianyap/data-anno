@@ -185,7 +185,9 @@ class ControlPanel extends React.Component<IProps, IState> {
         switch (this.props.currentStage) {
             case (CurrentStage.SEGMENTATION_CHECK): {
                 if (this.props.indexedID === undefined) break;
-                if (previousProps.indexedID.index !== this.props.indexedID.index) {
+                if (previousProps.indexedID.index !== this.props.indexedID.index 
+                    || this.props.currentID.sessionID === '' || this.props.indexedID.index !== this.props.currentID.index) {
+                        // load session data / load next ID
                     if (!this.props.indexedID.dataLoaded) {
                         GeneralUtil.toggleOverlay(true);
                         axios.post('/loadSessionData', {
@@ -209,11 +211,16 @@ class ControlPanel extends React.Component<IProps, IState> {
                         this.props.loadNextID(this.props.indexedID);
                         this.loadSegCheckImage();
                         this.initializeSegCheckData();
-                        this.setState({loadedSegCheckImage: true}, () => GeneralUtil.toggleOverlay(false));
+                        this.setState({loadedSegCheckImage: true});
                     }
                     break;
                 }
-                if (previousProps.currentStage !== this.props.currentStage || previousProps.currentID.sessionID !== this.props.currentID.sessionID) {
+                if (previousProps.currentStage !== this.props.currentStage || previousProps.currentID.sessionID !== this.props.currentID.sessionID
+                    || (this.props.currentID.originalIDProcessed &&
+                        (previousProps.internalID === undefined && this.props.internalID !== undefined
+                         && this.props.internalID.processStage === IDProcess.MYKAD_BACK) || 
+                         (previousProps.internalID !== undefined && this.props.internalID !== undefined
+                            && this.props.internalID.processStage !== previousProps.internalID.processStage))) {
                     this.initializeSegCheckData();
                 }
                 // initial load of doctypes and overall flags from config json, initial load of image
@@ -225,6 +232,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     break;
                 }
                 if (this.props.processType !== ProcessType.SEGMENTATION) {
+                    if (this.props.internalID === undefined) return;
                     // first time
                     if (previousProps.currentID.index === this.props.currentID.index && 
                         previousProps.internalID === undefined && this.props.internalID !== undefined) {
@@ -247,6 +255,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     // get mykadback of next internal id OR skip over
                     if (previousProps.currentID.internalIndex < this.props.currentID.internalIndex) {
                         if (this.props.currentID.internalIndex < this.props.currentID.internalIDs.length) {
+                            if (this.props.internalID === undefined) return;
                             if (this.props.internalID.documentType !== 'MyKad') {
                                 this.props.saveToInternalID(this.props.internalID.originalID!, true);
                             } else {
@@ -260,28 +269,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                             // next ID
                             this.loadNextID(false);
                         }
-                    // coming from seg edit of front id
                     } 
-                    // else if (this.props.currentID.internalIDs.length > 0 
-                    //     && previousProps.currentID.internalIndex === this.props.currentID.internalIndex
-                    //     && this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
-                    //         console.log(this.props.internalID);
-                    //     this.props.loadImageState(this.props.internalID.backID!);
-                    //     if (this.props.currentID.internalIndex < this.props.currentID.internalIDs.length) {
-                    //         if (this.props.internalID.documentType !== 'MyKad') {
-                    //             this.props.saveToInternalID(this.props.internalID.originalID!, true);
-                    //         } else {
-                    //             this.props.saveToInternalID(this.props.internalID.originalID!, false);
-                    //             this.loadBackId();
-                    //         }
-                    //     }
-
-                    //     if (this.props.currentID.internalIndex >= this.props.currentID.internalIDs.length
-                    //         || this.props.currentID.backIDsProcessed === this.props.currentID.internalIDs.length) {
-                    //         // next ID
-                    //         this.loadNextID();
-                    //     }
-                    // }
                 }
                 break;
             }
@@ -327,7 +315,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 if (!this.state.OCRLoaded) {
                     this.loadOCRDetails();
                 } else {
-
+                    if (this.props.internalID === undefined) return;
                     this.state.OCR.forEach((each) => {
                         if (each.docType === this.props.internalID.processStage) {
                             if (each.details.length !== this.state.currentOCR.length) {
@@ -356,9 +344,9 @@ class ControlPanel extends React.Component<IProps, IState> {
                     this.props.currentID.internalIDs.length > 0 && this.props.currentID.videoLiveness !== undefined) {
                     this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
                 }
-                if (previousProps.currentID.videoLiveness !== this.props.currentID.videoLiveness) {
+                if (this.props.currentID.sessionID !== '' && previousProps.currentID.videoLiveness !== this.props.currentID.videoLiveness) {
                     if (this.props.processType === ProcessType.LIVENESS || this.props.internalID === undefined || 
-                        this.props.internalID && this.props.internalID.originalID!.croppedImage!.name === 'notfound') {
+                        (this.props.internalID && this.props.internalID.originalID!.croppedImage!.name === 'notfound')) {
                         this.loadNextID(false);
                     } else {
                         this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
@@ -513,30 +501,33 @@ class ControlPanel extends React.Component<IProps, IState> {
                     cropResult = false;
                 }
             }
-        } else if (this.props.currentID.givenData !== undefined) {
+        } 
+        if (this.props.currentID.givenData !== undefined) {
             if (this.props.currentID.originalIDProcessed) {
                 if (this.props.currentID.givenData.backID !== undefined && this.props.currentID.givenData.backID.segmentation !== undefined) {
                     let seg = this.props.currentID.givenData.backID.segmentation;
-                    if (seg.length <= 1) {
-                        cropResult = seg[0] !== undefined ? seg[0]!.passesCrop : undefined;
-                    } else {
-                        cropResult = false;
+                    if (cropResult === undefined) {
+                        if (seg.length <= 1) {
+                            cropResult = seg[0] !== undefined ? seg[0]!.passesCrop : undefined;
+                        } else {
+                            cropResult = false;
+                        }
                     }
                 }
             } else {
                 if (this.props.currentID.givenData.originalID !== undefined && this.props.currentID.givenData.originalID.segmentation !== undefined) {
                     let seg = this.props.currentID.givenData.originalID.segmentation;
                     if (seg.length <= 1) {
-                        cropResult = seg[0] !== undefined ? seg[0]!.passesCrop : undefined;
-                        docType = seg[0] !== undefined ? seg[0]!.documentType : '';
+                        if (cropResult === undefined) cropResult = seg[0] !== undefined ? seg[0]!.passesCrop : undefined;
+                        if (docType === '') docType = seg[0] !== undefined ? seg[0]!.documentType : '';
                     } else {
-                        cropResult = false;
-                        docType = seg[this.props.currentID.internalIndex] !== undefined ? seg[this.props.currentID.internalIndex]!.documentType : '';
+                        if (cropResult === undefined) cropResult = false;
+                        if (docType === '') docType = seg[this.props.currentID.internalIndex] !== undefined ? seg[this.props.currentID.internalIndex]!.documentType : '';
                     }
                 }
             }
         }
-
+        console.log(cropResult);
         if (docType !== '' ) {
             this.setState({passesCrop: cropResult, selectedFrontIDFlags: frontIDFlags, selectedBackIDFlags: backIDFlags, singleDocumentType: docType});
         } else {
@@ -935,6 +926,17 @@ class ControlPanel extends React.Component<IProps, IState> {
                             }
                             this.props.createNewID(preBox !== undefined ? preBox : box, true);
                             this.props.saveDocumentType(0, this.state.singleDocumentType);
+                            if (this.props.processType === ProcessType.SEGMENTATION) {
+                                let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
+                                if (internalID !== undefined && internalID.processStage === IDProcess.MYKAD_FRONT) {
+                                    this.props.saveToInternalID(internalID.originalID !== undefined ? internalID.originalID : this.props.currentImage, false);
+                                    this.props.loadImageState(internalID.backID!);
+                                    this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+                                } else {
+                                    this.props.saveToInternalID(this.props.currentImage, true);
+                                    this.loadNextID(false);
+                                }
+                            }
                         } else {
                             this.props.progressNextStage(CurrentStage.SEGMENTATION_EDIT);
                         }
@@ -944,8 +946,20 @@ class ControlPanel extends React.Component<IProps, IState> {
                             if (this.props.internalID.documentType !== this.state.singleDocumentType) {
                                 this.props.saveDocumentType(0, this.state.singleDocumentType);
                             }
-                            this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
-                            this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                            if (this.props.processType === ProcessType.SEGMENTATION) {
+                                let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
+                                if (internalID !== undefined && internalID.processStage === IDProcess.MYKAD_FRONT) {
+                                    this.props.saveToInternalID(internalID.originalID !== undefined ? internalID.originalID : this.props.currentImage, false);
+                                    this.props.loadImageState(internalID.backID!);
+                                    this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+                                } else {
+                                    this.props.saveToInternalID(this.props.currentImage, true);
+                                    this.loadNextID(false);
+                                }
+                            } else {
+                                this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
+                                this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                            }
                         } else {
                             this.props.progressNextStage(CurrentStage.SEGMENTATION_EDIT);
                         }
@@ -1044,7 +1058,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     if (this.props.processType === ProcessType.SEGMENTATION) {
                         let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
                         if (internalID !== undefined && internalID.processStage === IDProcess.MYKAD_FRONT) {
-                            this.props.saveToInternalID(this.props.currentImage, false);
+                            this.props.saveToInternalID(internalID.originalID !== undefined ? internalID.originalID : this.props.currentImage, false);
                             this.props.loadImageState(internalID.backID!);
                             this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
                         } else {
@@ -1719,16 +1733,13 @@ class ControlPanel extends React.Component<IProps, IState> {
         if (beforeSegCheckDone) {
             id.frontIDFlags = this.state.selectedFrontIDFlags;
             id.backIDFlags = this.state.selectedBackIDFlags;
-            this.props.saveToLibrary(id);
-        } else {
-            this.props.saveToLibrary(id);
         }
+        this.props.saveToLibrary(id);
         axios.post('/saveOutput', {
             database: this.props.database,
             ID: DatabaseUtil.extractOutput(id, this.props.processType === ProcessType.FACE),
             overwrite: true
         }).then((res: any) => {
-            console.log(res);
             this.props.restoreID();
             this.props.restoreImage();
             if (prev) {
@@ -1835,23 +1846,6 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
 
         const navigateIDs = () => {
-            // const handleClick = (prev: boolean) => {
-                // switch (this.props.currentStage) {
-                //     case (CurrentStage.LANDMARK_EDIT): {
-                //         this.state.currentLandmarks.forEach((each) => {
-                //             this.props.updateLandmarkFlags(each.name, each.flags);
-                //         });
-                //         this.props.saveToInternalID(this.props.currentImage, this.props.internalID.processStage !== IDProcess.MYKAD_FRONT);
-                //         break;
-                //     }
-                //     case (CurrentStage.OCR_DETAILS): {
-
-                //     }
-                // }
-                // need to save state first?
-                // this.loadNextID(prev);
-            // }
-
             const saveAndQuit = () => {
                 let id = this.props.currentID;
                 id.frontIDFlags = this.state.selectedFrontIDFlags;

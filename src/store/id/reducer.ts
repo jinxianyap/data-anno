@@ -66,6 +66,7 @@ export function IDReducer(
                 processStage: IDProcess.MYKAD_FRONT,
             }
             let IDs = state.internalIDs;
+            console.log(action.payload.IDBox);
             IDs.push(ID);
             return {
                 ...state,

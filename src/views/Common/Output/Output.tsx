@@ -39,34 +39,34 @@ class Output extends React.Component<IProps, IState> {
     }
 
     componentDidMount() {
-        let lib = [];
-        if (this.props.processType === ProcessType.FACE) {
-            lib = this.props.IDLibrary
-                .filter(((each) => each.videoLiveness !== undefined || each.faceCompareMatch !== undefined))
-                .map((each) => DatabaseUtil.extractOutput(each, true));
-        } else {
-            lib = this.props.IDLibrary
-                .filter(((each) => each.dirty))
-                .map((each) => DatabaseUtil.extractOutput(each, false))
-        }
-        console.log(lib);
-        GeneralUtil.toggleOverlay(true);
-        axios.post('/saveBulkOutput', {
-            database: this.props.database,
-            library: lib,
-            overwrite: true
-        }).then((res: any) => {
-            if (res.status === 200) {
-                this.setState({ saveSuccess: true, saveOutputStatus: res.data.map((each: any) => {return {sessionID: each.sessionID, success: each.success}})});
-            } else {
-                this.setState({ saveSuccess: false, errorMsg: res.message });
-            }
-            GeneralUtil.toggleOverlay(false);
-        }).catch((err: any) => {
-            console.error(err);
-            GeneralUtil.toggleOverlay(false);
-            this.setState({ saveSuccess: false, errorMsg: err})
-        });
+        // let lib = [];
+        // if (this.props.processType === ProcessType.FACE) {
+        //     lib = this.props.IDLibrary
+        //         .filter(((each) => each.videoLiveness !== undefined || each.faceCompareMatch !== undefined))
+        //         .map((each) => DatabaseUtil.extractOutput(each, true));
+        // } else {
+        //     lib = this.props.IDLibrary
+        //         .filter(((each) => each.dirty))
+        //         .map((each) => DatabaseUtil.extractOutput(each, false))
+        // }
+        // console.log(lib);
+        // GeneralUtil.toggleOverlay(true);
+        // axios.post('/saveBulkOutput', {
+        //     database: this.props.database,
+        //     library: lib,
+        //     overwrite: true
+        // }).then((res: any) => {
+        //     if (res.status === 200) {
+        //         this.setState({ saveSuccess: true, saveOutputStatus: res.data.map((each: any) => {return {sessionID: each.sessionID, success: each.success}})});
+        //     } else {
+        //         this.setState({ saveSuccess: false, errorMsg: res.message });
+        //     }
+        //     GeneralUtil.toggleOverlay(false);
+        // }).catch((err: any) => {
+        //     console.error(err);
+        //     GeneralUtil.toggleOverlay(false);
+        //     this.setState({ saveSuccess: false, errorMsg: err})
+        // });
     }
 
     render() {
