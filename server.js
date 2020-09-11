@@ -149,57 +149,129 @@ function updateDataWithJSON(result, data) {
                 }
 
                 if (ocrResults.landmarks !== undefined) {
-                    ocrResults.landmarks = landmarks.map((lm) => {
-                        return ocrResults.landmarks.map((each) => {
-                            let landmark = lm.find((llm) => llm.codeName === each.id);
-                            if (landmark !== undefined) {
-                                if (front && data.imageProps.originalID !== undefined && data.imageProps.originalID.height !== undefined) {
-                                    each.coords = [landmark.position.x1, 
+                    ocrResults.landmarks = landmarks.map((currLm) => {
+                        let csvLm = ocrResults.landmarks;
+                        if (currLm.length > csvLm.length) {
+                            return currLm.map((landmark) => {
+                                let lm = csvLm.find((l) => l.id === landmark.codeName);
+                                if (lm !== undefined && lm.id !== undefined) {
+                                    lm.coords = [landmark.position.x1, 
                                         data.imageProps.originalID.height - landmark.position.y1, 
                                         landmark.position.x2,
                                         data.imageProps.originalID.height - landmark.position.y4];
-                                } else if (!front && data.imageProps.backID !== undefined && data.imageProps.backID.height !== undefined) {
-                                    each.coords = [landmark.position.x1, 
-                                        data.imageProps.backID.height - landmark.position.y1, 
-                                        landmark.position.x2,
-                                        data.imageProps.backID.height - landmark.position.y4];
+                                } else {
+                                    return {
+                                        id: landmark.codeName,
+                                        score: 0,
+                                        coords: [landmark.position.x1, 
+                                            data.imageProps.originalID.height - landmark.position.y1, 
+                                            landmark.position.x2,
+                                            data.imageProps.originalID.height - landmark.position.y4]
+                                    }
                                 }
-                            }
-                            return each;
-                        })
+                            })
+                        } else {
+                            return ocrResults.landmarks.map((each) => {
+                                let landmark = currLm.find((llm) => llm.codeName === each.id);
+                                if (landmark !== undefined) {
+                                    if (front && data.imageProps.originalID !== undefined && data.imageProps.originalID.height !== undefined) {
+                                        each.coords = [landmark.position.x1, 
+                                            data.imageProps.originalID.height - landmark.position.y1, 
+                                            landmark.position.x2,
+                                            data.imageProps.originalID.height - landmark.position.y4];
+                                    } else if (!front && data.imageProps.backID !== undefined && data.imageProps.backID.height !== undefined) {
+                                        each.coords = [landmark.position.x1, 
+                                            data.imageProps.backID.height - landmark.position.y1, 
+                                            landmark.position.x2,
+                                            data.imageProps.backID.height - landmark.position.y4];
+                                    }
+                                }
+                                return each;
+                            })
+                        }
                     })  
                 }
             } else {
                 ocrResults.glare_results = [ocrResults.glare_results];
                 ocrResults.landmarks = [ocrResults.landmarks];
             }
-
             if (ocrs !== undefined && ocrs.length > 0 && ocrResults.ocr_results !== undefined) {
                 ocrResults.ocr_results = ocrs.map((currOcr) => {
-                    return ocrResults.ocr_results.map((each) => {
-                        let ocr = currOcr.find((o) => o.codeName === each.field);
-                        if (ocr !== undefined) {
-                            each.text = ocr.labels.map((lbl) => lbl.value).join(" ");
-                            each.coords = ocr.labels.map((lbl) => {
-                                if (lbl.position !== undefined) {
-                                    if (front && data.imageProps.originalID !== undefined && data.imageProps.originalID.height !== undefined) {
-                                        return [lbl.position.x1, 
-                                            data.imageProps.originalID.height - lbl.position.y1, 
-                                            lbl.position.x2,
-                                            data.imageProps.originalID.height - lbl.position.y4];
-                                    } else if (!front && data.imageProps.backID !== undefined && data.imageProps.backID.height !== undefined) {
-                                        return [lbl.position.x1, 
-                                            data.imageProps.backID.height - lbl.position.y1, 
-                                            lbl.position.x2,
-                                            data.imageProps.backID.height - lbl.position.y4];
+                    let csvOcr = ocrResults.ocr_results;
+                    if (currOcr.length > csvOcr.length) {
+                        return currOcr.map((ocr) => {
+                            let each = csvOcr.find((o) => o.field === ocr.codeName);
+                            if (each !== undefined && each.field !== undefined) {
+                                each.text = ocr.labels.map((lbl) => lbl.value).join(" ");
+                                each.coords = ocr.labels.map((lbl) => {
+                                    if (lbl.position !== undefined) {
+                                        if (front && data.imageProps.originalID !== undefined && data.imageProps.originalID.height !== undefined) {
+                                            return [lbl.position.x1, 
+                                                data.imageProps.originalID.height - lbl.position.y1, 
+                                                lbl.position.x2,
+                                                data.imageProps.originalID.height - lbl.position.y4];
+                                        } else if (!front && data.imageProps.backID !== undefined && data.imageProps.backID.height !== undefined) {
+                                            return [lbl.position.x1, 
+                                                data.imageProps.backID.height - lbl.position.y1, 
+                                                lbl.position.x2,
+                                                data.imageProps.backID.height - lbl.position.y4];
+                                        }
+                                    } else {
+                                        return [];
                                     }
-                                } else {
-                                    return [];
+                                });
+                            } else {
+                                return {
+                                    field: ocr.codeName,
+                                    score: 0,
+                                    text: ocr.labels.map((lbl) => lbl.value).join(" "),
+                                    coords: ocr.labels.map((lbl) => {
+                                        if (lbl.position !== undefined) {
+                                            if (front && data.imageProps.originalID !== undefined && data.imageProps.originalID.height !== undefined) {
+                                                return [lbl.position.x1, 
+                                                    data.imageProps.originalID.height - lbl.position.y1, 
+                                                    lbl.position.x2,
+                                                    data.imageProps.originalID.height - lbl.position.y4];
+                                            } else if (!front && data.imageProps.backID !== undefined && data.imageProps.backID.height !== undefined) {
+                                                return [lbl.position.x1, 
+                                                    data.imageProps.backID.height - lbl.position.y1, 
+                                                    lbl.position.x2,
+                                                    data.imageProps.backID.height - lbl.position.y4];
+                                            }
+                                        } else {
+                                            return [];
+                                        }
+                                    })
                                 }
-                            })
-                        }
-                        return each;
-                    })
+                            }
+                            return each;
+                        })
+                    } else {
+                        return csvOcr.map((each) => {
+                            let ocr = currOcr.find((o) => o.codeName === each.field);
+                            if (ocr !== undefined) {
+                                each.text = ocr.labels.map((lbl) => lbl.value).join(" "),
+                                each.coords = ocr.labels.map((lbl) => {
+                                    if (lbl.position !== undefined) {
+                                        if (front && data.imageProps.originalID !== undefined && data.imageProps.originalID.height !== undefined) {
+                                            return [lbl.position.x1, 
+                                                data.imageProps.originalID.height - lbl.position.y1, 
+                                                lbl.position.x2,
+                                                data.imageProps.originalID.height - lbl.position.y4];
+                                        } else if (!front && data.imageProps.backID !== undefined && data.imageProps.backID.height !== undefined) {
+                                            return [lbl.position.x1, 
+                                                data.imageProps.backID.height - lbl.position.y1, 
+                                                lbl.position.x2,
+                                                data.imageProps.backID.height - lbl.position.y4];
+                                        }
+                                    } else {
+                                        return [];
+                                    }
+                                })
+                            }
+                            return each;
+                        })
+                    }
                 })   
             } else {
                 ocrResults.ocr_results = [ocrResults.ocr_results];

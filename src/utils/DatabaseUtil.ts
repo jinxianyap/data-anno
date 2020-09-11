@@ -318,6 +318,7 @@ export class DatabaseUtil {
     public static loadSessionData(session: any, ID: IDState): Promise<IDState> {
         return new Promise<IDState>(async (res, rej) => {
             let sessionID = session.sessionID;
+            console.log(session);
             this.loadMyKadGivenData(session).then((givenData) => {
                 res({
                     ...ID,
