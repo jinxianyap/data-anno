@@ -30,15 +30,17 @@ export function loadFromDatabase(IDs: IDState[]): GeneralActionTypes {
     }
 }
 
-export function getPreviousID(): GeneralActionTypes {
+export function getPreviousID(res?: any): GeneralActionTypes {
     return {
-        type: Action.GET_PREV_ID
+        type: Action.GET_PREV_ID,
+        payload: res !== undefined ? {sessionID: res.sessionID, success: res.success} : undefined
     }
 }
 
-export function getNextID(): GeneralActionTypes {
+export function getNextID(res?: any): GeneralActionTypes {
     return {
-        type: Action.GET_NEXT_ID
+        type: Action.GET_NEXT_ID,
+        payload: res !== undefined ? {sessionID: res.sessionID, success: res.success} : undefined
     }
 }
 

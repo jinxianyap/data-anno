@@ -13,7 +13,8 @@ const initialState: GeneralState = {
     },
     IDLibrary: [],
     loadedIDs: false,
-    currentIndex: 0
+    currentIndex: 0,
+    saveResults: []
 }
 
 export function generalReducer(
@@ -41,20 +42,40 @@ export function generalReducer(
             }
         }
         case Action.GET_PREV_ID: {
+            let results = state.saveResults;
             if (state.IDLibrary[state.currentIndex - 1] !== undefined) {
                 state.IDLibrary[state.currentIndex - 1].dirty = true;
             }
+            if (action.payload !== undefined) {
+                let idx = results.findIndex((each) => each.sessionID === action.payload!.sessionID);
+                if (idx >= 0) {
+                    results.splice(idx, 1, action.payload);
+                } else {
+                    results.push(action.payload);
+                }
+            }
             return {
                 ...state,
+                saveResults: results,
                 currentIndex: state.currentIndex - 1
             }
         }
         case Action.GET_NEXT_ID: {
+            let results = state.saveResults;
             if (state.IDLibrary[state.currentIndex + 1] !== undefined) {
                 state.IDLibrary[state.currentIndex + 1].dirty = true;
             }
+            if (action.payload !== undefined) {
+                let idx = results.findIndex((each) => each.sessionID === action.payload!.sessionID);
+                if (idx >= 0) {
+                    results.splice(idx, 1, action.payload);
+                } else {
+                    results.push(action.payload);
+                }
+            }
             return {
                 ...state,
+                saveResults: results,
                 currentIndex: state.currentIndex + 1
             }
         }

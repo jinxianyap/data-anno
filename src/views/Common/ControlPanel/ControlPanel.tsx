@@ -30,8 +30,8 @@ interface IProps {
 
     // Moving between stages
     progressNextStage: (nextStage: CurrentStage) => GeneralActionTypes;
-    getPreviousID: () => GeneralActionTypes;
-    getNextID: () => GeneralActionTypes;
+    getPreviousID: (res?: any) => GeneralActionTypes;
+    getNextID: (res?: any) => GeneralActionTypes;
     loadImageState: (currentImage: ImageState, passesCrop?: boolean) => ImageActionTypes;
 
     // Seg Check
@@ -1743,9 +1743,9 @@ class ControlPanel extends React.Component<IProps, IState> {
             this.props.restoreID();
             this.props.restoreImage();
             if (prev) {
-                this.props.getPreviousID();
+                this.props.getPreviousID(res.data);
             } else {
-                this.props.getNextID();
+                this.props.getNextID(res.data);
             }
             this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
         }).catch((err: any) => {

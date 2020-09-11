@@ -11,20 +11,12 @@ import { GeneralUtil } from '../../../utils/GeneralUtil';
 const axios = require('axios');
 
 interface IProps {
-    IDLibrary: IDState[],
-    index: number,
+    saveResults: {sessionID: string, success: boolean}[],
     database: string,
-    processType: ProcessType,
     progressNextStage: (stage: CurrentStage) => GeneralActionTypes;
 }
 
 interface IState {
-    saveSuccess?: boolean,
-    errorMsg?: string,
-    saveOutputStatus: {
-        sessionID: string,
-        success: boolean
-    }[]
 }
 
 class Output extends React.Component<IProps, IState> {
@@ -32,79 +24,39 @@ class Output extends React.Component<IProps, IState> {
     constructor(props: IProps) {
         super(props);
         this.state = {
-            saveSuccess: undefined,
-            errorMsg: undefined,
-            saveOutputStatus: []
         }
     }
 
     componentDidMount() {
-        // let lib = [];
-        // if (this.props.processType === ProcessType.FACE) {
-        //     lib = this.props.IDLibrary
-        //         .filter(((each) => each.videoLiveness !== undefined || each.faceCompareMatch !== undefined))
-        //         .map((each) => DatabaseUtil.extractOutput(each, true));
-        // } else {
-        //     lib = this.props.IDLibrary
-        //         .filter(((each) => each.dirty))
-        //         .map((each) => DatabaseUtil.extractOutput(each, false))
-        // }
-        // console.log(lib);
-        // GeneralUtil.toggleOverlay(true);
-        // axios.post('/saveBulkOutput', {
-        //     database: this.props.database,
-        //     library: lib,
-        //     overwrite: true
-        // }).then((res: any) => {
-        //     if (res.status === 200) {
-        //         this.setState({ saveSuccess: true, saveOutputStatus: res.data.map((each: any) => {return {sessionID: each.sessionID, success: each.success}})});
-        //     } else {
-        //         this.setState({ saveSuccess: false, errorMsg: res.message });
-        //     }
-        //     GeneralUtil.toggleOverlay(false);
-        // }).catch((err: any) => {
-        //     console.error(err);
-        //     GeneralUtil.toggleOverlay(false);
-        //     this.setState({ saveSuccess: false, errorMsg: err})
-        // });
     }
 
     render() {
-        if (this.state.saveSuccess === undefined) {
-            return <div />
-        } else {
-            return (
-                <Container style={{padding: "2rem"}}>
-                    <h5 style={{width: "fit-content", margin: "1rem auto"}}>
-                    {this.state.saveSuccess ? 'Successfully saved annotation results.' : 'Failed to save annotation results.'}</h5>
+        return (
+            <Container style={{padding: "2rem"}}>
+                <h5 style={{width: "fit-content", margin: "1rem auto"}}>Database: {this.props.database}</h5>
+                <Table striped bordered hover size="sm">
+                    <thead>
+                    <tr>
+                        <th>Session ID</th>
+                        <th>Saved</th>
+                    </tr>
+                    </thead>
+                    <tbody>
                     {
-                        this.state.saveSuccess ?
-                        <Table striped bordered hover size="sm">
-                            <thead>
-                            <tr>
-                                <th>Session ID</th>
-                                <th>Saved</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {
-                                this.state.saveOutputStatus.map((each, idx) => {
-                                    return (
-                                        <tr key={idx}>
-                                            <td>{each.sessionID}</td>
-                                            <td>{each.success.toString()}</td>
-                                        </tr>
-                                    )
-                                })
-                            }
-                            </tbody>
-                        </Table>
-                        : <h6>{this.state.errorMsg}</h6>
+                        this.props.saveResults.map((each, idx) => {
+                            return (
+                                <tr key={idx}>
+                                    <td>{each.sessionID}</td>
+                                    <td>{each.success.toString()}</td>
+                                </tr>
+                            )
+                        })
                     }
-                    <Button style={{margin: "1rem auto"}} onClick={() => this.props.progressNextStage(CurrentStage.SETUP)}>Go to Setup</Button>
-                </Container>
-            );
-        }
+                    </tbody>
+                </Table>
+                <Button style={{margin: "1rem auto"}} onClick={() => this.props.progressNextStage(CurrentStage.SETUP)}>Go to Setup</Button>
+            </Container>
+        );
     }
 }
 
@@ -115,9 +67,7 @@ const mapDispatchToProps = {
 const mapStateToProps = (state: AppState) => {
     return {
         database: state.general.setupOptions.database,
-        processType: state.general.setupOptions.processType,
-        index: state.general.currentIndex,
-        IDLibrary: state.general.IDLibrary
+        saveResults: state.general.saveResults
     }
 }
 

@@ -29,8 +29,8 @@ interface IProps {
     currentImage: ImageState;
 
     progressNextStage: (nextStage: CurrentStage) => GeneralActionTypes;
-    getPreviousID: () => GeneralActionTypes;
-    getNextID: () => GeneralActionTypes;
+    getPreviousID: (res?: any) => GeneralActionTypes;
+    getNextID: (res?: any) => GeneralActionTypes;
     loadImageState: (currentImage: ImageState, passesCrop?: boolean) => ImageActionTypes;
     loadNextID: (ID: IDState) => IDActionTypes;
     createNewID: (IDBox: IDBox, passesCrop?: boolean) => IDActionTypes;
@@ -85,10 +85,7 @@ class FacePanel extends React.Component<IProps, IState> {
             this.loadVideoFlags();
         }
 
-        console.log(this.props.indexedID.sessionID);
-        console.log(this.props.indexedID);
         if (previousProps.indexedID !== this.props.indexedID) {
-            console.log('here');
             if (!this.props.indexedID.dataLoaded) {
                 GeneralUtil.toggleOverlay(true);
                 axios.post('/loadSessionData', {
@@ -99,11 +96,8 @@ class FacePanel extends React.Component<IProps, IState> {
                     if (res.status === 200) {
                         DatabaseUtil.loadSessionData(res.data, this.props.indexedID).then((completeID) => {
                             this.props.loadNextID(completeID);
-                            this.setState({
-                                selectedVideoFlags: completeID.videoFlags !== undefined ? completeID.videoFlags : [],
-                                passesLiveness: completeID.videoLiveness,
-                                livenessValidation: completeID.videoLiveness !== undefined ? true : false
-                            })
+                            this.initializeLiveness();
+                            this.initializeFaceCompareMatch();
                             GeneralUtil.toggleOverlay(false);
                         });
                     }
@@ -113,23 +107,30 @@ class FacePanel extends React.Component<IProps, IState> {
                 });
             } else {
                 this.props.loadNextID(this.props.indexedID);
-                this.setState({
-                    selectedVideoFlags: this.props.indexedID.videoFlags !== undefined ? this.props.indexedID.videoFlags : [],
-                    passesLiveness: this.props.indexedID.videoLiveness,
-                    livenessValidation: this.props.indexedID.videoLiveness !== undefined ? true : false
-                })
+                this.initializeLiveness();
+                this.initializeFaceCompareMatch();
                 GeneralUtil.toggleOverlay(false);
             }
             return;
         } else if (previousProps.currentID !== this.props.currentID) {
-            if (this.props.currentID.selfieVideo!.name === 'notfound') {
-                // new ID has no video
-                if ((this.props.currentID.selfieImage!.name !== 'notfound' || this.props.currentID.videoStills!.length > 0)
-                    && this.props.currentID.croppedFace!.name !== 'notfound') {
-                    // new ID has no video but can do face comparison
-                    this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
-                } else {
-                    this.loadNextID(this.state.previous);
+            if (this.props.currentStage === CurrentStage.FR_LIVENESS_CHECK) {
+                if (this.props.currentID.selfieVideo !== undefined && this.props.currentID.selfieVideo!.name === 'notfound') {
+                    // new ID has no video
+                    if (((this.props.currentID.selfieImage !== undefined && this.props.currentID.selfieImage!.name !== 'notfound') 
+                    || (this.props.currentID.videoStills !== undefined && this.props.currentID.videoStills!.length > 0))
+                        && (this.props.currentID.croppedFace !== undefined && this.props.currentID.croppedFace!.name !== 'notfound')) {
+                        // new ID has no video but can do face comparison
+                        this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
+                    } else {
+                        this.loadNextID(this.state.previous);
+                    }
+                } else if (this.props.currentID.selfieVideo !== undefined && this.props.currentID.selfieVideo!.name !== 'notfound' &&
+                    this.props.currentID.sessionID !== '' && this.state.passesLiveness === undefined) {
+                    this.initializeLiveness();
+                }
+            } else if (this.props.currentStage === CurrentStage.FR_COMPARE_CHECK) {
+                if (this.state.faceCompareMatch === undefined) {
+                    this.initializeFaceCompareMatch();
                 }
             }
             return;
@@ -166,48 +167,78 @@ class FacePanel extends React.Component<IProps, IState> {
             let flags = options.flags.video.values[idx];
             vidFlags.push({category: each, flags: flags});
         });
-        this.setState({videoFlags: vidFlags, videoFlagsLoaded: true});
+        this.setState({videoFlags: vidFlags, videoFlagsLoaded: true}, this.initializeLiveness);
+    }
+
+    initializeLiveness = () => {
+        if (this.state.videoFlagsLoaded && this.state.passesLiveness === undefined) {
+            if (this.props.currentID.videoLiveness !== undefined) {
+                this.setState({
+                    passesLiveness: this.props.currentID.videoLiveness,
+                    selectedVideoFlags: this.props.currentID.videoFlags !== undefined ? this.props.currentID.videoFlags: [],
+                }, this.frLivenessValidate);
+            } else if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.face !== undefined) {
+                let face = this.props.currentID.givenData.face;
+                this.setState({passesLiveness: face.liveness, selectedVideoFlags: face.videoFlags !== undefined ? face.videoFlags : []}, this.frLivenessValidate);
+            }
+        }
+    }
+
+    initializeFaceCompareMatch = () => {
+        if (this.state.faceCompareMatch === undefined) {
+            if (this.props.currentID.faceCompareMatch !== undefined) {
+                this.setState({faceCompareMatch: this.props.currentID.faceCompareMatch});
+            } else if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.face !== undefined) {
+                let match = this.props.currentID.givenData.face.match;
+                if (match === undefined || match.length === 0) return;
+                let value = match[this.props.currentID.internalIndex];
+                this.setState({faceCompareMatch: value}, () => {
+                    if (value !== undefined) this.props.setIDFaceMatch(value);
+                });
+            }
+        }
+    }
+
+    frLivenessValidate = () => {
+        let val = false;
+        if (this.state.passesLiveness !== undefined) {
+            if (this.state.passesLiveness) {
+                val = true;
+            } else {
+                let spoofFlags = this.state.videoFlags.find((each) => each.category === 'spoof');
+                if (spoofFlags !== undefined) {
+                    if (spoofFlags.flags.length === 0) {
+                        val = true;
+                    } else {
+                        for (let i = 0; i < spoofFlags.flags.length; i++) {
+                            if (this.state.selectedVideoFlags.includes(spoofFlags.flags[i])) {
+                                val = true;
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    val = true;
+                }
+            }
+        }
+
+        if (this.state.livenessValidation !== val) {
+            this.setState({livenessValidation: val});
+        }          
+        
+        this.props.updateVideoData(this.state.passesLiveness!, this.state.selectedVideoFlags);
     }
 
     frLivenessCheck = () => {
         const setFlag = (flags: string[], possibleFlags: string[]) => {
-            this.setState({selectedVideoFlags: flags}, validate);
-        }
-    
-        const validate = () => {
-            let val = false;
-            if (this.state.passesLiveness !== undefined) {
-                if (this.state.passesLiveness) {
-                    val = true;
-                } else {
-                    let spoofFlags = this.state.videoFlags.find((each) => each.category === 'spoof');
-                    if (spoofFlags !== undefined) {
-                        if (spoofFlags.flags.length === 0) {
-                            val = true;
-                        } else {
-                            for (let i = 0; i < spoofFlags.flags.length; i++) {
-                                if (this.state.selectedVideoFlags.includes(spoofFlags.flags[i])) {
-                                    val = true;
-                                    break;
-                                }
-                            }
-                        }
-                    } else {
-                        val = true;
-                    }
-                }
-            }
-
-            if (this.state.livenessValidation !== val) {
-                this.setState({livenessValidation: val});
-            }          
-            
-            this.props.updateVideoData(this.state.passesLiveness!, this.state.selectedVideoFlags);
+            this.setState({selectedVideoFlags: flags}, this.frLivenessValidate);
         }
 
         const submitLiveness = () => {
-            if ((this.props.currentID.videoStills!.length > 0 || this.props.currentID.selfieImage!.name !== 'notfound') 
-                && this.props.currentID.croppedFace!.name !== 'notfound'){
+            if (((this.props.currentID.videoStills !== undefined && this.props.currentID.videoStills!.length > 0) 
+            || (this.props.currentID.selfieImage !== undefined && this.props.currentID.selfieImage!.name !== 'notfound')) 
+                && (this.props.currentID.croppedFace !== undefined && this.props.currentID.croppedFace!.name !== 'notfound')) {
                 this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
             } else {
                 this.setState({previous: false}, () => this.loadNextID(false));
@@ -220,7 +251,7 @@ class FacePanel extends React.Component<IProps, IState> {
                     <Card.Title>Liveness</Card.Title>
                     <Card.Body>
                         <ToggleButtonGroup type="radio" name="passesLivenessButtons" style={{display: "block", width: "100%"}}
-                            value={this.state.passesLiveness} onChange={(val) => this.setState({passesLiveness: val}, validate)}>
+                            value={this.state.passesLiveness} onChange={(val) => this.setState({passesLiveness: val}, this.frLivenessValidate)}>
                             <ToggleButton variant="light" className="common-button" value={false}>Spoof</ToggleButton>
                             <ToggleButton variant="light" className="common-button"  value={true}>Live</ToggleButton>
                         </ToggleButtonGroup>
@@ -286,7 +317,7 @@ class FacePanel extends React.Component<IProps, IState> {
                     </Card.Body>
                 </Card>
                 {
-                    this.props.currentID.selfieVideo!.name !== 'notfound' ?
+                    this.props.currentID.selfieVideo !== undefined && this.props.currentID.selfieVideo!.name !== 'notfound' ?
                     <Button variant="secondary" className="common-button" onClick={() => this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK)}>
                         Back
                     </Button>
@@ -300,15 +331,35 @@ class FacePanel extends React.Component<IProps, IState> {
     }
 
     loadNextID = (prev: boolean) => {
-        this.resetState();
         this.props.saveToLibrary(this.props.currentID);
-        this.props.restoreID();
-        this.props.restoreImage();
-        this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
-        if (prev) {
-            this.props.getPreviousID();
+        if (this.props.currentID.videoLiveness !== undefined || this.props.currentID.faceCompareMatch !== undefined) {
+            axios.post('/saveOutput', {
+                database: this.props.database,
+                ID: DatabaseUtil.extractOutput(this.props.currentID, this.props.processType === ProcessType.FACE),
+                overwrite: true
+            }).then((res: any) => {
+                this.resetState();
+                this.props.restoreID();
+                this.props.restoreImage();
+                this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
+                if (prev) {
+                    this.props.getPreviousID(res.data);
+                } else {
+                    this.props.getNextID(res.data);
+                }
+            }).catch((err: any) => {
+                console.error(err);
+            })
         } else {
-            this.props.getNextID();
+            this.resetState();
+            this.props.restoreID();
+            this.props.restoreImage();
+            this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
+            if (prev) {
+                this.props.getPreviousID();
+            } else {
+                this.props.getNextID();
+            }
         }
     }
 

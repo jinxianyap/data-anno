@@ -16,6 +16,10 @@ export type GeneralState = {
     IDLibrary: IDState[];
     loadedIDs: boolean;
     currentIndex: number;
+    saveResults: {
+        sessionID: string,
+        success: boolean
+    }[];
 }
 
 interface SaveSetupOptions {
@@ -41,9 +45,17 @@ interface LoadFromDatabase {
 
 interface GetPreviousID {
     type: typeof Action.GET_PREV_ID;
+    payload?: {
+        sessionID: string,
+        success: boolean
+    }
 }
 interface GetNextID {
     type: typeof Action.GET_NEXT_ID;
+    payload?: {
+        sessionID: string,
+        success: boolean
+    }
 }
 
 interface SaveToLibrary {
