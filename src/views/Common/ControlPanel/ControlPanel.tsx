@@ -527,7 +527,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
             }
         }
-        console.log(cropResult);
+
         if (docType !== '' ) {
             this.setState({passesCrop: cropResult, selectedFrontIDFlags: frontIDFlags, selectedBackIDFlags: backIDFlags, singleDocumentType: docType});
         } else {

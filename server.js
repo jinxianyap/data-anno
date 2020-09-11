@@ -130,6 +130,191 @@ function allocateFiles(sessionID, route, files) {
     }
 }
 
+// evaluate annotation status of a specific session, given sessionID and json data
+function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
+    function getFilesExistence(sessionRoute) {
+        var existence = {
+            mykad_front_ori: false,
+            mykad_back_ori: false,
+            mykad_front_ocr: false,
+            mykad_back_ocr: false,
+            mykad_face: false,
+            face: false,
+            face_video: false,
+            face_video_stills: 0
+        }
+        try {
+            let files = fs.readdirSync(sessionRoute);
+            if (files) {
+                for (let i = 0; i < files.length; i++) {
+                    if (fs.lstatSync(sessionRoute + files[i]).isDirectory()) {
+                        continue;
+                    }
+                    let file = fs.readFileSync(sessionRoute + files[i]);
+                    if (file) {
+                        let type = getFileType(files[i]);
+                        switch (type) {
+                            case (fileType.mykad_front_ori): existence.mykad_front_ori = true; break;
+                            case (fileType.mykad_back_ori): existence.mykad_back_ori = true; break;
+                            case (fileType.mykad_front_ocr): existence.mykad_front_ocr = true; break;
+                            case (fileType.mykad_back_ocr): existence.mykad_back_ocr = true; break;
+                            case (fileType.mykad_face): existence.mykad_face = true; break;
+                            case (fileType.face): existence.face = true; break;
+                            case (fileType.face_video): existence.face_video = true; break;
+                            case (fileType.face_video_still): existence.face_video_stills++; break;
+                            default: break;
+                        }
+                    }
+                }
+                return existence;
+            } else {
+                return undefined;
+            }
+        } catch(err) {
+            console.error(err);
+            return undefined;
+        }
+    }
+
+    function checkOCRState(front) {
+        let seg = false;
+        let landmark = false;
+        let ocr = false;
+        let skippedSeg = false;
+        let segData = front ? json.segmentation.originalID : json.segmentation.backID;
+        let segFlags = front ? json.frontIDFlags : json.backIDFlags;
+
+        function isValidPosition(pos) {
+            if (pos === undefined) return false;
+            // console.log(Object.keys(pos).every(e => pos[e] !== undefined))
+            return Object.keys(pos).every(e => pos[e] !== undefined && !isNaN(pos[e]));
+        }
+
+        // check seg
+        if (segData !== undefined && segData.length > 0) {
+            if (segData.length === 1 && segData.IDBox === undefined) {
+                // single empty entry
+                skippedSeg = true;
+                seg = front ? segFlags.length > 0 : (segFlags.length > 0 ? true : json.frontIDFlags.length > 0);
+            } else {
+                // check if coordinates are present
+                seg = segData.every((each) => each.IDBox !== undefined && isValidPosition(each.IDBox.position));
+            }
+        } else {
+            // no segData, check if got flags to justify
+            skippedSeg = true;
+            seg = front ? segFlags.length > 0 : (segFlags.length > 0 ? true : json.frontIDFlags.length > 0);
+        }
+
+        // go on to check landmark if seg is annotated
+        if (skippedSeg) {
+            landmark = true;
+        } else if (seg === true) {
+            let landmarkData = front ? json.landmarks.originalID: json.landmarks.backID;
+            if (landmarkData !== undefined && landmarkData.length > 0 && landmarkData.length === segData.length) {
+                // Q: need to check if the set of landmark is complete?????
+                // religion optional
+                landmark = landmarkData.every((each) => each.every((lm) => lm.codeName === 'religion' || isValidPosition(lm.position)));
+            }
+        }
+
+        // go on to check ocr if landmark is annotated
+        if (skippedSeg) {
+            ocr = true;
+        } else if (landmark === true) {
+            let ocrData = front ? json.ocr.originalID : json.ocr.backID;
+            if (ocrData !== undefined && ocrData.length > 0 && ocrData.length === segData.length) {
+                ocr = ocrData.every((each) => {
+                    let ocrs = each.filter((o) => o.codeName === 'ic_num' || o.codeName === 'name' || o.codeName === 'address');
+                    if (ocrs !== undefined && ocrs.length === 3) {
+                        return ocrs.every((o) => {
+                            if (o.count === 1) {
+                                return o.labels.length === 1 && o.labels[0].value !== '' && o.labels[0].value !== undefined;
+                            } else if (o.count > 1) {
+                                return o.labels.length === o.count && o.labels.every((lbl) => lbl.value !== '' && lbl.value !== undefined && isValidPosition(lbl.position));
+                            } else {
+                                return false;
+                            }
+                        });
+                    } else {
+                        return false;
+                    }
+                })
+            }
+        }
+
+        return { seg, landmark, ocr };
+    }
+
+    var existence = getFilesExistence(sessionRoute);
+    if (existence !== undefined) {
+        var phasesToCheck = {
+            front: existence.mykad_front_ori,
+            back: existence.mykad_back_ori,
+            video: existence.face_video,
+            face: existence.mykad_front_ori && (existence.face || existence.face_video_stills > 0)
+        }
+        var annotationStates = {
+            front: {
+                seg: false,
+                landmark: false,
+                ocr: false
+            },
+            back: {
+                seg: false,
+                landmark: false,
+                ocr: false
+            },
+            video: false,
+            match: false
+        }
+        var shouldIgnore = {
+            back: false,
+            face: false
+        }
+
+        if (jsonFound) {
+            // check front
+            if (phasesToCheck.front) {
+                let frontState = checkOCRState(true);
+                annotationStates.front = frontState;
+            } else {
+                annotationStates.front = { seg: true, landmark: true, ocr: true };
+                shouldIgnore.back = true;
+                shouldIgnore.face = true;
+            }
+
+            // check back
+            if (phasesToCheck.back && !shouldIgnore.back) {
+                let backState = checkOCRState(false);
+                annotationStates.back = backState;
+            } else {
+                annotationStates.back = { seg: true, landmark: true, ocr: true };
+            }
+
+            // check liveness
+            annotationStates.video = phasesToCheck.liveness ? (json.videoLiveness === true || json.videoLiveness === false) : true;
+    // check seg originalid exists same for ladmark and ocr
+            // check face
+            if (phasesToCheck.face && !shouldIgnore.face) {
+                annotationStates.match = json.faceCompareMatch.length === json.segmentation.originalID.length 
+                    && json.faceCompareMatch.every((each) => each === true || each === false);
+            } else {
+                annotationStates.match = true;
+            }
+        }
+
+        return {
+            sessionID: sessionID,
+            phasesChecked: phasesToCheck,
+            annotationState: annotationStates
+        }
+    } else {
+        return undefined;
+    }
+}
+
+// sending data
 function updateDataWithJSON(result, data) {
     function updateOCR(ocrResults, front) {
         if (ocrResults !== undefined) {
@@ -437,6 +622,7 @@ function getCSVData(filepath, session, res, rej) {9
     })
 }
 
+// saving data
 function mergeJSONData(initial, updated) {
     function mergeLandmarks(originalLandmarks, updatedLandmarks) {
         if (originalLandmarks.length === 0 || originalLandmarks.length < updatedLandmarks.length) {
@@ -540,6 +726,19 @@ function mergeJSONData(initial, updated) {
     }
 }
 
+app.get('/testEvaluation', async (req, res) => {
+    let sessionID = "5ec3872b-0c65-4e41-8fc0-f9e2b2100d6f";
+    let jsonPath = testFolder + "annotation_output/db2/20200805/5ec3872b-0c65-4e41-8fc0-f9e2b2100d6f.json";
+    let sessionRoute = testFolder + "db2/images/20200805/5ec3872b-0c65-4e41-8fc0-f9e2b2100d6f/";
+    let jsonData = fs.readFileSync(jsonPath);
+    if (jsonData) {
+        let result = evaluateSessionState(sessionRoute, sessionID, JSON.parse(jsonData));
+        res.status(200).send(result);
+    } else {
+        res.status(500).send('cant open json');
+    }
+})
+
 app.post('/loadSessionData', async (req, res) => {
     let db = req.body.database;
     let date = req.body.date;
@@ -597,9 +796,19 @@ app.post('/loadDatabase', async (req, res) => {
         
         if (sessions) {
             for (let j = 0; j < sessions.length; j++) {
-                sessionIDs.push({
-                    sessionID: sessions[j]
-                });
+                let folderRoute = sessionRoute + sessions[j] + "/";
+                let jsonPath = testFolder + "annotation_output/" + db + "/" + dateImgs[i] + "/" + sessions[j] + ".json";
+                try {
+                    let jsonData = fs.readFileSync(jsonPath);
+                    if (jsonData) {
+                        sessionIDs.push(evaluateSessionState(folderRoute, sessions[j], true, JSON.parse(jsonData)));
+                    } else {
+                        sessionIDs.push(evaluateSessionState(folderRoute, sessions[j], false));
+                    }
+                } catch(err) {
+                    console.error(err);
+                    sessionIDs.push(evaluateSessionState(folderRoute, sessions[j], false));
+                }
             }
 
             let folder = {
