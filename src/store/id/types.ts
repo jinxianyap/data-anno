@@ -9,6 +9,9 @@ export type IDState = {
     sessionID: string;
     index: number;
 
+    phasesChecked: PhasesChecked;
+    annotationState: AnnotationState;
+
     dataLoaded: boolean;
     originalID?: ImageState;
     backID?: ImageState;
@@ -69,6 +72,20 @@ export type GivenData = {
         videoFlags?: string[],
         match?: boolean[]
     }
+}
+
+export type PhasesChecked = {
+    front: boolean,
+    back: boolean,
+    video: boolean,
+    face: boolean
+}
+
+export type AnnotationState = {
+    front: {seg: boolean, landmark: boolean, ocr: boolean},
+    back: {seg: boolean, landmark: boolean, ocr: boolean},
+    video: boolean,
+    match: boolean
 }
 
 interface SaveDocumentType {

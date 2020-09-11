@@ -14,6 +14,7 @@ import { loadImageState, restoreImage } from '../../../store/image/actionCreator
 import { DatabaseUtil } from '../../../utils/DatabaseUtil';
 import { GeneralUtil } from '../../../utils/GeneralUtil';
 import { GrFormNext, GrFormPrevious } from 'react-icons/gr';
+import SessionDropdown from '../SessionDropdown/SessionDropdown';
 const axios = require('axios');
 
 interface IProps {
@@ -396,33 +397,17 @@ class FacePanel extends React.Component<IProps, IState> {
                 this.setState({showSaveAndQuitModal: false}, () => this.props.progressNextStage(CurrentStage.OUTPUT));
             }
 
+            const toggleModal = (show: boolean) => {
+                this.setState({showSaveAndQuitModal: show});
+            }
+
+            const load = (previous: boolean) => {
+                this.setState({previous: previous}, () => this.loadNextID(previous));
+            }
+
             return (
-                <div id="folder-number">
-                    <Button variant="light" 
-                        onClick={() => this.setState({previous: true}, () => this.loadNextID(true))}
-                        disabled={this.props.currentIndex === 0} 
-                        className="nav-button"><GrFormPrevious /></Button>
-                    <p>Session:   {this.props.currentIndex + 1}/{this.props.totalIDs}</p>
-                    <Button variant="light" 
-                        onClick={() => this.setState({previous: false}, () => this.loadNextID(false))}
-                        disabled={this.props.currentIndex + 1 === this.props.totalIDs}
-                        className="nav-button"><GrFormNext /></Button>
-                    <Button variant="secondary" id="quit-button" onClick={() => this.setState({showSaveAndQuitModal: true})}>Quit</Button>
-                    <Modal show={this.state.showSaveAndQuitModal} onHide={() => this.setState({showSaveAndQuitModal: false})}>
-                        <Modal.Header closeButton>
-                        <Modal.Title>Save And Quit</Modal.Title>
-                        </Modal.Header>
-                        <Modal.Body>Are you sure you would like to proceed?</Modal.Body>
-                        <Modal.Footer>
-                        <Button variant="secondary" onClick={() => this.setState({showSaveAndQuitModal: false})}>
-                            Cancel
-                        </Button>
-                        <Button variant="primary" onClick={saveAndQuit}>
-                            Confirm
-                        </Button>
-                        </Modal.Footer>
-                    </Modal>
-                </div>
+                <SessionDropdown showModal={this.state.showSaveAndQuitModal} toggleModal={toggleModal} 
+                    saveAndQuit={saveAndQuit} loadNextID={load} />
             );
         }
 

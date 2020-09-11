@@ -15,6 +15,13 @@ const initialState: IDState = {
     backIDsProcessed: 0,
     originalIDRotation: Rotation.ROT0,
     backIDRotation: Rotation.ROT0,
+    annotationState: {
+        front: {seg: false, landmark: false, ocr: false},
+        back: {seg: false, landmark: false, ocr: false},
+        match: false,
+        video: false
+    },
+    phasesChecked: {front: false, back: false, video: false, face: false},
     index: 0,
     internalIndex: 0,
     internalIDs: [],

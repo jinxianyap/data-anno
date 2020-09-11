@@ -1,0 +1,26 @@
+
+#folder-number {
+    padding: 0.5rem 1rem;
+    text-align: center;
+    border: 1px solid lightgrey;
+    border-top: 0;
+    border-right: 0;
+    width: 100%;
+
+    p {
+        vertical-align: middle;
+        width: fit-content;
+        display: inline-block;
+        margin: 0.3rem 2rem;
+    }
+
+    .nav-button {
+        padding: 0.2rem 0.4rem;
+    }
+
+    #quit-button {
+        position: absolute;
+        right: 1rem;
+        padding: 0.3rem 0.7rem;
+    }
+}

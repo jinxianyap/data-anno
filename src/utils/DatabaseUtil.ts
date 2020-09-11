@@ -31,6 +31,8 @@ export class DatabaseUtil {
             dataLoaded: false,
             processed: false,
             index: index,
+            phasesChecked: session.phasesChecked,
+            annotationState: session.annotationState,
             dateCreated: date,
             sessionID: id,
             originalIDProcessed: false,
@@ -177,7 +179,7 @@ export class DatabaseUtil {
 
                 const handleLandmarks = (each: any) => {
                     if (each === null) return null;
-                    return each.map((lm: any, idx: number) => {
+                    return each.filter((lm: any) => lm !== null).map((lm: any, idx: number) => {
                         let flags: string[] = [];
                         let glare = ocrData.glare_results.find((glare: any) => glare.field === lm.id);
                         if (glare !== undefined) {
@@ -223,7 +225,7 @@ export class DatabaseUtil {
 
                 const handleOCRs = (each: any) => {
                     if (each === null) return null;
-                    return each.map((o: any, idx: number) => {
+                    return each.filter((lm: any) => lm !== null).map((o: any, idx: number) => {
                         let text: string[] = o.text.split('\n').join(' ').split(' ');
                         let ocr: OCRData = {
                             id: idx,
@@ -318,7 +320,7 @@ export class DatabaseUtil {
     public static loadSessionData(session: any, ID: IDState): Promise<IDState> {
         return new Promise<IDState>(async (res, rej) => {
             let sessionID = session.sessionID;
-
+            console.log(session);
             this.loadMyKadGivenData(session).then((givenData) => {
                 res({
                     ...ID,

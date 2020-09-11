@@ -37,6 +37,12 @@ export enum ProcessType {
     FACE = "Face", // only do liveness and face comparison
 }
 
+export enum AnnotationStatus {
+    COMPLETE = "Complete",
+    INCOMPLETE = "Incomplete",
+    NOT_APPLICABLE = "Not Applicable"
+}
+
 export enum DatabasesTemp {
     DB1 = "Database 1",
     DB2 = "Database 2"
