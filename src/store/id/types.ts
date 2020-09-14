@@ -52,7 +52,8 @@ export type InternalIDState = {
 
 export type GivenData = {
     originalID?: {
-        imageProps?: ImageProps;
+        originalImageProps?: ImageProps;
+        croppedImageProps?: ImageProps;
         spoof: boolean;
         flags: string[];
         segmentation?: ({documentType: string, passesCrop: boolean, IDBox: IDBox} | undefined)[],
@@ -60,7 +61,8 @@ export type GivenData = {
         ocr: OCRData[][],
     },
     backID?: {
-        imageProps?: ImageProps;
+        originalImageProps?: ImageProps;
+        croppedImageProps?: ImageProps;
         spoof: boolean;
         flags: string[];
         segmentation?: ({passesCrop: boolean, IDBox: IDBox} | undefined)[],
@@ -115,7 +117,8 @@ interface CreateNewID {
     type: typeof Action.CREATE_NEW_ID;
     payload: {
         IDBox: IDBox,
-        passesCrop?: boolean
+        passesCrop?: boolean,
+        documentType?: string,
     }
 }
 

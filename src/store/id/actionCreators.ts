@@ -12,12 +12,13 @@ export function loadNextID(ID: IDState): IDActionTypes {
     }
 }
 
-export function createNewID(IDBox: IDBox, passesCrop?: boolean): IDActionTypes {
+export function createNewID(IDBox: IDBox, passesCrop?: boolean, documentType?: string): IDActionTypes {
     return {
         type: Action.CREATE_NEW_ID,
         payload: {
             IDBox: IDBox,
-            passesCrop: passesCrop
+            passesCrop: passesCrop,
+            documentType: documentType
         }
     }
 }

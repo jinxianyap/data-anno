@@ -2,7 +2,7 @@ import React from 'react';
 import './SetupView.scss'
 import { Form, Button, Container, Card } from 'react-bootstrap';
 import DatePicker from 'react-datepicker';
-import { ProcessType, CurrentStage, UsersTemp } from '../../utils/enums';
+import { ProcessType, CurrentStage, UsersTemp, AnnotationStatus } from '../../utils/enums';
 import { SetupOptions, GeneralActionTypes } from '../../store/general/types';
 import { saveSetupOptions, progressNextStage, loadFromDatabase, restoreGeneral } from '../../store/general/actionCreators';
 import { restoreID } from '../../store/id/actionCreators';
@@ -114,7 +114,27 @@ class SetupView extends React.Component<IProps, IState> {
                             IDs.push(DatabaseUtil.initializeID(res.data[i].sessions[j], res.data[i].date, IDs.length));
                         }
                     }
-                    this.props.loadFromDatabase(IDs);
+                    this.props.loadFromDatabase(IDs.sort((first, second) => {
+                        let firstStatus = DatabaseUtil.getOverallStatus(first.phasesChecked, first.annotationState, st.processType);
+                        let secondStatus = DatabaseUtil.getOverallStatus(second.phasesChecked, second.annotationState, st.processType);
+                        if (firstStatus === AnnotationStatus.INCOMPLETE) {
+                            if (secondStatus === AnnotationStatus.INCOMPLETE) {
+                                return 0;
+                            } else {
+                                return -1;
+                            }
+                        } else if (firstStatus === AnnotationStatus.COMPLETE) {
+                            if (secondStatus === AnnotationStatus.INCOMPLETE) {
+                                return 1;
+                            } else if (secondStatus === AnnotationStatus.NOT_APPLICABLE) {
+                                return -1;
+                            } else {
+                                return 0;
+                            }
+                        } else {
+                            return secondStatus === AnnotationStatus.NOT_APPLICABLE ? 0 : 1;
+                        }
+                    }));
 
                     if (st.processType === ProcessType.FACE) {
                         this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
@@ -162,13 +182,13 @@ class SetupView extends React.Component<IProps, IState> {
                         </Form.Group>
             
                         <Form.Group controlId="startDate">
-                            <Form.Label>Start Date</Form.Label>
+                            <Form.Label style={{width: "100%"}}>Start Date</Form.Label>
                             <DatePicker id="startDatepicker" includeDates={this.state.selectedDates} 
                             selected={this.state.startDate} onChange={(date: Date) => this.setState({startDate: date})} />
                         </Form.Group>
 
                         <Form.Group controlId="endDate">
-                            <Form.Label>End Date</Form.Label>
+                            <Form.Label style={{width: "100%"}}>End Date</Form.Label>
                             <DatePicker id="endDatepicker" includeDates={this.state.selectedDates}
                             selected={this.state.endDate} onChange={(date: Date) => this.setState({endDate: date})} />
                         </Form.Group>

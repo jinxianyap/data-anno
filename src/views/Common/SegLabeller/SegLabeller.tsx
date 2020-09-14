@@ -107,7 +107,18 @@ class SegLabeller extends React.Component<IProps, IState> {
             if (this.state.map !== undefined) {
                 this.renderCommittedBoxes();
             }
-        } 
+        } else if (this.state.map !== undefined && this.props.currentID.internalIDs.length !== this.state.boxes.length) {
+            if (this.props.currentID.originalIDProcessed && this.props.internalIDs[this.props.currentID.internalIndex] !== undefined
+                && this.props.internalIDs[this.props.currentID.internalIndex].processStage === IDProcess.MYKAD_BACK) {
+                if (this.props.currentID.internalIDs.filter((each) => each.backID !== undefined && each.backID.IDBox !== undefined).length
+                    !== this.state.boxes.length) {
+                    this.renderCommittedBoxes();
+                }
+            } else {
+                this.renderCommittedBoxes();
+            }
+        }
+        console.log(this.state.boxes);
     }
 
     componentWillUnmount() {

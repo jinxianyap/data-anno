@@ -8,13 +8,12 @@ import './ControlPanel.scss';
 import { GeneralActionTypes } from '../../../store/general/types';
 import { IDActionTypes, IDState, InternalIDState } from '../../../store/id/types';
 import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord, LandmarkData, Position } from '../../../store/image/types';
-import { progressNextStage, getPreviousID, getNextID, saveToLibrary } from '../../../store/general/actionCreators';
+import { progressNextStage, getPreviousID, getNextID, getSelectedID, saveToLibrary } from '../../../store/general/actionCreators';
 import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, setFaceCompareMatch, backToOriginal, saveToInternalID, updateFrontIDFlags, updateBackIDFlags, restoreID, clearInternalIDs } from '../../../store/id/actionCreators';
 import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, addLandmarkData, updateLandmarkFlags, addOCRData, restoreImage } from '../../../store/image/actionCreators';
 import { DatabaseUtil } from '../../../utils/DatabaseUtil';
 import { HOST, PORT, TRANSFORM } from '../../../config';
 import { GeneralUtil } from '../../../utils/GeneralUtil';
-import { GrFormNext, GrFormPrevious } from 'react-icons/gr';
 import SessionDropdown from '../SessionDropdown/SessionDropdown';
 const axios = require('axios');
 
@@ -33,11 +32,12 @@ interface IProps {
     progressNextStage: (nextStage: CurrentStage) => GeneralActionTypes;
     getPreviousID: (res?: any) => GeneralActionTypes;
     getNextID: (res?: any) => GeneralActionTypes;
+    getSelectedID: (index: number, res?: any) => GeneralActionTypes;
     loadImageState: (currentImage: ImageState, passesCrop?: boolean) => ImageActionTypes;
 
     // Seg Check
     loadNextID: (ID: IDState) => IDActionTypes;
-    createNewID: (IDBox: IDBox, passesCrop?: boolean) => IDActionTypes;
+    createNewID: (IDBox: IDBox, passesCrop?: boolean, documentType?: string) => IDActionTypes;
     setIDBox: (IDBox: IDBox, croppedImage?: File) => IDActionTypes;
     deleteIDBox: (index: number) => IDActionTypes;
     saveCroppedImage: (croppedImage: File, index?: number) => IDActionTypes;
@@ -287,7 +287,12 @@ class ControlPanel extends React.Component<IProps, IState> {
                         }
                     })
                     this.setState({selectedDocumentTypes: docTypes});
-                }        
+                }   
+                if (previousProps.currentStage !== this.props.currentStage) {
+                    if (this.props.currentID.sessionID !== '') {
+                        this.initializeSegEditData();
+                    }
+                }     
                 break;
             }
             case (CurrentStage.LANDMARK_EDIT): {
@@ -533,6 +538,37 @@ class ControlPanel extends React.Component<IProps, IState> {
             this.setState({passesCrop: cropResult, selectedFrontIDFlags: frontIDFlags, selectedBackIDFlags: backIDFlags, singleDocumentType: docType});
         } else {
             this.setState({passesCrop: cropResult, selectedFrontIDFlags: frontIDFlags, selectedBackIDFlags: backIDFlags});
+        }
+    }
+
+    initializeSegEditData = () => {
+        if (this.props.currentID.sessionID === '') return;
+        if (this.props.currentID.givenData !== undefined) {
+            if (this.props.currentID.originalIDProcessed) {
+                if (this.props.internalID !== undefined && this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
+                    if (this.props.currentID.givenData.backID !== undefined && this.props.currentID.givenData.backID.segmentation !== undefined) {
+                        let seg = this.props.currentID.givenData.backID.segmentation;
+                        if (this.props.currentID.internalIDs.filter((each) => each.backID !== undefined && each.backID.IDBox !== undefined).length === 0) {
+                            seg.forEach((each) => {
+                                if (each !== undefined) {
+                                    this.props.setIDBox(each.IDBox);
+                                }
+                            })
+                        }
+                    }
+                }
+            } else {
+                if (this.props.currentID.givenData.originalID !== undefined && this.props.currentID.givenData.originalID.segmentation !== undefined) {
+                    let seg = this.props.currentID.givenData.originalID.segmentation;
+                    if (this.props.currentID.internalIDs.length === 0) {
+                        seg.forEach((each) => {
+                            if (each !== undefined) {
+                                this.props.createNewID(each.IDBox, each.passesCrop, each.documentType)
+                            }
+                        });
+                    }
+                }
+            }
         }
     }
 
@@ -818,8 +854,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                     {
                         dividedFlags.map((divFlag, i) => {
                             return (
-                                <div style={{width: "100%"}}>
-                                    <ToggleButtonGroup key={i} type="checkbox" onChange={(val) => setFlag(val)}
+                                <div key={i} style={{width: "100%"}}>
+                                    <ToggleButtonGroup type="checkbox" onChange={(val) => setFlag(val)}
                                         value={values}
                                         style={{marginBottom: "1rem"}}>
                                     {
@@ -906,8 +942,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                                 if (this.props.currentID.givenData.originalID.segmentation.length > 0) {
                                     preBox = this.props.currentID.givenData.originalID.segmentation[0] !== undefined ?
                                                 this.props.currentID.givenData.originalID.segmentation[0]!.IDBox : undefined;
-                                } else if (this.props.currentID.givenData.originalID.imageProps !== undefined) {
-                                    let imgProps = this.props.currentID.givenData.originalID.imageProps;
+                                } else if (this.props.currentID.givenData.originalID.croppedImageProps !== undefined) {
+                                    let imgProps = this.props.currentID.givenData.originalID.croppedImageProps;
                                     if (imgProps.height >= 0 && imgProps.width >= 0) {
                                         preBox = {
                                             id: 0,
@@ -978,8 +1014,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                                 if (this.props.currentID.givenData.backID.segmentation.length > 0) {
                                     preBox = this.props.currentID.givenData.backID.segmentation[0] !== undefined ?
                                                 this.props.currentID.givenData.backID.segmentation[0]!.IDBox : undefined;
-                                } else if (this.props.currentID.givenData.backID.imageProps !== undefined) {
-                                    let imgProps = this.props.currentID.givenData.backID.imageProps;
+                                } else if (this.props.currentID.givenData.backID.croppedImageProps !== undefined) {
+                                    let imgProps = this.props.currentID.givenData.backID.croppedImageProps;
                                     if (imgProps.height >= 0 && imgProps.width >= 0) {
                                         preBox = {
                                             id: 0,
@@ -1034,8 +1070,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                         if (this.props.currentID.givenData.originalID.segmentation.length > 0) {
                             preBox = this.props.currentID.givenData.originalID.segmentation[0] !== undefined ?
                                         this.props.currentID.givenData.originalID.segmentation[0]!.IDBox : undefined;
-                        } else if (this.props.currentID.givenData.originalID.imageProps !== undefined) {
-                            let imgProps = this.props.currentID.givenData.originalID.imageProps;
+                        } else if (this.props.currentID.givenData.originalID.croppedImageProps !== undefined) {
+                            let imgProps = this.props.currentID.givenData.originalID.croppedImageProps;
                             if (imgProps.height >= 0 && imgProps.width >= 0) {
                                 preBox = {
                                     id: 0,
@@ -1754,6 +1790,29 @@ class ControlPanel extends React.Component<IProps, IState> {
         })
     }
 
+    loadSelectedID = (index: number, beforeSegCheckDone?: boolean) => {
+        if (index === this.props.currentIndex) return;
+        this.resetState();
+        let id = this.props.currentID;
+        if (beforeSegCheckDone) {
+            id.frontIDFlags = this.state.selectedFrontIDFlags;
+            id.backIDFlags = this.state.selectedBackIDFlags;
+        }
+        this.props.saveToLibrary(id);
+        axios.post('/saveOutput', {
+            database: this.props.database,
+            ID: DatabaseUtil.extractOutput(id, this.props.processType === ProcessType.FACE),
+            overwrite: true
+        }).then((res: any) => {
+            this.props.restoreID();
+            this.props.restoreImage();
+            this.props.getSelectedID(index, res.data);
+            this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+        }).catch((err: any) => {
+            console.error(err);
+        })
+    }
+
     resetState = () => {
         this.setState({
             loadedSegCheckImage: false,
@@ -1861,7 +1920,7 @@ class ControlPanel extends React.Component<IProps, IState> {
 
             return (
                 <SessionDropdown showModal={this.state.showSaveAndQuitModal} toggleModal={toggleModal} 
-                    saveAndQuit={saveAndQuit} loadNextID={this.loadNextID} />
+                    saveAndQuit={saveAndQuit} loadNextID={this.loadNextID} loadSelectedID={this.loadSelectedID} />
             );
         }
 
@@ -1881,6 +1940,7 @@ const mapDispatchToProps = {
     progressNextStage,
     getPreviousID,
     getNextID,
+    getSelectedID,
     loadNextID,
     createNewID,
     setIDBox,

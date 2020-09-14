@@ -1,6 +1,6 @@
-import { IDState, GivenData, InternalIDState } from '../store/id/types';
+import { IDState, GivenData, InternalIDState, PhasesChecked, AnnotationState } from '../store/id/types';
 import { ImageState, LandmarkData, OCRData, OCRWord, ImageProps, IDBox } from '../store/image/types';
-import { Rotation, IDProcess } from './enums';
+import { Rotation, IDProcess, AnnotationStatus, ProcessType } from './enums';
 import { DummyImage } from './dummy';
 import options from '../options.json';
 
@@ -96,67 +96,100 @@ export class DatabaseUtil {
         const load = async (docKey: string, front: boolean, given: GivenData) => {
             let frontSeg: {documentType: string, IDBox: IDBox, passesCrop: boolean}[] = [];
             let backSeg: {IDBox: IDBox, passesCrop: boolean}[] = [];
-            let frontImgProps: ImageProps = {height: -1, width: -1};
-            let backImgProps: ImageProps = {height: -1, width: -1};
+            let frontOriProps: ImageProps = {height: -1, width: -1};
+            let backOriProps: ImageProps = {height: -1, width: -1};
+            let frontOcrProps: ImageProps = {height: -1, width: -1};
+            let backOcrProps: ImageProps = {height: -1, width: -1};
             let landmarks = [];
             let ocr = [];
 
-            let segData = session.raw_data.segmentation !== undefined ? 
-                (front ? session.raw_data.segmentation.originalID : session.raw_data.segmentation.backID) : undefined;
-            if (segData !== undefined) {
+            let ocrData = front ? session.raw_data.front_ocr : session.raw_data.back_ocr;
+            if (ocrData !== undefined) {
+                let oriSrc = front ? session.mykad_front_ori : session.mykad_back_ori;
+                let oriProps: ImageProps = {height: -1, width: -1};
+                if (ocrData.originalImageProps !== undefined) {
+                    oriProps.height = ocrData.originalImageProps.height;
+                    oriProps.width = ocrData.originalImageProps.width;
+                } else if (ocrData !== undefined && oriSrc !== undefined) {
+                    oriProps = await new Promise((res, rej) => {
+                        let img = new Image();
+                        img.onload = () => {
+                            let props: ImageProps = {
+                                height: img.height,
+                                width: img.width
+                            }
+                            res(props);
+                        }
+                        img.src = oriSrc;
+                    })
+                }
+
                 if (front) {
-                    frontSeg = segData.map((e: any, idx: number) => {
-                        let each = e.coords;
-                        if (each === undefined) {
-                            return undefined;
-                        }
-                        return {
-                            documentType: e.documentType !== undefined ? e.documentType : '',
-                            passesCrop: e. passesCrop,
-                            IDBox: {
-                                id: idx,
-                                position: {x1: each[0],
-                                    x2: each[0] + each[2],
-                                    x3: each[0] + each[2],
-                                    x4: each[0],
-                                    y1: each[1] + each[3],
-                                    y2: each[1] + each[3],
-                                    y3: each[1],
-                                    y4: each[1]}
-                            }
-                        }
-                    })
+                    frontOriProps = oriProps;
                 } else {
-                    backSeg = segData.map((e: any, idx: number) => {
-                        let each = e.coords;
-                        if (each === undefined) {
-                            return undefined;
-                        }
-                        return {
-                            passesCrop: e.passesCrop,
-                            IDBox: {
-                                id: idx,
-                                position: {x1: each[0],
-                                    x2: each[0] + each[2],
-                                    x3: each[0] + each[2],
-                                    x4: each[0],
-                                    y1: each[1] + each[3],
-                                    y2: each[1] + each[3],
-                                    y3: each[1],
-                                    y4: each[1]}
+                    backOriProps = oriProps;
+                }
+
+                let segData = session.raw_data.segmentation !== undefined ? 
+                    (front ? session.raw_data.segmentation.originalID : session.raw_data.segmentation.backID) : undefined;
+                if (segData !== undefined) {
+                    if (front) {
+                        frontSeg = segData.map((e: any, idx: number) => {
+                            let each = e.coords;
+                            if (each === undefined) {
+                                return undefined;
                             }
-                        }
-                    })
+                            return {
+                                documentType: e.documentType !== undefined ? e.documentType : '',
+                                passesCrop: e. passesCrop,
+                                IDBox: {
+                                    id: idx,
+                                    position: {
+                                        x1: each[0],
+                                        x2: each[2],
+                                        x3: each[4],
+                                        x4: each[6],
+                                        y1: each[1],
+                                        y2: each[3],
+                                        y3: each[5],
+                                        y4: each[7],
+                                    }
+                                }
+                            }
+                        })
+                    } else {
+                        backSeg = segData.map((e: any, idx: number) => {
+                            let each = e.coords;
+                            if (each === undefined) {
+                                return undefined;
+                            }
+                            return {
+                                passesCrop: e.passesCrop,
+                                IDBox: {
+                                    id: idx,
+                                    position: {
+                                        x1: each[0],
+                                        x2: each[2],
+                                        x3: each[4],
+                                        x4: each[6],
+                                        y1: each[1],
+                                        y2: each[3],
+                                        y3: each[5],
+                                        y4: each[7],
+                                    }
+                                }
+                            }
+                        })
+                    }
                 }
             }
 
-            let ocrData = front ? session.raw_data.front_ocr : session.raw_data.back_ocr;
             if (ocrData !== undefined) {
                 let ocrSrc = front ? session.mykad_front_ocr : session.mykad_back_ocr;
                 let imgProps: ImageProps = {height: -1, width: -1};
-                if (ocrData.imageProps !== undefined) {
-                    imgProps.height = ocrData.imageProps.height;
-                    imgProps.width = ocrData.imageProps.width;
+                if (ocrData.croppedImageProps !== undefined) {
+                    imgProps.height = ocrData.croppedImageProps.height;
+                    imgProps.width = ocrData.croppedImageProps.width;
                 } else if (ocrSrc !== undefined) {
                     imgProps = await new Promise((res, rej) => {
                         let img = new Image();
@@ -172,9 +205,9 @@ export class DatabaseUtil {
                 }
 
                 if (front) {
-                    frontImgProps = imgProps;
+                    frontOcrProps = imgProps;
                 } else {
-                    backImgProps = imgProps;
+                    backOcrProps = imgProps;
                 }
 
                 const handleLandmarks = (each: any) => {
@@ -273,7 +306,8 @@ export class DatabaseUtil {
 
             if (front) {
                 given.originalID = {
-                    imageProps: frontImgProps,
+                    originalImageProps: frontOriProps,
+                    croppedImageProps: frontOcrProps,
                     spoof: ocrData !== undefined && ocrData.spoof_results !== undefined ? ocrData.spoof_results.is_card_spoof : false,
                     flags: ocrData !== undefined && ocrData.flags !== undefined ? ocrData.flags : [],
                     segmentation: frontSeg,
@@ -282,7 +316,8 @@ export class DatabaseUtil {
                 }
             } else {
                 given.backID = {
-                    imageProps: backImgProps,
+                    originalImageProps: backOriProps,
+                    croppedImageProps: backOcrProps,
                     spoof: ocrData !== undefined && ocrData.spoof_results !== undefined ? ocrData.spoof_results.is_card_spoof : false,
                     flags: ocrData !== undefined && ocrData.flags !== undefined ? ocrData.flags : [],
                     segmentation: backSeg,
@@ -369,9 +404,13 @@ export class DatabaseUtil {
             processStage: ID.internalIDs.map((each) => each.processStage),
             documentType: ID.internalIDs.map((each) => each.documentType),
 
-            imageProps: {
-                originalID: ID.givenData !== undefined ? ID.givenData.originalID!.imageProps : undefined,
-                backID: ID.givenData !== undefined ? ID.givenData.backID!.imageProps : undefined
+            originalImageProps: {
+                originalID: ID.givenData !== undefined ? ID.givenData.originalID!.originalImageProps : undefined,
+                backID: ID.givenData !== undefined ? ID.givenData.backID!.originalImageProps : undefined
+            },
+            croppedImageProps: {
+                originalID: ID.givenData !== undefined ? ID.givenData.originalID!.croppedImageProps : undefined,
+                backID: ID.givenData !== undefined ? ID.givenData.backID!.croppedImageProps : undefined
             },
             segmentation: {
                 originalID: ID.internalIDs.map((each) => {return {IDBox: each.originalID!.IDBox, passesCrop: each.originalID!.passesCrop}}),
@@ -423,6 +462,63 @@ export class DatabaseUtil {
             day += date.getDate();
         }
         return date.getFullYear() + month + day;
+    }
+
+    public static getOverallStatus(phases: PhasesChecked, annoState: AnnotationState, processType: ProcessType): AnnotationStatus {
+        switch (processType) {
+            case (ProcessType.WHOLE): {
+                if (annoState.match && annoState.video) {
+                    if (annoState.front.seg && annoState.front.landmark && annoState.front.ocr
+                        && annoState.back.seg && annoState.back.landmark && annoState.back.ocr) {
+                            return AnnotationStatus.COMPLETE;
+                        }
+                }
+                return AnnotationStatus.INCOMPLETE;
+            }
+            case (ProcessType.SEGMENTATION): {
+                return annoState.front.seg && annoState.back.seg ? AnnotationStatus.COMPLETE : AnnotationStatus.INCOMPLETE;
+            }
+            case (ProcessType.LANDMARK): {
+                if (annoState.front.seg && annoState.front.landmark) {
+                    if (annoState.back.landmark && annoState.back.landmark) {
+                        return AnnotationStatus.COMPLETE;
+                    }
+                }
+                return AnnotationStatus.INCOMPLETE;
+            }
+            case (ProcessType.OCR): {
+                if (annoState.front.seg && annoState.front.landmark && annoState.front.ocr) {
+                    if (annoState.back.landmark && annoState.back.landmark && annoState.back.ocr) {
+                        return AnnotationStatus.COMPLETE;
+                    }
+                }
+                return AnnotationStatus.INCOMPLETE;
+            }
+            case (ProcessType.LIVENESS): {
+                if (annoState.video) {
+                    if (annoState.front.seg && annoState.front.landmark && annoState.front.ocr) {
+                        if (annoState.back.landmark && annoState.back.landmark && annoState.back.ocr) {
+                            return AnnotationStatus.COMPLETE;
+                        }
+                    }
+                }
+                return AnnotationStatus.INCOMPLETE;
+            }
+            case (ProcessType.FACE): {
+                if (!phases.video && !phases.face) {
+                    return AnnotationStatus.NOT_APPLICABLE;
+                } else {
+                    if (phases.video && phases.face) {
+                        return annoState.match && annoState.video ? AnnotationStatus.COMPLETE : AnnotationStatus.INCOMPLETE;
+                    } else if (phases.video) {
+                        return annoState.video ? AnnotationStatus.COMPLETE : AnnotationStatus.INCOMPLETE;
+                    } else {
+                        return annoState.match ? AnnotationStatus.COMPLETE : AnnotationStatus.INCOMPLETE;
+                    }
+                }
+            }
+            default: return AnnotationStatus.NOT_APPLICABLE;;
+        }
     }
 
     public static beautifyWord(word: string): string {

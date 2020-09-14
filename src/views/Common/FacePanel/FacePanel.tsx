@@ -1,19 +1,18 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { CurrentStage, IDProcess, ProcessType } from '../../../utils/enums';
+import { CurrentStage, ProcessType } from '../../../utils/enums';
 import { AppState } from '../../../store';
-import { Form, Modal, Button, ButtonGroup, ToggleButton, ToggleButtonGroup, Card, Accordion, Spinner } from 'react-bootstrap';
+import { Button, ToggleButton, ToggleButtonGroup, Card } from 'react-bootstrap';
 import options from '../../../options.json';
 import './FacePanel.scss';
 import { GeneralActionTypes } from '../../../store/general/types';
 import { IDActionTypes, IDState, InternalIDState } from '../../../store/id/types';
 import { ImageActionTypes, ImageState, IDBox } from '../../../store/image/types';
-import { progressNextStage, getPreviousID, getNextID, saveToLibrary } from '../../../store/general/actionCreators';
+import { progressNextStage, getPreviousID, getNextID, getSelectedID, saveToLibrary } from '../../../store/general/actionCreators';
 import { loadNextID, createNewID, updateVideoData, restoreID, setIDFaceMatch } from '../../../store/id/actionCreators';
 import { loadImageState, restoreImage } from '../../../store/image/actionCreators';
 import { DatabaseUtil } from '../../../utils/DatabaseUtil';
 import { GeneralUtil } from '../../../utils/GeneralUtil';
-import { GrFormNext, GrFormPrevious } from 'react-icons/gr';
 import SessionDropdown from '../SessionDropdown/SessionDropdown';
 const axios = require('axios');
 
@@ -32,6 +31,7 @@ interface IProps {
     progressNextStage: (nextStage: CurrentStage) => GeneralActionTypes;
     getPreviousID: (res?: any) => GeneralActionTypes;
     getNextID: (res?: any) => GeneralActionTypes;
+    getSelectedID: (index: number, res?: any) => GeneralActionTypes;
     loadImageState: (currentImage: ImageState, passesCrop?: boolean) => ImageActionTypes;
     loadNextID: (ID: IDState) => IDActionTypes;
     createNewID: (IDBox: IDBox, passesCrop?: boolean) => IDActionTypes;
@@ -49,6 +49,9 @@ interface IProps {
 interface IState {
     showSaveAndQuitModal: boolean;
     previous: boolean;
+
+    livenessInit: boolean;
+    matchInit: boolean;
 
     // Liveness
     videoFlagsLoaded: boolean;
@@ -76,6 +79,8 @@ class FacePanel extends React.Component<IProps, IState> {
             videoFlags: [],
             selectedVideoFlags: [],
             livenessValidation: false,
+            livenessInit: false,
+            matchInit: false
         }
     }
 
@@ -86,7 +91,7 @@ class FacePanel extends React.Component<IProps, IState> {
             this.loadVideoFlags();
         }
 
-        if (previousProps.indexedID !== this.props.indexedID) {
+        if (previousProps.currentIndex !== this.props.currentIndex) {
             if (!this.props.indexedID.dataLoaded) {
                 GeneralUtil.toggleOverlay(true);
                 axios.post('/loadSessionData', {
@@ -108,12 +113,11 @@ class FacePanel extends React.Component<IProps, IState> {
                 });
             } else {
                 this.props.loadNextID(this.props.indexedID);
-                this.initializeLiveness();
-                this.initializeFaceCompareMatch();
                 GeneralUtil.toggleOverlay(false);
             }
             return;
-        } else if (previousProps.currentID !== this.props.currentID) {
+        }
+        if (this.props.currentID.sessionID !== '') {
             if (this.props.currentStage === CurrentStage.FR_LIVENESS_CHECK) {
                 if (this.props.currentID.selfieVideo !== undefined && this.props.currentID.selfieVideo!.name === 'notfound') {
                     // new ID has no video
@@ -125,17 +129,22 @@ class FacePanel extends React.Component<IProps, IState> {
                     } else {
                         this.loadNextID(this.state.previous);
                     }
-                } else if (this.props.currentID.selfieVideo !== undefined && this.props.currentID.selfieVideo!.name !== 'notfound' &&
-                    this.props.currentID.sessionID !== '' && this.state.passesLiveness === undefined) {
+                } else if (!this.state.livenessInit) {
                     this.initializeLiveness();
                 }
             } else if (this.props.currentStage === CurrentStage.FR_COMPARE_CHECK) {
-                if (this.state.faceCompareMatch === undefined) {
+                if (!this.state.matchInit) {
                     this.initializeFaceCompareMatch();
                 }
             }
             return;
         }
+
+        if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.face !== undefined
+             && this.props.currentID.givenData.face.match !== undefined && this.props.currentID.givenData.face.match[this.props.currentID.internalIndex] !== undefined
+            && this.state.faceCompareMatch !== this.props.currentID.givenData.face.match[this.props.currentID.internalIndex]) {
+                this.initializeFaceCompareMatch();
+            }
     }
 
     componentDidMount() {
@@ -177,10 +186,15 @@ class FacePanel extends React.Component<IProps, IState> {
                 this.setState({
                     passesLiveness: this.props.currentID.videoLiveness,
                     selectedVideoFlags: this.props.currentID.videoFlags !== undefined ? this.props.currentID.videoFlags: [],
+                    livenessInit: true,
                 }, this.frLivenessValidate);
             } else if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.face !== undefined) {
                 let face = this.props.currentID.givenData.face;
-                this.setState({passesLiveness: face.liveness, selectedVideoFlags: face.videoFlags !== undefined ? face.videoFlags : []}, this.frLivenessValidate);
+                this.setState({
+                    passesLiveness: face.liveness, 
+                    selectedVideoFlags: face.videoFlags !== undefined ? face.videoFlags : [],
+                    livenessInit: true
+                }, this.frLivenessValidate);
             }
         }
     }
@@ -188,12 +202,12 @@ class FacePanel extends React.Component<IProps, IState> {
     initializeFaceCompareMatch = () => {
         if (this.state.faceCompareMatch === undefined) {
             if (this.props.currentID.faceCompareMatch !== undefined) {
-                this.setState({faceCompareMatch: this.props.currentID.faceCompareMatch});
+                this.setState({faceCompareMatch: this.props.currentID.faceCompareMatch, matchInit: true});
             } else if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.face !== undefined) {
                 let match = this.props.currentID.givenData.face.match;
                 if (match === undefined || match.length === 0) return;
                 let value = match[this.props.currentID.internalIndex];
-                this.setState({faceCompareMatch: value}, () => {
+                this.setState({faceCompareMatch: value, matchInit: true}, () => {
                     if (value !== undefined) this.props.setIDFaceMatch(value);
                 });
             }
@@ -364,8 +378,28 @@ class FacePanel extends React.Component<IProps, IState> {
         }
     }
 
+    loadSelectedID = (index: number) => {
+        if (index === this.props.currentIndex) return;
+        this.resetState();
+        this.props.saveToLibrary(this.props.currentID);
+        axios.post('/saveOutput', {
+            database: this.props.database,
+            ID: DatabaseUtil.extractOutput(this.props.currentID, this.props.processType === ProcessType.FACE),
+            overwrite: true
+        }).then((res: any) => {
+            this.props.restoreID();
+            this.props.restoreImage();
+            this.props.getSelectedID(index, res.data);
+            this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
+        }).catch((err: any) => {
+            console.error(err);
+        })
+    }
+
     resetState = () => {
         this.setState({
+            livenessInit: false,
+            matchInit: false,
             videoFlagsLoaded: false,
             videoFlags: [],
             selectedVideoFlags: [],
@@ -407,7 +441,7 @@ class FacePanel extends React.Component<IProps, IState> {
 
             return (
                 <SessionDropdown showModal={this.state.showSaveAndQuitModal} toggleModal={toggleModal} 
-                    saveAndQuit={saveAndQuit} loadNextID={load} />
+                    saveAndQuit={saveAndQuit} loadNextID={load} loadSelectedID={this.loadSelectedID} />
             );
         }
 
@@ -426,6 +460,7 @@ const mapDispatchToProps = {
     progressNextStage,
     getPreviousID,
     getNextID,
+    getSelectedID,
     loadNextID,
     createNewID,
     loadImageState,

@@ -4,12 +4,13 @@ import './SessionDropdown.scss';
 import { AppState } from '../../../store';
 import { ButtonGroup, Button, Modal, ListGroup } from 'react-bootstrap';
 import { GrFormPrevious, GrFormNext } from 'react-icons/gr';
-import { IDState, AnnotationState, PhasesChecked } from '../../../store/id/types';
+import { IDState } from '../../../store/id/types';
 import { DatabaseUtil } from '../../../utils/DatabaseUtil';
-import { ProcessType, AnnotationStatus } from '../../../utils/enums';
+import { ProcessType, AnnotationStatus, CurrentStage } from '../../../utils/enums';
 
 interface IProps {
     currentIndex: number,
+    currentStage: CurrentStage,
     library: IDState[],
     database: string,
     startDate: Date,
@@ -18,7 +19,8 @@ interface IProps {
     processType: ProcessType,
     toggleModal: (show: boolean) => void,
     saveAndQuit: () => void,
-    loadNextID: (prev: boolean) => void
+    loadNextID: (prev: boolean, beforeSegCheckDone?: boolean) => void,
+    loadSelectedID: (index: number, beforeSegCheckDone?: boolean) => void,
 }
 
 interface IState {
@@ -36,27 +38,10 @@ class SessionDropdown extends React.Component<IProps, IState> {
     }
 
     getSessionsModal = () => {
-        const getOverallStatus = (phases: PhasesChecked, annoState: AnnotationState) => {
-            switch (this.props.processType) {
-                case (ProcessType.WHOLE): {
-                    if (annoState.match && annoState.video) {
-                        if (annoState.front.seg && annoState.front.landmark && annoState.front.ocr
-                            && annoState.back.seg && annoState.back.landmark && annoState.back.ocr) {
-                                return AnnotationStatus.COMPLETE;
-                            }
-                    }
-                    return AnnotationStatus.INCOMPLETE;
-                }
-                case (ProcessType.FACE): {
-                    if (!phases.video && !phases.face) {
-                        return AnnotationStatus.NOT_APPLICABLE;
-                    } else {
-                        // tbd
-                        return AnnotationStatus.NOT_APPLICABLE;
-                    }
-                }
-                default: return AnnotationStatus.NOT_APPLICABLE;;
-            }
+        const handleSessionClick = (idx: number, status: AnnotationStatus) => {
+            if (status === AnnotationStatus.NOT_APPLICABLE) return;
+            this.props.loadSelectedID(idx, this.props.currentStage === CurrentStage.SEGMENTATION_CHECK);
+            this.setState({showSessionsModal: false});
         }
 
         return (
@@ -71,41 +56,19 @@ class SessionDropdown extends React.Component<IProps, IState> {
                     <p>Sessions Loaded: {this.props.library.length}</p>
                     <ListGroup>
                         {
-                            this.props.library.map((each) => {
-                                let status = getOverallStatus(each.phasesChecked, each.annotationState);
-                                let variant = "light";
+                            this.props.library.map((each, idx) => {
+                                let status = DatabaseUtil.getOverallStatus(each.phasesChecked, each.annotationState, this.props.processType);
+                                let variant = "dark";
                                 if (status === AnnotationStatus.INCOMPLETE) variant = "primary";
-                                if (status === AnnotationStatus.NOT_APPLICABLE) variant = "dark";
+                                if (status === AnnotationStatus.NOT_APPLICABLE) variant = "light";
                                 return (
-                                    <ListGroup.Item action variant={variant} key={each.index}>
+                                    <ListGroup.Item action={status!==AnnotationStatus.NOT_APPLICABLE} variant={variant} key={idx} 
+                                    onClick={() => handleSessionClick(idx, status)}>
                                         {each.sessionID}
                                     </ListGroup.Item>
                                 )
                             })
                         }
-                        {/* <ListGroup.Item action>No style</ListGroup.Item>
-                        <ListGroup.Item variant="primary">Primary</ListGroup.Item>
-                        <ListGroup.Item action variant="secondary">
-                            Secondary
-                        </ListGroup.Item>
-                        <ListGroup.Item action variant="success">
-                            Success
-                        </ListGroup.Item>
-                        <ListGroup.Item action variant="danger">
-                            Danger
-                        </ListGroup.Item>
-                        <ListGroup.Item action variant="warning">
-                            Warning
-                        </ListGroup.Item>
-                        <ListGroup.Item action variant="info">
-                            Info
-                        </ListGroup.Item>
-                        <ListGroup.Item action variant="light">
-                            Light
-                        </ListGroup.Item>
-                        <ListGroup.Item action variant="dark">
-                            Dark
-                        </ListGroup.Item> */}
                     </ListGroup>
                 </Modal.Body>
                 <Modal.Footer>
@@ -122,13 +85,13 @@ class SessionDropdown extends React.Component<IProps, IState> {
             <div id="folder-number">
                 <ButtonGroup>
                     <Button variant="light" 
-                        onClick={() => this.props.loadNextID(true)}
+                        onClick={() => this.props.loadNextID(true, this.props.currentStage === CurrentStage.SEGMENTATION_CHECK)}
                         disabled={this.props.currentIndex === 0} 
                         className="nav-button"><GrFormPrevious /></Button>
                     <Button variant="light" onClick={() => this.setState({showSessionsModal: true})}>
                         Session:   {this.props.currentIndex + 1}/{this.props.library.length}</Button>
                     <Button variant="light" 
-                        onClick={() => this.props.loadNextID(false)}
+                        onClick={() => this.props.loadNextID(false, this.props.currentStage === CurrentStage.SEGMENTATION_CHECK)}
                         disabled={this.props.currentIndex + 1 === this.props.library.length}
                         className="nav-button"><GrFormNext /></Button>
                 </ButtonGroup>
@@ -160,6 +123,7 @@ const mapDispatchToProps = {
 const mapStateToProps = (state: AppState, ownProps: any) => {
     return {
         currentIndex: state.general.currentIndex,
+        currentStage: state.general.currentStage,
         library: state.general.IDLibrary,
         database: state.general.setupOptions.database,
         startDate: state.general.setupOptions.startDate,
@@ -168,7 +132,8 @@ const mapStateToProps = (state: AppState, ownProps: any) => {
         showModal: ownProps.showModal,
         toggleModal: ownProps.toggleModal,
         saveAndQuit: ownProps.saveAndQuit,
-        loadNextID: ownProps.loadNextID
+        loadNextID: ownProps.loadNextID,
+        loadSelectedID: ownProps.loadSelectedID
     }
 };
 

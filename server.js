@@ -186,13 +186,12 @@ function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
 
         function isValidPosition(pos) {
             if (pos === undefined) return false;
-            // console.log(Object.keys(pos).every(e => pos[e] !== undefined))
-            return Object.keys(pos).every(e => pos[e] !== undefined && !isNaN(pos[e]));
+            return Object.keys(pos).every((e) => pos[e] !== undefined && !isNaN(pos[e]));
         }
 
         // check seg
         if (segData !== undefined && segData.length > 0) {
-            if (segData.length === 1 && segData.IDBox === undefined) {
+            if (segData.length === 1 && segData[0].IDBox === undefined) {
                 // single empty entry
                 skippedSeg = true;
                 seg = front ? segFlags.length > 0 : (segFlags.length > 0 ? true : json.frontIDFlags.length > 0);
@@ -214,7 +213,12 @@ function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
             if (landmarkData !== undefined && landmarkData.length > 0 && landmarkData.length === segData.length) {
                 // Q: need to check if the set of landmark is complete?????
                 // religion optional
-                landmark = landmarkData.every((each) => each.every((lm) => lm.codeName === 'religion' || isValidPosition(lm.position)));
+                landmark = landmarkData.every((each) => {
+                    if (each.length > 0) {
+                        return each.every((lm) => lm.codeName === 'religion' || isValidPosition(lm.position))
+                    }
+                    return false;
+                });
             }
         }
 
@@ -226,7 +230,7 @@ function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
             if (ocrData !== undefined && ocrData.length > 0 && ocrData.length === segData.length) {
                 ocr = ocrData.every((each) => {
                     let ocrs = each.filter((o) => o.codeName === 'ic_num' || o.codeName === 'name' || o.codeName === 'address');
-                    if (ocrs !== undefined && ocrs.length === 3) {
+                    if (ocrs !== undefined) {
                         return ocrs.every((o) => {
                             if (o.count === 1) {
                                 return o.labels.length === 1 && o.labels[0].value !== '' && o.labels[0].value !== undefined;
@@ -252,7 +256,7 @@ function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
             front: existence.mykad_front_ori,
             back: existence.mykad_back_ori,
             video: existence.face_video,
-            face: existence.mykad_front_ori && (existence.face || existence.face_video_stills > 0)
+            face: existence.mykad_front_ori && existence.face
         }
         var annotationStates = {
             front: {
@@ -341,17 +345,18 @@ function updateDataWithJSON(result, data) {
                                 let lm = csvLm.find((l) => l.id === landmark.codeName);
                                 if (lm !== undefined && lm.id !== undefined) {
                                     lm.coords = [landmark.position.x1, 
-                                        data.imageProps.originalID.height - landmark.position.y1, 
+                                        data.croppedImageProps.originalID.height - landmark.position.y1, 
                                         landmark.position.x2,
-                                        data.imageProps.originalID.height - landmark.position.y4];
+                                        data.croppedImageProps.originalID.height - landmark.position.y4];
+                                    return lm;
                                 } else {
                                     return {
                                         id: landmark.codeName,
                                         score: 0,
                                         coords: [landmark.position.x1, 
-                                            data.imageProps.originalID.height - landmark.position.y1, 
+                                            data.croppedImageProps.originalID.height - landmark.position.y1, 
                                             landmark.position.x2,
-                                            data.imageProps.originalID.height - landmark.position.y4]
+                                            data.croppedImageProps.originalID.height - landmark.position.y4]
                                     }
                                 }
                             })
@@ -359,16 +364,16 @@ function updateDataWithJSON(result, data) {
                             return ocrResults.landmarks.map((each) => {
                                 let landmark = currLm.find((llm) => llm.codeName === each.id);
                                 if (landmark !== undefined) {
-                                    if (front && data.imageProps.originalID !== undefined && data.imageProps.originalID.height !== undefined) {
+                                    if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
                                         each.coords = [landmark.position.x1, 
-                                            data.imageProps.originalID.height - landmark.position.y1, 
+                                            data.croppedImageProps.originalID.height - landmark.position.y1, 
                                             landmark.position.x2,
-                                            data.imageProps.originalID.height - landmark.position.y4];
-                                    } else if (!front && data.imageProps.backID !== undefined && data.imageProps.backID.height !== undefined) {
+                                            data.croppedImageProps.originalID.height - landmark.position.y4];
+                                    } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
                                         each.coords = [landmark.position.x1, 
-                                            data.imageProps.backID.height - landmark.position.y1, 
+                                            data.croppedImageProps.backID.height - landmark.position.y1, 
                                             landmark.position.x2,
-                                            data.imageProps.backID.height - landmark.position.y4];
+                                            data.croppedImageProps.backID.height - landmark.position.y4];
                                     }
                                 }
                                 return each;
@@ -390,16 +395,16 @@ function updateDataWithJSON(result, data) {
                                 each.text = ocr.labels.map((lbl) => lbl.value).join(" ");
                                 each.coords = ocr.labels.map((lbl) => {
                                     if (lbl.position !== undefined) {
-                                        if (front && data.imageProps.originalID !== undefined && data.imageProps.originalID.height !== undefined) {
+                                        if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
                                             return [lbl.position.x1, 
-                                                data.imageProps.originalID.height - lbl.position.y1, 
+                                                data.croppedImageProps.originalID.height - lbl.position.y1, 
                                                 lbl.position.x2,
-                                                data.imageProps.originalID.height - lbl.position.y4];
-                                        } else if (!front && data.imageProps.backID !== undefined && data.imageProps.backID.height !== undefined) {
+                                                data.croppedImageProps.originalID.height - lbl.position.y4];
+                                        } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
                                             return [lbl.position.x1, 
-                                                data.imageProps.backID.height - lbl.position.y1, 
+                                                data.croppedImageProps.backID.height - lbl.position.y1, 
                                                 lbl.position.x2,
-                                                data.imageProps.backID.height - lbl.position.y4];
+                                                data.croppedImageProps.backID.height - lbl.position.y4];
                                         }
                                     } else {
                                         return [];
@@ -412,16 +417,16 @@ function updateDataWithJSON(result, data) {
                                     text: ocr.labels.map((lbl) => lbl.value).join(" "),
                                     coords: ocr.labels.map((lbl) => {
                                         if (lbl.position !== undefined) {
-                                            if (front && data.imageProps.originalID !== undefined && data.imageProps.originalID.height !== undefined) {
+                                            if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
                                                 return [lbl.position.x1, 
-                                                    data.imageProps.originalID.height - lbl.position.y1, 
+                                                    data.croppedImageProps.originalID.height - lbl.position.y1, 
                                                     lbl.position.x2,
-                                                    data.imageProps.originalID.height - lbl.position.y4];
-                                            } else if (!front && data.imageProps.backID !== undefined && data.imageProps.backID.height !== undefined) {
+                                                    data.croppedImageProps.originalID.height - lbl.position.y4];
+                                            } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
                                                 return [lbl.position.x1, 
-                                                    data.imageProps.backID.height - lbl.position.y1, 
+                                                    data.croppedImageProps.backID.height - lbl.position.y1, 
                                                     lbl.position.x2,
-                                                    data.imageProps.backID.height - lbl.position.y4];
+                                                    data.croppedImageProps.backID.height - lbl.position.y4];
                                             }
                                         } else {
                                             return [];
@@ -438,16 +443,16 @@ function updateDataWithJSON(result, data) {
                                 each.text = ocr.labels.map((lbl) => lbl.value).join(" "),
                                 each.coords = ocr.labels.map((lbl) => {
                                     if (lbl.position !== undefined) {
-                                        if (front && data.imageProps.originalID !== undefined && data.imageProps.originalID.height !== undefined) {
+                                        if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
                                             return [lbl.position.x1, 
-                                                data.imageProps.originalID.height - lbl.position.y1, 
+                                                data.croppedImageProps.originalID.height - lbl.position.y1, 
                                                 lbl.position.x2,
-                                                data.imageProps.originalID.height - lbl.position.y4];
-                                        } else if (!front && data.imageProps.backID !== undefined && data.imageProps.backID.height !== undefined) {
+                                                data.croppedImageProps.originalID.height - lbl.position.y4];
+                                        } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
                                             return [lbl.position.x1, 
-                                                data.imageProps.backID.height - lbl.position.y1, 
+                                                data.croppedImageProps.backID.height - lbl.position.y1, 
                                                 lbl.position.x2,
-                                                data.imageProps.backID.height - lbl.position.y4];
+                                                data.croppedImageProps.backID.height - lbl.position.y4];
                                         }
                                     } else {
                                         return [];
@@ -469,7 +474,8 @@ function updateDataWithJSON(result, data) {
                 }
             }
             ocrResults.flags = front ? data.frontIDFlags : data.backIDFlags;
-            ocrResults.imageProps = front ? data.imageProps.originalID : data.imageProps.backID;
+            ocrResults.croppedImageProps = front ? data.croppedImageProps.originalID : data.croppedImageProps.backID;
+            ocrResults.originalImageProps = front ? data.originalImageProps.originalID : data.originalImageProps.backID;
         }
         return ocrResults
     }
@@ -481,9 +487,13 @@ function updateDataWithJSON(result, data) {
                 documentType: data.documentType[idx],
                 passesCrop: each.passesCrop,
                 coords: [each.IDBox.position.x1, 
-                    data.imageProps.originalID.height - each.IDBox.position.y1, 
+                    each.IDBox.position.y1, 
                     each.IDBox.position.x2,
-                    data.imageProps.originalID.height - each.IDBox.position.y4]
+                    each.IDBox.position.y2,
+                    each.IDBox.position.x3,
+                    each.IDBox.position.y3,
+                    each.IDBox.position.x4,
+                    each.IDBox.position.y4]
             }
         }) : [],
         backID: data.segmentation.backID !== undefined ? data.segmentation.backID.filter((each) =>  each.IDBox !== null).map((each) => {
@@ -493,9 +503,13 @@ function updateDataWithJSON(result, data) {
             return {
                 passesCrop: each.passesCrop,
                 coords: [each.IDBox.position.x1, 
-                data.imageProps.backID.height - each.IDBox.position.y1, 
-                each.IDBox.position.x2,
-                data.imageProps.backID.height - each.IDBox.position.y4],
+                    each.IDBox.position.y1, 
+                    each.IDBox.position.x2,
+                    each.IDBox.position.y2,
+                    each.IDBox.position.x3,
+                    each.IDBox.position.y3,
+                    each.IDBox.position.x4,
+                    each.IDBox.position.y4]
             }
         }) : []
     }
@@ -699,9 +713,13 @@ function mergeJSONData(initial, updated) {
         processStage: updated.processStage,
         documentType: updated.documentType,
 
-        imageProps: {
-            originalID: updated.imageProps !== undefined ? updated.imageProps.originalID : undefined,
-            backID: updated.imageProps !== undefined ? updated.imageProps.backID : undefined
+        originalImageProps: {
+            originalID: updated.originalImageProps !== undefined ? updated.originalImageProps.originalID : undefined,
+            backID: updated.originalImageProps !== undefined ? updated.originalImageProps.backID : undefined
+        },
+        croppedImageProps: {
+            originalID: updated.croppedImageProps !== undefined ? updated.croppedImageProps.originalID : undefined,
+            backID: updated.croppedImageProps !== undefined ? updated.croppedImageProps.backID : undefined
         },
         segmentation: updated.segmentation !== undefined ? {
             originalID: updated.segmentation.originalID.length > 0 ? updated.segmentation.originalID : initial.segmentation.originalID,
@@ -718,11 +736,12 @@ function mergeJSONData(initial, updated) {
 
         videoLiveness: updated.videoLiveness !== undefined ? updated.videoLiveness : initial.videoLiveness,
         videoFlags: updated.videoFlags !== undefined ? updated.videoFlags : initial.videoFlags,
-        faceCompareMatch: updated.faceCompareMatch !== undefined ? updated.faceCompareMatch.map((each, idx) => {
-            return each !== undefined 
+        faceCompareMatch: updated.faceCompareMatch !== undefined && updated.faceCompareMatch.length > 0 
+            ? updated.faceCompareMatch.map((each, idx) => {
+            return each !== undefined && each !== null
                 ? each
                 : initial.faceCompareMatch[idx];
-        }) : initial.faceCompareMatch
+        }).filter((each) => each !== undefined && each !== null) : initial.faceCompareMatch.filter((each) => each !== undefined || each !== null)
     }
 }
 
@@ -769,7 +788,7 @@ app.post('/loadSessionData', async (req, res) => {
                     session.raw_data = updatedData;
                 }
             } catch (err) {
-                console.error(err);
+                // console.error(err);
                 session.raw_data = csvData;
             }
         }
@@ -901,6 +920,7 @@ app.post('/saveOutput', async (req, res) => {
                             let data = fs.readFileSync(sessionRoute);
                             let initialData = JSON.parse(data);
                             let updatedData = mergeJSONData(initialData, ID);
+                            console.log(updatedData);
                             console.log("merge " + ID.sessionID);
                             fs.writeFileSync(sessionRoute, JSON.stringify(updatedData), 'utf8');
                             res({sessionID: ID.sessionID, success: true});

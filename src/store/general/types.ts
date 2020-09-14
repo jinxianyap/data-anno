@@ -58,6 +58,15 @@ interface GetNextID {
     }
 }
 
+interface GetSelectedID {
+    type: typeof Action.GET_SELECTED_ID;
+    payload: {
+        index: number,
+        sessionID?: string,
+        success?: boolean
+    }
+}
+
 interface SaveToLibrary {
     type: typeof Action.SAVE_TO_LIBRARY;
     payload: {
@@ -74,5 +83,6 @@ export type GeneralActionTypes = SaveSetupOptions
     | LoadFromDatabase
     | GetPreviousID
     | GetNextID
+    | GetSelectedID
     | SaveToLibrary
     | RestoreGeneral

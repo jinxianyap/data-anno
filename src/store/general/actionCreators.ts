@@ -44,6 +44,13 @@ export function getNextID(res?: any): GeneralActionTypes {
     }
 }
 
+export function getSelectedID(index: number, res?: any): GeneralActionTypes {
+    return {
+        type: Action.GET_SELECTED_ID,
+        payload: res !== undefined ? {sessionID: res.sessionID, success: res.success, index: index} : {index: index}
+    }
+}
+
 export function saveToLibrary(id: IDState): GeneralActionTypes {
     return {
         type: Action.SAVE_TO_LIBRARY,

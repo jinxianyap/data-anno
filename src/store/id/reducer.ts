@@ -69,7 +69,7 @@ export function IDReducer(
                 source: state.sessionID,
                 originalID: cloneImageState(state.originalID!, action.payload.IDBox, action.payload.passesCrop),
                 backID: cloneImageState(state.backID!),
-                documentType: 'MyKad',
+                documentType: action.payload.documentType !== undefined ? action.payload.documentType : 'MyKad',
                 processStage: IDProcess.MYKAD_FRONT,
             }
             let IDs = state.internalIDs;
@@ -193,6 +193,14 @@ export function IDReducer(
             if (state.originalIDProcessed && state.internalIDs[state.internalIndex].processStage === IDProcess.MYKAD_BACK) {
                 state.backIDRotation = action.payload.idRotation;
                 state.backID!.image = action.payload.id;
+                if (state.givenData !== undefined && state.givenData.backID !== undefined) {
+                    if (state.givenData.backID.originalImageProps !== undefined) {
+                        state.givenData.backID.originalImageProps = {
+                            width: state.givenData.backID.originalImageProps.height,
+                            height: state.givenData.backID.originalImageProps.width
+                        }
+                    }
+                }
                 if (state.internalIDs.length > 0) {
                     let ids = state.internalIDs;
                     return {
@@ -204,6 +212,14 @@ export function IDReducer(
                 (state.internalIDs[state.internalIndex] !== undefined && state.internalIDs[state.internalIndex].processStage !== IDProcess.MYKAD_BACK)) {
                 state.originalIDRotation = action.payload.idRotation;
                 state.originalID!.image = action.payload.id;
+                if (state.givenData !== undefined && state.givenData.originalID !== undefined) {
+                    if (state.givenData.originalID.originalImageProps !== undefined) {
+                        state.givenData.originalID.originalImageProps = {
+                            width: state.givenData.originalID.originalImageProps.height,
+                            height: state.givenData.originalID.originalImageProps.width
+                        }
+                    }
+                }
                 if (state.internalIDs.length > 0) {
                     let ids = state.internalIDs;
                     return {
