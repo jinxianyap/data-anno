@@ -33,3 +33,12 @@
 .current-item {
     border: 1px solid royalblue;
 }
+
+#sessions-btn {
+    &.Incomplete {
+        background-color: #b8daff;
+    }
+    // &.Complete {
+    //     background-color: #c6c8ca;
+    // }
+}

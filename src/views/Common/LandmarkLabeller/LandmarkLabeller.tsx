@@ -3,7 +3,7 @@ import 'leaflet-easybutton/src/easy-button';
 import React from 'react';
 import { connect } from 'react-redux'; 
 import { ImageActionTypes, ImageState, LandmarkData, Position, OCRData, OCRWord } from '../../../store/image/types';
-import { addLandmarkData, deleteLandmarkPosition, updateOCRData, setCurrentSymbol, setCurrentWord } from '../../../store/image/actionCreators';
+import { addLandmarkData, deleteLandmarkPosition, clearLandmarkPositions, updateOCRData, clearOCRPositions, setCurrentSymbol, setCurrentWord } from '../../../store/image/actionCreators';
 import { AppState } from '../../../store';
 import { CurrentStage } from '../../../utils/enums';
 import './LandmarkLabeller.scss';
@@ -20,7 +20,9 @@ interface IProps {
 
     addLandmarkData: (landmark: LandmarkData) => ImageActionTypes,
     deleteLandmarkPosition: (landmark: string) => ImageActionTypes,
+    clearLandmarkPositions: () => ImageActionTypes,
     updateOCRData: (id: number, name: string, value: string, position?: Position) => ImageActionTypes,
+    clearOCRPositions: () => ImageActionTypes,
     setCurrentSymbol: (symbol?: string, landmark?: string) => ImageActionTypes,
     setCurrentWord: (word: OCRWord) => ImageActionTypes
 }
@@ -218,6 +220,16 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
         let easyButton = L.easyButton('<span>&hercon;</span>', () => {
             map.fitBounds(imageBounds);
+        }).addTo(map);
+
+        let clearButton = L.easyButton('<span>x</span>', () => {
+            if (this.props.currentStage === CurrentStage.LANDMARK_EDIT) {
+                this.props.clearLandmarkPositions();
+                this.renderCommittedLandmarks();
+            } else if (this.props.currentStage === CurrentStage.OCR_EDIT) {
+                this.props.clearOCRPositions();
+                this.renderCommittedOCRs();
+            }
         }).addTo(map);
 
         let overlay = L.imageOverlay(st.source, imageBounds);
@@ -1315,7 +1327,9 @@ const mapStateToProps = (state: AppState, ownProps: any) => {
 const mapDispatchToProps = {
     addLandmarkData,
     deleteLandmarkPosition,
+    clearLandmarkPositions,
     updateOCRData,
+    clearOCRPositions,
     setCurrentSymbol,
     setCurrentWord
 }

@@ -90,14 +90,6 @@ interface SetImageProps {
     }
 }
 
-// interface SetIDBox {
-//     type: typeof Action.SET_ID_BOX;
-//     payload: {
-//         IDBox: IDBox,
-//         croppedImage: File
-//     }
-// }
-
 interface SetCurrentSymbol {
     type: typeof Action.SET_CURRENT_SYMBOL;
     payload: {
@@ -113,8 +105,8 @@ interface AddLandmarkData {
     }
 }
 
-interface ClearLandmarkData {
-    type: typeof Action.CLEAR_LANDMARK_DATA;
+interface ClearLandmarkPositions {
+    type: typeof Action.CLEAR_LANDMARK_POSITIONS;
 }
 
 interface DeleteLandmarkPosition {
@@ -157,20 +149,24 @@ interface UpdateOCRData {
     }
 }
 
+interface ClearOCRPositions {
+    type: typeof Action.CLEAR_OCR_POSITIONS;
+}
+
 interface RestoreImage {
     type: typeof Action.RESTORE_IMAGE;
 }
 
 export type ImageActionTypes = LoadImageState
     | SaveSegCheck
-    // | SetIDBox
     | SetImageProps
     | SetCurrentSymbol
     | AddLandmarkData
-    | ClearLandmarkData
+    | ClearLandmarkPositions
     | DeleteLandmarkPosition
     | UpdateLandmarkFlags
     | AddOCRData
     | UpdateOCRData
+    | ClearOCRPositions
     | SetCurrentWord
     | RestoreImage

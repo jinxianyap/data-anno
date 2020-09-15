@@ -344,6 +344,30 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
                 break;
             }
+            case (CurrentStage.OCR_EDIT): {
+                if (this.props.currentImage.ocr.every((each) => each.count <= 1)) {
+                    if (this.props.processType === ProcessType.OCR) {
+                        if (this.props.internalID.processStage === IDProcess.MYKAD_FRONT) {
+                            this.props.saveToInternalID(this.props.currentImage, false);
+                            this.props.progressNextStage(CurrentStage.INTER_STAGE);
+                        } else {
+                            this.props.saveToInternalID(this.props.currentImage, true);
+                            this.props.progressNextStage(CurrentStage.INTER_STAGE);
+                        }
+                    } else {
+                        if (this.props.internalID.processStage === IDProcess.MYKAD_FRONT) {
+                            this.props.saveToInternalID(this.props.currentImage, false);
+                            this.loadBackId();
+                        } else if (this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
+                            this.props.saveToInternalID(this.props.currentImage, false);
+                            this.props.progressNextStage(CurrentStage.END_STAGE);
+                        } else {
+                            this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
+                        }
+                    }
+                }
+                break;
+            }
             case (CurrentStage.FR_LIVENESS_CHECK): {
                 if (!this.state.videoFlagsLoaded) {
                     this.loadVideoFlags();
@@ -469,7 +493,6 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     mapIDLibrary = () => {
-        console.log('map shith0ththth');
         return new Promise((res, rej) => {
             const mappedList = this.props.library.map((each, idx) => {
                 return {
@@ -1835,8 +1858,12 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     loadBackId = () => {
-        this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
-        this.setState({passesCrop: undefined, loadedSegCheckImage: true}, () => this.props.loadImageState(this.props.internalID.backID!));
+        if (this.props.internalID !== undefined && this.props.internalID.backID !== undefined && this.props.internalID.backID.image.name === 'notfound') {
+            this.loadNextID(false);
+        } else {
+            this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+            this.setState({passesCrop: undefined, loadedSegCheckImage: true}, () => this.props.loadImageState(this.props.internalID.backID!));
+        }
     }
 
     loadNextInternalId = () => {
@@ -1857,11 +1884,9 @@ class ControlPanel extends React.Component<IProps, IState> {
             ID: DatabaseUtil.extractOutput(id, this.props.processType === ProcessType.FACE),
             overwrite: true
         }).then((res: any) => {
-            // console.log(res);
             this.props.restoreID();
             this.props.restoreImage();
             if (prev) {
-                // this.props.getPreviousID(res.data);
                 let idx = this.state.sortedList[this.state.sortedIndex - 1].libIndex;
                 this.props.getSelectedID(idx, res.data);
             } else {
@@ -1873,7 +1898,6 @@ class ControlPanel extends React.Component<IProps, IState> {
                     let idx = this.state.sortedList[this.state.sortedIndex + 1].libIndex;
                     this.props.getSelectedID(idx, res.data);
                 }
-                // this.props.getNextID(res.data);
             }
             if (DatabaseUtil.getOverallStatus(res.data.phasesChecked, res.data.annotationState, this.props.processType)
                 === AnnotationStatus.COMPLETE) {
@@ -2033,7 +2057,6 @@ class ControlPanel extends React.Component<IProps, IState> {
             return (
                 <SessionDropdown showModal={this.state.showSaveAndQuitModal} toggleModal={toggleModal} 
                     saveAndQuit={saveAndQuit} sortedList={this.state.sortedList} sortedIndex={this.state.sortedIndex}
-                    loadSelectedID={this.loadSelectedID} loadWithoutSaving={this.loadSelectedIDWithoutSaving} 
                     handleGetSession={this.handleGetSession} />
             );
         }

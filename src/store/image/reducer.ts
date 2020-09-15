@@ -88,24 +88,26 @@ export function imageReducer(
             }
         }
 
-        case Action.CLEAR_LANDMARK_DATA: {
+        case Action.CLEAR_LANDMARK_POSITIONS: {
             return {
                 ...state,
-                landmark: []
+                landmark: state.landmark.map((each) => { each.position = undefined; return each; })
             }
         }
 
         case Action.DELETE_LANDMARK_POSITION: {
             let landmarks = state.landmark;
-
+            console.log(action.payload.landmark);
             for (var k = 0; k < landmarks.length; k++) {
                 if (landmarks[k].codeName === action.payload.landmark) {
+                    console.log(landmarks[k].position);
                     let landmark = landmarks[k];
                     landmark.position = undefined
+                    console.log(landmark.position);
                     landmarks.splice(k, 1, landmark);
                 }
             } 
-
+            console.log(landmarks);
             return {
                 ...state,
                 landmark: landmarks
@@ -222,6 +224,14 @@ export function imageReducer(
                 ocr: ocr
             }
         }
+
+        case Action.CLEAR_OCR_POSITIONS: {
+            return {
+                ...state,
+                ocr: state.ocr.map((each) => {each.labels = each.labels.map((lbl) => {lbl.position = undefined; return lbl;}); return each;})
+            }
+        }
+
         case Action.RESTORE_IMAGE: {
             return {
                 ...initialState

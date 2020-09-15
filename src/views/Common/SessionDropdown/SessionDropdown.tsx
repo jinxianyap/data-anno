@@ -21,9 +21,6 @@ interface IProps {
     sortedIndex: number, 
     toggleModal: (show: boolean) => void,
     saveAndQuit: () => void,
-    loadNextID: (prev: boolean, beforeSegCheckDone?: boolean) => void,
-    loadSelectedID: (index: number, beforeSegCheckDone?: boolean) => void,
-    loadWithoutSaving: (index: number) => void,
     handleGetSession: (libIndex: number, sortedIndex: number, status: AnnotationStatus) => void;
 }
 
@@ -40,21 +37,7 @@ class SessionDropdown extends React.Component<IProps, IState> {
         }
     }
 
-    componentWillReceiveProps(props: IProps) {
-        console.log(props);
-    }
-
-    componentDidMount() {
-        // this.mapIDLibrary();
-    }
-
-    componentDidUpdate(previousProps: IProps) {
-
-    }
-
     getSessionsModal = () => {
-        // console.log(this.props.sortedIndex);
-        // console.log(this.props.sortedList);
         return (
             <Modal show={this.state.showSessionsModal} onHide={() => this.setState({showSessionsModal: false})}>
                 <Modal.Header closeButton>
@@ -99,6 +82,9 @@ class SessionDropdown extends React.Component<IProps, IState> {
             if (sortedEntry === undefined) return;
             this.props.handleGetSession(sortedEntry.libIndex, prev ? sortedIndex - 1 : sortedIndex + 1, sortedEntry.status);
         }
+        const sessionStatus = this.props.sortedList[this.props.sortedIndex] !== undefined ? this.props.sortedList[this.props.sortedIndex].status : "";
+        const maxIndex = this.props.sortedList.filter((each) => each.status !== AnnotationStatus.NOT_APPLICABLE).length;
+
         return (
             <div id="folder-number">
                 <ButtonGroup>
@@ -106,11 +92,11 @@ class SessionDropdown extends React.Component<IProps, IState> {
                         onClick={() => loadNextID(true)}
                         disabled={this.props.sortedIndex === 0} 
                         className="nav-button"><GrFormPrevious /></Button>
-                    <Button variant="light" onClick={() => this.setState({showSessionsModal: true})}>
-                        Sessions:   {this.props.library.length}</Button>
+                    <Button id="sessions-btn" className={sessionStatus} variant="light" onClick={() => this.setState({showSessionsModal: true})}>
+                        Session   {this.props.sortedIndex + 1}/ {this.props.library.length}</Button>
                     <Button variant="light" 
                         onClick={() => loadNextID(false)}
-                        disabled={this.props.sortedIndex + 1 === this.props.sortedList.length}
+                        disabled={this.props.sortedIndex + 1 === maxIndex}
                         className="nav-button"><GrFormNext /></Button>
                 </ButtonGroup>
                 <Button variant="secondary" id="quit-button" onClick={() => this.props.toggleModal(true)}>Quit</Button>
@@ -150,8 +136,6 @@ const mapStateToProps = (state: AppState, ownProps: any) => {
         showModal: ownProps.showModal,
         toggleModal: ownProps.toggleModal,
         saveAndQuit: ownProps.saveAndQuit,
-        loadSelectedID: ownProps.loadSelectedID,
-        loadWithoutSaving: ownProps.loadWithoutSaving,
         handleGetSession: ownProps.handleGetSession,
         sortedList: ownProps.sortedList,
         sortedIndex: ownProps.sortedIndex,

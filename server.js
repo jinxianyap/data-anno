@@ -298,11 +298,14 @@ function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
 
             // check liveness
             annotationStates.video = phasesToCheck.liveness ? (json.videoLiveness === true || json.videoLiveness === false) : true;
-    // check seg originalid exists same for ladmark and ocr
+            // check seg originalid exists same for ladmark and ocr
             // check face
             if (phasesToCheck.face && !shouldIgnore.face) {
-                annotationStates.match = json.faceCompareMatch.length === json.segmentation.originalID.length 
-                    && json.faceCompareMatch.every((each) => each === true || each === false);
+                // first case where segmentation has been done
+                // second case where it hasn't but a face only process was done before
+                annotationStates.match = (json.faceCompareMatch.length === json.segmentation.originalID.length 
+                    && json.faceCompareMatch.every((each) => each === true || each === false))
+                    || (json.faceCompareMatch.length === 1 && json.faceCompareMatch[0]);
             } else {
                 annotationStates.match = true;
             }

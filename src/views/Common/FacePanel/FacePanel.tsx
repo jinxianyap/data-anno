@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { CurrentStage, ProcessType } from '../../../utils/enums';
+import { CurrentStage, ProcessType, AnnotationStatus } from '../../../utils/enums';
 import { AppState } from '../../../store';
 import { Button, ToggleButton, ToggleButtonGroup, Card } from 'react-bootstrap';
 import options from '../../../options.json';
@@ -22,6 +22,7 @@ interface IProps {
     processType: ProcessType;
     currentStage: CurrentStage;
     currentIndex: number;
+    library: IDState[];
     totalIDs: number;
     currentID: IDState;
     indexedID: IDState;
@@ -47,6 +48,9 @@ interface IProps {
 }
 
 interface IState {
+    sortedList: {ID: IDState, libIndex: number, status: AnnotationStatus}[];
+    sortedIndex: number;
+
     showSaveAndQuitModal: boolean;
     previous: boolean;
 
@@ -73,6 +77,8 @@ class FacePanel extends React.Component<IProps, IState> {
     constructor(props: IProps) {
         super(props);
         this.state = {
+            sortedList: [],
+            sortedIndex: 0,
             showSaveAndQuitModal: false,
             previous: false,
             videoFlagsLoaded: false,
@@ -109,7 +115,6 @@ class FacePanel extends React.Component<IProps, IState> {
                     }
                 }).catch((err: any) => {
                     console.error(err);
-                    // GeneralUtil.toggleOverlay(false);
                 });
             } else {
                 this.props.loadNextID(this.props.indexedID);
@@ -151,22 +156,25 @@ class FacePanel extends React.Component<IProps, IState> {
         if (this.props.currentStage === CurrentStage.FR_LIVENESS_CHECK && !this.state.videoFlagsLoaded) {
             this.loadVideoFlags();
         }
-        GeneralUtil.toggleOverlay(true);
-        axios.post('/loadSessionData', {
-            database: this.props.database,
-            date: this.props.indexedID.dateCreated,
-            sessionID:  this.props.indexedID.sessionID
-        }).then((res: any) => {
-            if (res.status === 200) {
-                DatabaseUtil.loadSessionData(res.data, this.props.indexedID)
-                .then((completeID) => {
-                    this.props.loadNextID(completeID);
-                    GeneralUtil.toggleOverlay(false);
-                })
-            }
-        }).catch((err: any) => {
-            console.error(err);
-            GeneralUtil.toggleOverlay(false);
+
+        this.mapIDLibrary().then(() => {
+            GeneralUtil.toggleOverlay(true);
+            axios.post('/loadSessionData', {
+                database: this.props.database,
+                date: this.props.indexedID.dateCreated,
+                sessionID:  this.props.indexedID.sessionID
+            }).then((res: any) => {
+                if (res.status === 200) {
+                    DatabaseUtil.loadSessionData(res.data, this.props.indexedID)
+                    .then((completeID) => {
+                        this.props.loadNextID(completeID);
+                        GeneralUtil.toggleOverlay(false);
+                    })
+                }
+            }).catch((err: any) => {
+                console.error(err);
+                GeneralUtil.toggleOverlay(false);
+            });
         });
     }
 
@@ -358,9 +366,21 @@ class FacePanel extends React.Component<IProps, IState> {
                 this.props.restoreImage();
                 this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
                 if (prev) {
-                    this.props.getPreviousID(res.data);
+                    let idx = this.state.sortedList[this.state.sortedIndex - 1].libIndex;
+                    this.props.getSelectedID(idx, res.data);
                 } else {
-                    this.props.getNextID(res.data);
+                    if (this.state.sortedIndex + 1 === this.state.sortedList.length) {
+                        // go back to the first session
+                        let idx = this.state.sortedList[0].libIndex;
+                        this.props.getSelectedID(idx, res.data);
+                    } else {
+                        let idx = this.state.sortedList[this.state.sortedIndex + 1].libIndex;
+                        this.props.getSelectedID(idx, res.data);
+                    }
+                }
+                if (DatabaseUtil.getOverallStatus(res.data.phasesChecked, res.data.annotationState, this.props.processType)
+                    === AnnotationStatus.COMPLETE) {
+                    this.mapIDLibrary();
                 }
             }).catch((err: any) => {
                 console.error(err);
@@ -371,9 +391,17 @@ class FacePanel extends React.Component<IProps, IState> {
             this.props.restoreImage();
             this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
             if (prev) {
-                this.props.getPreviousID();
+                let idx = this.state.sortedList[this.state.sortedIndex - 1].libIndex;
+                this.props.getSelectedID(idx);
             } else {
-                this.props.getNextID();
+                if (this.state.sortedIndex + 1 === this.state.sortedList.length) {
+                    // go back to the first session
+                    let idx = this.state.sortedList[0].libIndex;
+                    this.props.getSelectedID(idx);
+                } else {
+                    let idx = this.state.sortedList[this.state.sortedIndex + 1].libIndex;
+                    this.props.getSelectedID(idx);
+                }
             }
         }
     }
@@ -390,10 +418,53 @@ class FacePanel extends React.Component<IProps, IState> {
             this.props.restoreID();
             this.props.restoreImage();
             this.props.getSelectedID(index, res.data);
+            if (DatabaseUtil.getOverallStatus(res.data.phasesChecked, res.data.annotationState, this.props.processType)
+                === AnnotationStatus.COMPLETE) {
+                    this.mapIDLibrary();
+                }
             this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
         }).catch((err: any) => {
             console.error(err);
         })
+    }
+
+    mapIDLibrary = () => {
+        return new Promise((res, rej) => {
+            const mappedList = this.props.library.map((each, idx) => {
+                return {
+                    ID: each,
+                    libIndex: idx,
+                    status: DatabaseUtil.getOverallStatus(each.phasesChecked, each.annotationState, this.props.processType)
+                }
+            });
+            const incompleteSessions = mappedList.filter((each) => 
+                DatabaseUtil.getOverallStatus(each.ID.phasesChecked, each.ID.annotationState, this.props.processType) 
+                    === AnnotationStatus.INCOMPLETE);
+            const completeSessions = mappedList.filter((each) => 
+                DatabaseUtil.getOverallStatus(each.ID.phasesChecked, each.ID.annotationState, this.props.processType) 
+                    === AnnotationStatus.COMPLETE);
+            const naSessions = mappedList.filter((each) => 
+                DatabaseUtil.getOverallStatus(each.ID.phasesChecked, each.ID.annotationState, this.props.processType) 
+                    === AnnotationStatus.NOT_APPLICABLE);
+            const sortedList = incompleteSessions.concat(completeSessions).concat(naSessions);
+
+            if (this.state.sortedList.length === sortedList.length) {
+                if (completeSessions.length === this.state.sortedList.filter((each) => each.status === AnnotationStatus.COMPLETE).length) {
+                    return;
+                } else {
+                    this.initializeFirstSortedID(sortedList[0].libIndex);
+                    this.setState({sortedList: sortedList, sortedIndex: 0}, res);
+                }
+            }
+            this.initializeFirstSortedID(sortedList[0].libIndex);
+            this.setState({sortedList: sortedList}, res);
+        })
+    }
+
+    initializeFirstSortedID = (libIndex: number) => {
+        if (this.props.currentIndex !== libIndex) {
+            this.props.getSelectedID(libIndex);
+        }
     }
 
     resetState = () => {
@@ -407,6 +478,12 @@ class FacePanel extends React.Component<IProps, IState> {
             livenessValidation: false,
             faceCompareMatch: undefined
         });
+    }
+
+    handleGetSession = (libIndex: number, sortedIndex: number, status: AnnotationStatus) => {
+        if (status === AnnotationStatus.NOT_APPLICABLE) return;
+        this.loadSelectedID(libIndex);
+        this.setState({sortedIndex: sortedIndex});
     }
 
     render() {
@@ -441,7 +518,8 @@ class FacePanel extends React.Component<IProps, IState> {
 
             return (
                 <SessionDropdown showModal={this.state.showSaveAndQuitModal} toggleModal={toggleModal} 
-                    saveAndQuit={saveAndQuit} loadNextID={load} loadSelectedID={this.loadSelectedID} />
+                    saveAndQuit={saveAndQuit} sortedList={this.state.sortedList} sortedIndex={this.state.sortedIndex}
+                    handleGetSession={this.handleGetSession} />
             );
         }
 
@@ -478,6 +556,7 @@ const mapStateToProps = (state: AppState) => {
         totalIDs: state.general.IDLibrary.length,
         database: state.general.setupOptions.database,
         processType: state.general.setupOptions.processType,
+        library: state.general.IDLibrary,
         currentStage: state.general.currentStage,
         indexedID: state.general.IDLibrary[state.general.currentIndex],
         currentID: state.id,

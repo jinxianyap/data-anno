@@ -29,16 +29,6 @@ export function setImageProps(props: ImageProps): ImageActionTypes {
     }
 }
 
-// export function setIDBox(box: IDBox, croppedImage: File): ImageActionTypes {
-//     return {
-//         type: Action.SET_ID_BOX,
-//         payload: {
-//             IDBox: box,
-//             croppedImage: croppedImage
-//         }
-//     }
-// }
-
 export function setCurrentSymbol(symbol?: string, mapToLandmark?: string): ImageActionTypes {
     return {
         type: Action.SET_CURRENT_SYMBOL,
@@ -58,9 +48,9 @@ export function addLandmarkData(landmark: LandmarkData): ImageActionTypes {
     }
 }
 
-export function clearLandmarkData(): ImageActionTypes {
+export function clearLandmarkPositions(): ImageActionTypes {
     return {
-        type: Action.CLEAR_LANDMARK_DATA
+        type: Action.CLEAR_LANDMARK_POSITIONS
     }
 }
 
@@ -110,6 +100,12 @@ export function updateOCRData(id: number, codeName: string, value: string, posit
             value: value,
             position: position
         }
+    }
+}
+
+export function clearOCRPositions(): ImageActionTypes {
+    return {
+        type: Action.CLEAR_OCR_POSITIONS
     }
 }
 
