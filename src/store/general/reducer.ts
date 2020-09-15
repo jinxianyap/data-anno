@@ -43,57 +43,99 @@ export function generalReducer(
         }
         case Action.GET_PREV_ID: {
             let results = state.saveResults;
+            let currentID = state.IDLibrary[state.currentIndex];
+
             if (state.IDLibrary[state.currentIndex - 1] !== undefined) {
                 state.IDLibrary[state.currentIndex - 1].dirty = true;
             }
             if (action.payload !== undefined) {
                 let idx = results.findIndex((each) => each.sessionID === action.payload!.sessionID);
+                let response = {
+                    sessionID: action.payload.sessionID,
+                    success: action.payload.success
+                }
                 if (idx >= 0) {
-                    results.splice(idx, 1, action.payload);
+                    results.splice(idx, 1, response);
                 } else {
-                    results.push(action.payload);
+                    results.push(response);
+                }
+
+                if (action.payload.annotationState !== undefined) {
+                    currentID.annotationState = action.payload.annotationState;
+                }
+                if (action.payload.phasesChecked !== undefined) {
+                    currentID.phasesChecked = action.payload.phasesChecked;
                 }
             }
             return {
                 ...state,
+                // IDLibrary: state.IDLibrary.splice(state.currentIndex, 1, currentID),
                 saveResults: results,
                 currentIndex: state.currentIndex - 1
             }
         }
         case Action.GET_NEXT_ID: {
             let results = state.saveResults;
+            let currentID = state.IDLibrary[state.currentIndex];
+
             if (state.IDLibrary[state.currentIndex + 1] !== undefined) {
                 state.IDLibrary[state.currentIndex + 1].dirty = true;
             }
             if (action.payload !== undefined) {
                 let idx = results.findIndex((each) => each.sessionID === action.payload!.sessionID);
+                let response = {
+                    sessionID: action.payload.sessionID,
+                    success: action.payload.success
+                }
                 if (idx >= 0) {
-                    results.splice(idx, 1, action.payload);
+                    results.splice(idx, 1, response);
                 } else {
-                    results.push(action.payload);
+                    results.push(response);
+                }
+
+                if (action.payload.annotationState !== undefined) {
+                    currentID.annotationState = action.payload.annotationState;
+                }
+                if (action.payload.phasesChecked !== undefined) {
+                    currentID.phasesChecked = action.payload.phasesChecked;
                 }
             }
             return {
                 ...state,
+                // IDLibrary: state.IDLibrary.splice(state.currentIndex, 1, currentID),
                 saveResults: results,
                 currentIndex: state.currentIndex + 1
             }
         }
         case Action.GET_SELECTED_ID: {
             let results = state.saveResults;
+            let currentID = state.IDLibrary[state.currentIndex];
+
             if (state.IDLibrary[action.payload.index] !== undefined) {
                 state.IDLibrary[action.payload.index].dirty = true;
             }
             if (action.payload.sessionID !== undefined && action.payload.success) {
                 let idx = results.findIndex((each) => each.sessionID === action.payload.sessionID);
+                let response = {
+                    sessionID: action.payload.sessionID,
+                    success: action.payload.success
+                }
                 if (idx >= 0) {
-                    results.splice(idx, 1, {sessionID: action.payload.sessionID, success: action.payload.success});
+                    results.splice(idx, 1, response);
                 } else {
-                    results.push({sessionID: action.payload.sessionID, success: action.payload.success});
+                    results.push(response);
+                }
+
+                if (action.payload.annotationState !== undefined) {
+                    currentID.annotationState = action.payload.annotationState;
+                }
+                if (action.payload.phasesChecked !== undefined) {
+                    currentID.phasesChecked = action.payload.phasesChecked;
                 }
             }
             return {
                 ...state,
+                // IDLibrary: state.IDLibrary.splice(state.currentIndex, 1, currentID),
                 saveResults: results,
                 currentIndex: action.payload.index
             }

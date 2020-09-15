@@ -1,6 +1,6 @@
 import { Action } from "../Actions";
 import { ProcessType, CurrentStage } from "../../utils/enums";
-import { IDState } from "../id/types";
+import { IDState, AnnotationState, PhasesChecked } from "../id/types";
 
 export type SetupOptions = {
     user: string;
@@ -47,14 +47,18 @@ interface GetPreviousID {
     type: typeof Action.GET_PREV_ID;
     payload?: {
         sessionID: string,
-        success: boolean
+        success: boolean,
+        annotationState?: AnnotationState,
+        phasesChecked?: PhasesChecked
     }
 }
 interface GetNextID {
     type: typeof Action.GET_NEXT_ID;
     payload?: {
         sessionID: string,
-        success: boolean
+        success: boolean,
+        annotationState?: AnnotationState,
+        phasesChecked?: PhasesChecked
     }
 }
 
@@ -63,7 +67,9 @@ interface GetSelectedID {
     payload: {
         index: number,
         sessionID?: string,
-        success?: boolean
+        success?: boolean,
+        annotationState?: AnnotationState,
+        phasesChecked?: PhasesChecked
     }
 }
 

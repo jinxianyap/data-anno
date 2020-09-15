@@ -33,21 +33,39 @@ export function loadFromDatabase(IDs: IDState[]): GeneralActionTypes {
 export function getPreviousID(res?: any): GeneralActionTypes {
     return {
         type: Action.GET_PREV_ID,
-        payload: res !== undefined ? {sessionID: res.sessionID, success: res.success} : undefined
+        payload: res !== undefined ? {
+            sessionID: res.sessionID, 
+            success: res.success, 
+            annotationState: 
+            res.annotationState, 
+            phasesChecked: res.phasesChecked
+        } : undefined
     }
 }
 
 export function getNextID(res?: any): GeneralActionTypes {
     return {
         type: Action.GET_NEXT_ID,
-        payload: res !== undefined ? {sessionID: res.sessionID, success: res.success} : undefined
+        payload: res !== undefined ? {
+            sessionID: res.sessionID, 
+            success: res.success, 
+            annotationState: 
+            res.annotationState, 
+            phasesChecked: res.phasesChecked
+        } : undefined
     }
 }
 
 export function getSelectedID(index: number, res?: any): GeneralActionTypes {
     return {
         type: Action.GET_SELECTED_ID,
-        payload: res !== undefined ? {sessionID: res.sessionID, success: res.success, index: index} : {index: index}
+        payload: res !== undefined ? {
+            sessionID: res.sessionID, 
+            success: res.success, 
+            index: index,
+            annotationState: res.annotationState, 
+            phasesChecked: res.phasesChecked
+        } : {index: index}
     }
 }
 

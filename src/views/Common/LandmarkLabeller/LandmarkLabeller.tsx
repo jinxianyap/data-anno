@@ -7,6 +7,7 @@ import { addLandmarkData, deleteLandmarkPosition, updateOCRData, setCurrentSymbo
 import { AppState } from '../../../store';
 import { CurrentStage } from '../../../utils/enums';
 import './LandmarkLabeller.scss';
+import { GeneralUtil } from '../../../utils/GeneralUtil';
 
 interface IProps {
     currentStage: CurrentStage;
@@ -36,6 +37,7 @@ interface IState {
     ymargin: number,
     ratio: number,
 
+    mapFocusLandmark?: string,
     isDrawing: boolean,
     isResizing: boolean,
     resizingBox?: number,
@@ -48,6 +50,7 @@ interface IState {
 
     landmarkBoxes: Box[],
     drawnLandmarks: string[],
+    // landmarkAction: number, // -1 represents deletion, 1 for addition, 0 for moving/resizing
 
     ocrBoxes: Box[],
     drawnOCRs: {
@@ -113,45 +116,20 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
     }
 
     componentDidUpdate(previousProps: IProps, previousState: IState) {
-        if (previousProps !== this.props && this.state.map !== undefined) {
+        const rerender = () => {
             if (this.props.currentStage === CurrentStage.OCR_EDIT) {
                 this.renderCommittedLandmarks(true);
                 this.renderCommittedOCRs();
             } else {
-                this.renderCommittedLandmarks();
-                this.renderCommittedOCRs(true);
+                    this.renderCommittedLandmarks();
+                    this.renderCommittedOCRs(true);
             }
         }
-        if (previousProps.currentStage !== this.props.currentStage) {
-            // switch (this.props.currentStage) {
-            //     case (CurrentStage.OCR_EDIT): {
-            //         this.renderCommittedOCRs();
-            //         break;
-            //     }
-            //     case (CurrentStage.OCR_DETAILS): {
-            //         if (previousProps.currentStage !== CurrentStage.OCR_EDIT) {
-            //             this.renderCommittedLandmarks();
-            //         }
-            //         this.renderCommittedOCRs();
-            //         break;
-            //     }
-            //     case (CurrentStage.LANDMARK_EDIT): {
-            //         this.renderCommittedLandmarks();
-            //         break;
-            //     }
-            // }
-        } else {
-            if (this.props.currentStage === CurrentStage.OCR_EDIT) {
-                if (this.state.map !== undefined) {
-                    if (this.props.currentSymbol !== undefined && this.props.ocrToLandmark !== undefined) {
-                        this.focusMap(true);
-                    } else {
-                        this.focusMap(false);
-                    }
-                }
-            }
+        if (previousProps.currentStage !== this.props.currentStage && this.state.map !== undefined) {
+            rerender();
         }
-        if (previousProps.currentSymbol !== this.props.currentSymbol || previousProps.currentWord !== this.props.currentWord) {
+        if ((previousProps.currentSymbol !== this.props.currentSymbol || previousProps.currentWord !== this.props.currentWord)
+            && this.state.map !== undefined) {
             this.setState({
                 isDrawing: false,
                 isResizing: false,
@@ -162,7 +140,19 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                     codeName: '',
                     position: {}
                 }
-            })
+            });
+            rerender();
+        }
+        if (previousProps.currentStage === this.props.currentStage)  {
+            if (this.props.currentStage === CurrentStage.OCR_EDIT) {
+                if (this.state.map !== undefined) {
+                    if (this.props.currentSymbol !== undefined && this.props.ocrToLandmark !== undefined) {
+                        this.focusMap(true);
+                    } else {
+                        this.focusMap(false);
+                    }
+                }
+            }
         }
     }
 
@@ -252,9 +242,10 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
         let box = this.getLandmarkFromOCR(this.props.ocrToLandmark);
 
-        if (box !== undefined && map.hasLayer(box.rectangle!)) {
+        if (box !== undefined && map.hasLayer(box.rectangle!) && this.state.mapFocusLandmark !== box.codeName) {
             map.panTo(box.rectangle!.getCenter());
             map.fitBounds(box.rectangle!.getBounds());
+            this.setState({mapFocusLandmark: box.codeName});
         }
     }
 
@@ -263,10 +254,10 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         let drawnLandmarks: string[] = [];
 
         if (this.state.landmarkBoxes.length > 0) {
-            this.state.landmarkBoxes.forEach((each) => this.removeMapElements(each))
+            this.state.landmarkBoxes.forEach((each) => this.removeMapElements(each));
         };
-
         let landmarks = this.props.committedLandmarks;
+        console.log(landmarks);
         landmarks.forEach((landmark: LandmarkData) => {
             if (landmark.position !== undefined) {
                 if (ocrOnly) {
@@ -1258,7 +1249,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
     }
 
     deleteLandmarkBox = (e: any) => {
-        let boxIndex = this.withinLandmarkRectangleBounds(e)!;
+        let boxIndex = this.withinLandmarkRectangleBounds(e);
 
         if (boxIndex === undefined) return;
         if (this.state.landmarkBoxes[boxIndex].display) return;
@@ -1271,7 +1262,8 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         drawn.splice(index, 1);
         let boxes = this.state.landmarkBoxes;
         boxes.splice(index, 1);
-        this.setState({landmarkBoxes: boxes, drawnLandmarks: drawn, isDrawing: false, isMoving: false, isResizing: false}, () => {this.props.deleteLandmarkPosition(codeName)});
+        this.props.deleteLandmarkPosition(codeName);
+        this.setState({landmarkBoxes: boxes, drawnLandmarks: drawn, isDrawing: false, isMoving: false, isResizing: false});
     }
 
     deleteOcrBox = (e: any) => {

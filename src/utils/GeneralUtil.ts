@@ -1,3 +1,4 @@
+import { Position } from "../store/image/types";
 
 
 export class GeneralUtil {
@@ -22,5 +23,18 @@ export class GeneralUtil {
         } else {
             document.getElementById('overlay')!.classList.remove('show');
         }
+    }
+
+    public static arePositionsEqual(first?: Position, second?: Position): boolean {
+        if (first === undefined && second === undefined) return true;
+        if (first === undefined || second === undefined) return false;
+        return first.x1 === second.x1
+            && first.x2 === second.x2
+            && first.x3 === second.x3
+            && first.x4 === second.x4
+            && first.y1 === second.y1
+            && first.y2 === second.y2
+            && first.y3 === second.y3
+            && first.y4 === second.y4;
     }
 }

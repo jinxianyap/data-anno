@@ -73,10 +73,9 @@ export function imageReducer(
 
         case Action.ADD_LANDMARK_DATA: {
             let landmarks = state.landmark;
-            // let landmarks: LandmarkData[] = [];
 
             for (var j = 0; j < landmarks.length; j++) {
-                if (landmarks[j].name === action.payload.landmark.name) {
+                if (landmarks[j].codeName === action.payload.landmark.codeName) {
                     landmarks.splice(j, 1);
                 }
             } 
@@ -100,7 +99,7 @@ export function imageReducer(
             let landmarks = state.landmark;
 
             for (var k = 0; k < landmarks.length; k++) {
-                if (landmarks[k].name === action.payload.landmark) {
+                if (landmarks[k].codeName === action.payload.landmark) {
                     let landmark = landmarks[k];
                     landmark.position = undefined
                     landmarks.splice(k, 1, landmark);

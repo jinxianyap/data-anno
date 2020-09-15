@@ -24,3 +24,12 @@
         padding: 0.3rem 0.7rem;
     }
 }
+
+.session-list {
+    overflow-y: auto;
+    max-height: 50vh;
+}
+
+.current-item {
+    border: 1px solid royalblue;
+}

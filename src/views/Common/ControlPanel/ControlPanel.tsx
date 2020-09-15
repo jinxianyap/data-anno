@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { CurrentStage, IDProcess, ProcessType } from '../../../utils/enums';
+import { CurrentStage, IDProcess, ProcessType, AnnotationStatus } from '../../../utils/enums';
 import { AppState } from '../../../store';
 import { Form, Modal, Button, ButtonGroup, ToggleButton, ToggleButtonGroup, Card, Accordion, Spinner } from 'react-bootstrap';
 import options from '../../../options.json';
@@ -19,6 +19,7 @@ const axios = require('axios');
 
 interface IProps {
     database: string;
+    library: IDState[];
     processType: ProcessType;
     currentStage: CurrentStage;
     currentIndex: number;
@@ -70,7 +71,8 @@ interface IProps {
 }
 
 interface IState {
-    // ownStage: CurrentStage;
+    sortedList: {ID: IDState, libIndex: number, status: AnnotationStatus}[];
+    sortedIndex: number;
     showSaveAndQuitModal: boolean;
     // Seg Check
     loadedSegCheckImage: boolean;
@@ -151,8 +153,10 @@ class ControlPanel extends React.Component<IProps, IState> {
     constructor(props: IProps) {
         super(props);
         this.state = {
+            sortedList: [],
+            sortedIndex: 0,
+
             showSaveAndQuitModal: false,
-            // ownStage: CurrentStage.SEGMENTATION_CHECK,
             loadedSegCheckImage: false,
             showAddDocTypeModal: false,
             documentTypes: [],
@@ -440,26 +444,74 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     componentDidMount() {
         if (this.props.currentStage === CurrentStage.SEGMENTATION_CHECK) {
-            GeneralUtil.toggleOverlay(true);
-            axios.post('/loadSessionData', {
-                database: this.props.database,
-                date: this.props.indexedID.dateCreated,
-                sessionID:  this.props.indexedID.sessionID
-            }).then((res: any) => {
-                if (res.status === 200) {
-                    DatabaseUtil.loadSessionData(res.data, this.props.indexedID)
-                    .then((completeID) => {
-                        this.props.loadNextID(completeID);
-                        this.loadSegCheckData();
-                        this.initializeSegCheckData();
-                        GeneralUtil.toggleOverlay(false);
-                    })
-                }
-            }).catch((err: any) => {
-                console.error(err);
-                GeneralUtil.toggleOverlay(false);
+            this.mapIDLibrary().then(() => {
+                GeneralUtil.toggleOverlay(true);
+                axios.post('/loadSessionData', {
+                    database: this.props.database,
+                    date: this.props.indexedID.dateCreated,
+                    sessionID:  this.props.indexedID.sessionID
+                }).then((res: any) => {
+                    if (res.status === 200) {
+                        DatabaseUtil.loadSessionData(res.data, this.props.indexedID)
+                        .then((completeID) => {
+                            this.props.loadNextID(completeID);
+                            this.loadSegCheckData();
+                            this.initializeSegCheckData();
+                            GeneralUtil.toggleOverlay(false);
+                        })
+                    }
+                }).catch((err: any) => {
+                    console.error(err);
+                    GeneralUtil.toggleOverlay(false);
+                });
             });
         }
+    }
+
+    mapIDLibrary = () => {
+        console.log('map shith0ththth');
+        return new Promise((res, rej) => {
+            const mappedList = this.props.library.map((each, idx) => {
+                return {
+                    ID: each,
+                    libIndex: idx,
+                    status: DatabaseUtil.getOverallStatus(each.phasesChecked, each.annotationState, this.props.processType)
+                }
+            });
+            const incompleteSessions = mappedList.filter((each) => 
+                DatabaseUtil.getOverallStatus(each.ID.phasesChecked, each.ID.annotationState, this.props.processType) 
+                    === AnnotationStatus.INCOMPLETE);
+            const completeSessions = mappedList.filter((each) => 
+                DatabaseUtil.getOverallStatus(each.ID.phasesChecked, each.ID.annotationState, this.props.processType) 
+                    === AnnotationStatus.COMPLETE);
+            const naSessions = mappedList.filter((each) => 
+                DatabaseUtil.getOverallStatus(each.ID.phasesChecked, each.ID.annotationState, this.props.processType) 
+                    === AnnotationStatus.NOT_APPLICABLE);
+            const sortedList = incompleteSessions.concat(completeSessions).concat(naSessions);
+
+            if (this.state.sortedList.length === sortedList.length) {
+                if (completeSessions.length === this.state.sortedList.filter((each) => each.status === AnnotationStatus.COMPLETE).length) {
+                    return;
+                } else {
+                    this.initializeFirstSortedID(sortedList[0].libIndex);
+                    this.setState({sortedList: sortedList, sortedIndex: 0}, res);
+                }
+            }
+            this.initializeFirstSortedID(sortedList[0].libIndex);
+            this.setState({sortedList: sortedList}, res);
+        })
+    }
+
+    initializeFirstSortedID = (libIndex: number) => {
+        if (this.props.currentIndex !== libIndex) {
+            this.props.getSelectedID(libIndex);
+        }
+    }
+
+    handleGetSession = (libIndex: number, sortedIndex: number, status: AnnotationStatus) => {
+        if (status === AnnotationStatus.NOT_APPLICABLE) return;
+        this.loadSelectedID(libIndex, this.props.currentStage === CurrentStage.SEGMENTATION_CHECK);
+        this.setState({sortedIndex: sortedIndex});
     }
 
     loadSegCheckImage = () => {
@@ -561,11 +613,14 @@ class ControlPanel extends React.Component<IProps, IState> {
                 if (this.props.currentID.givenData.originalID !== undefined && this.props.currentID.givenData.originalID.segmentation !== undefined) {
                     let seg = this.props.currentID.givenData.originalID.segmentation;
                     if (this.props.currentID.internalIDs.length === 0) {
-                        seg.forEach((each) => {
+                        let docTypes: {id: number, value: string}[] = [];
+                        seg.forEach((each, idx) => {
                             if (each !== undefined) {
-                                this.props.createNewID(each.IDBox, each.passesCrop, each.documentType)
+                                docTypes.push({ id: idx, value: each!.documentType });
+                                this.props.createNewID(each.IDBox, each.passesCrop, each.documentType);
                             }
                         });
+                        this.setState({selectedDocumentTypes: docTypes});
                     }
                 }
             }
@@ -1183,9 +1238,13 @@ class ControlPanel extends React.Component<IProps, IState> {
         const setDocType = (e: any, id: number) => {
             let docs = this.state.selectedDocumentTypes;
             let index = docs.findIndex((each) => each.id === id);
-            let doc = docs[index];
-            doc.value = e.target.value;
-            docs.splice(index, 1, doc);
+            if (index === -1) {
+                docs.push({id: id, value: e.target.value});
+            } else {
+                let doc = docs[index];
+                doc.value = e.target.value;
+                docs.splice(index, 1, doc);
+            }
             this.setState({selectedDocumentTypes: docs});
         }
 
@@ -1203,9 +1262,20 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
 
         const submitDocTypes = () => {
-            this.state.selectedDocumentTypes.forEach((each) => {
-                this.props.saveDocumentType(each.id, each.value);
-            });
+            if (this.state.selectedDocumentTypes.length < this.props.currentID.internalIDs.length) {
+                this.props.currentID.internalIDs.forEach((each, idx) => {
+                    let selected = this.state.selectedDocumentTypes.find((doc) => doc.id === idx);
+                    if (selected === undefined) {
+                        this.props.saveDocumentType(idx, 'MyKad');
+                    } else {
+                        this.props.saveDocumentType(selected.id, selected.value);
+                    }
+                });
+            } else {
+                this.state.selectedDocumentTypes.forEach((each) => {
+                    this.props.saveDocumentType(each.id, each.value);
+                });
+            }
             this.setState({selectedDocumentTypes: []});
         }
 
@@ -1465,16 +1535,17 @@ class ControlPanel extends React.Component<IProps, IState> {
 
             let currentOCR = this.state.currentOCR;
             refs.forEach((each, idx) => {
+                let terms = each.ref.value.split(' ').filter((each: string) => each.length > 0);
                 let ocr: OCRData = {
                     id: idx,
                     type: 'OCR',
                     name: each.name,
                     codeName: each.codeName,
                     mapToLandmark: each.mapToLandmark,
-                    labels: each.ref.value.split(' ').map((each: string, idx: number) => {
+                    labels: terms.map((each: string, idx: number) => {
                         return {id: idx, value: each};
                     }),
-                    count: each.ref.value.split(' ').length
+                    count: terms.length
                 };
                 
                 if (currentOCR.find((ocr) => ocr.codeName === each.codeName)!.value !== each.ref.value) {
@@ -1656,7 +1727,16 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
 
         const submitLiveness = () => {
-            this.props.updateVideoData(this.state.passesLiveness!, this.state.selectedVideoFlags);
+            if (this.state.passesLiveness !== undefined && this.state.passesLiveness !== this.props.currentID.videoLiveness) {
+                this.props.updateVideoData(this.state.passesLiveness!, this.state.selectedVideoFlags);
+            } else {
+                if (this.props.processType === ProcessType.LIVENESS || this.props.internalID === undefined || 
+                    (this.props.internalID && this.props.internalID.originalID!.croppedImage!.name === 'notfound')) {
+                    this.loadNextID(false);
+                } else {
+                    this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
+                }
+            }
         }
 
         return (
@@ -1777,12 +1857,27 @@ class ControlPanel extends React.Component<IProps, IState> {
             ID: DatabaseUtil.extractOutput(id, this.props.processType === ProcessType.FACE),
             overwrite: true
         }).then((res: any) => {
+            // console.log(res);
             this.props.restoreID();
             this.props.restoreImage();
             if (prev) {
-                this.props.getPreviousID(res.data);
+                // this.props.getPreviousID(res.data);
+                let idx = this.state.sortedList[this.state.sortedIndex - 1].libIndex;
+                this.props.getSelectedID(idx, res.data);
             } else {
-                this.props.getNextID(res.data);
+                if (this.state.sortedIndex + 1 === this.state.sortedList.length) {
+                    // go back to the first session
+                    let idx = this.state.sortedList[0].libIndex;
+                    this.props.getSelectedID(idx, res.data);
+                } else {
+                    let idx = this.state.sortedList[this.state.sortedIndex + 1].libIndex;
+                    this.props.getSelectedID(idx, res.data);
+                }
+                // this.props.getNextID(res.data);
+            }
+            if (DatabaseUtil.getOverallStatus(res.data.phasesChecked, res.data.annotationState, this.props.processType)
+                === AnnotationStatus.COMPLETE) {
+                this.mapIDLibrary();
             }
             this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
         }).catch((err: any) => {
@@ -1807,10 +1902,24 @@ class ControlPanel extends React.Component<IProps, IState> {
             this.props.restoreID();
             this.props.restoreImage();
             this.props.getSelectedID(index, res.data);
+            if (DatabaseUtil.getOverallStatus(res.data.phasesChecked, res.data.annotationState, this.props.processType)
+                === AnnotationStatus.COMPLETE) {
+                    this.mapIDLibrary();
+                }
             this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
         }).catch((err: any) => {
             console.error(err);
         })
+    }
+
+
+    loadSelectedIDWithoutSaving = (index: number) => {
+        if (index === this.props.currentIndex) return;
+        this.resetState();
+        this.props.restoreID();
+        this.props.restoreImage();
+        this.props.getSelectedID(index);
+        this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
     }
 
     resetState = () => {
@@ -1881,6 +1990,8 @@ class ControlPanel extends React.Component<IProps, IState> {
 
         const showIndex = () => {
             switch (this.props.currentStage) {
+                // case (CurrentStage.SEGMENTATION_CHECK):
+                // case (CurrentStage.SEGMENTATION_EDIT):
                 case (CurrentStage.LANDMARK_EDIT):
                 case (CurrentStage.OCR_DETAILS):
                 case (CurrentStage.OCR_EDIT):
@@ -1891,7 +2002,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                         </div>
                     );
                 }
-                case (CurrentStage.SEGMENTATION_CHECK):
+                // case (CurrentStage.SEGMENTATION_CHECK):
                 case (CurrentStage.SEGMENTATION_EDIT): {
                     if (this.props.internalID !== undefined && this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
                         return (
@@ -1902,6 +2013,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                         ); 
                     }
                 }
+                default: return <div />;
             }
         }
 
@@ -1920,7 +2032,9 @@ class ControlPanel extends React.Component<IProps, IState> {
 
             return (
                 <SessionDropdown showModal={this.state.showSaveAndQuitModal} toggleModal={toggleModal} 
-                    saveAndQuit={saveAndQuit} loadNextID={this.loadNextID} loadSelectedID={this.loadSelectedID} />
+                    saveAndQuit={saveAndQuit} sortedList={this.state.sortedList} sortedIndex={this.state.sortedIndex}
+                    loadSelectedID={this.loadSelectedID} loadWithoutSaving={this.loadSelectedIDWithoutSaving} 
+                    handleGetSession={this.handleGetSession} />
             );
         }
 
@@ -1969,6 +2083,7 @@ const mapDispatchToProps = {
 
 const mapStateToProps = (state: AppState) => {
     return {
+        library: state.general.IDLibrary,
         currentIndex: state.general.currentIndex,
         totalIDs: state.general.IDLibrary.length,
         database: state.general.setupOptions.database,

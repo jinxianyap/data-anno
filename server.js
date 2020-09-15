@@ -778,7 +778,6 @@ app.post('/loadSessionData', async (req, res) => {
         let dateOutputPath = outputPath + date + "/";
         let jsonFilename = sessionID + ".json";
         let dateOutputFiles = fs.readdirSync(dateOutputPath);
-        
         if (dateOutputFiles && dateOutputFiles.includes(jsonFilename)) {
             try {
                 let jsonData = fs.readFileSync(dateOutputPath + jsonFilename);
@@ -789,7 +788,7 @@ app.post('/loadSessionData', async (req, res) => {
                 }
             } catch (err) {
                 // console.error(err);
-                session.raw_data = csvData;
+                // session.raw_data = csvData;
             }
         }
     }
@@ -881,6 +880,7 @@ app.post('/saveOutput', async (req, res) => {
     let topLevel = testFolder + "annotation_output/"
     let route = topLevel + database + "/";
 
+    // creating required folders if not present
     let dbs = fs.readdirSync(topLevel);
     if (dbs) {
         if (!dbs.includes(database)) {
@@ -912,22 +912,31 @@ app.post('/saveOutput', async (req, res) => {
                     });
                 }
                 try {
-                    let sessionRoute = dateRoute + ID.sessionID + ".json";
+                    let sessionOutputRoute = dateRoute + ID.sessionID + ".json";
                     ID.lastModified = (new Date()).toLocaleString();
                     try {
                         let sessions = fs.readdirSync(dateRoute);
+                        let sessionImageRoute = testFolder + database + "/images/" + ID.dateCreated + "/" + ID.sessionID + "/";
+
+                        // json already exists
                         if (sessions.includes(ID.sessionID + ".json")) {
-                            let data = fs.readFileSync(sessionRoute);
+                            let data = fs.readFileSync(sessionOutputRoute);
                             let initialData = JSON.parse(data);
                             let updatedData = mergeJSONData(initialData, ID);
-                            console.log(updatedData);
+
                             console.log("merge " + ID.sessionID);
-                            fs.writeFileSync(sessionRoute, JSON.stringify(updatedData), 'utf8');
-                            res({sessionID: ID.sessionID, success: true});
+                            fs.writeFileSync(sessionOutputRoute, JSON.stringify(updatedData), 'utf8');
+                            
+                            let result = evaluateSessionState(sessionImageRoute, ID.sessionID, true, updatedData);
+                            result.success = true;
+                            res(result);
                         } else {
+                            // first time annotation
                             console.log("new file " + ID.sessionID);
-                            fs.writeFileSync(sessionRoute, JSON.stringify(ID), 'utf8');
-                            res({sessionID: ID.sessionID, success: true})
+                            fs.writeFileSync(sessionOutputRoute, JSON.stringify(ID), 'utf8');
+                            let result = evaluateSessionState(sessionImageRoute, ID.sessionID, true, ID);
+                            result.success = true;
+                            res(result);
                         }
                     } catch(err) {
                         throw err;

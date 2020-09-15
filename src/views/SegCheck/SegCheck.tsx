@@ -251,9 +251,21 @@ class SegCheck extends React.Component<IProps, IState> {
     }
 
     render() {
+        const showIndex = () => {
+            if (this.props.currentID !== undefined && this.props.currentID.internalIDs[this.props.currentID.internalIndex] !== undefined
+                && this.props.currentID.internalIDs[this.props.currentID.internalIndex].processStage === IDProcess.MYKAD_BACK) {
+                return (
+                    <div id="backTitle">
+                        <p>Internal ID {(this.props.currentID.internalIndex + 1).toString() + " of " + this.props.currentID.internalIDs.length.toString()}</p>
+                        <p>MyKad Back</p>
+                    </div>
+                ); 
+            }
+        }
         return (
             <Container style={{height: "100%"}}>
-                <Row style={{height: "100%", padding: "4rem 0"}}>
+                {showIndex()}
+                <Row style={{height: "100%", padding: "2rem 0"}}>
                     <Col xs={6} style={{maxHeight: "100%"}}>
                         <div className="segCheckTools">
                             <p>Original</p>

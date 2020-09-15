@@ -17,14 +17,18 @@ interface IProps {
     endDate: Date,
     showModal: boolean,
     processType: ProcessType,
+    sortedList: {ID: IDState, libIndex: number, status: AnnotationStatus}[],
+    sortedIndex: number, 
     toggleModal: (show: boolean) => void,
     saveAndQuit: () => void,
     loadNextID: (prev: boolean, beforeSegCheckDone?: boolean) => void,
     loadSelectedID: (index: number, beforeSegCheckDone?: boolean) => void,
+    loadWithoutSaving: (index: number) => void,
+    handleGetSession: (libIndex: number, sortedIndex: number, status: AnnotationStatus) => void;
 }
 
 interface IState {
-    showSessionsModal: boolean
+    showSessionsModal: boolean, 
 }
 
 class SessionDropdown extends React.Component<IProps, IState> {
@@ -32,18 +36,25 @@ class SessionDropdown extends React.Component<IProps, IState> {
     constructor(props: IProps) {
         super(props);
         this.state = {
-            showSessionsModal: false
+            showSessionsModal: false,
         }
-        // this.overallStatus = {}
+    }
+
+    componentWillReceiveProps(props: IProps) {
+        console.log(props);
+    }
+
+    componentDidMount() {
+        // this.mapIDLibrary();
+    }
+
+    componentDidUpdate(previousProps: IProps) {
+
     }
 
     getSessionsModal = () => {
-        const handleSessionClick = (idx: number, status: AnnotationStatus) => {
-            if (status === AnnotationStatus.NOT_APPLICABLE) return;
-            this.props.loadSelectedID(idx, this.props.currentStage === CurrentStage.SEGMENTATION_CHECK);
-            this.setState({showSessionsModal: false});
-        }
-
+        // console.log(this.props.sortedIndex);
+        // console.log(this.props.sortedList);
         return (
             <Modal show={this.state.showSessionsModal} onHide={() => this.setState({showSessionsModal: false})}>
                 <Modal.Header closeButton>
@@ -54,17 +65,17 @@ class SessionDropdown extends React.Component<IProps, IState> {
                     <p>Start Date: {DatabaseUtil.dateToString(this.props.startDate)}</p>
                     <p>End Date: {DatabaseUtil.dateToString(this.props.endDate)}</p>
                     <p>Sessions Loaded: {this.props.library.length}</p>
-                    <ListGroup>
+                    <ListGroup className="session-list" key={this.props.sortedList.map((each) => each.libIndex).join('')}>
                         {
-                            this.props.library.map((each, idx) => {
-                                let status = DatabaseUtil.getOverallStatus(each.phasesChecked, each.annotationState, this.props.processType);
+                            this.props.sortedList.map((each, idx) => {
                                 let variant = "dark";
-                                if (status === AnnotationStatus.INCOMPLETE) variant = "primary";
-                                if (status === AnnotationStatus.NOT_APPLICABLE) variant = "light";
+                                if (each.status === AnnotationStatus.INCOMPLETE) variant = "primary";
+                                if (each.status === AnnotationStatus.NOT_APPLICABLE) variant = "light";
+                                let itemClass = this.props.currentIndex === each.libIndex ? "current-item" : "";
                                 return (
-                                    <ListGroup.Item action={status!==AnnotationStatus.NOT_APPLICABLE} variant={variant} key={idx} 
-                                    onClick={() => handleSessionClick(idx, status)}>
-                                        {each.sessionID}
+                                    <ListGroup.Item action={each.status !== AnnotationStatus.NOT_APPLICABLE} variant={variant} key={this.props.sortedIndex + '' + idx} 
+                                    onClick={() => this.setState({showSessionsModal: false}, () => this.props.handleGetSession(each.libIndex, idx, each.status))} className={itemClass}>
+                                        {each.ID.sessionID}
                                     </ListGroup.Item>
                                 )
                             })
@@ -81,18 +92,25 @@ class SessionDropdown extends React.Component<IProps, IState> {
     }
 
     render() {
+        const loadNextID = (prev: boolean) => {
+            let sortedIndex = this.props.sortedList.findIndex((each) => each.ID.index === this.props.currentIndex);
+            if (sortedIndex === undefined || sortedIndex === -1) return;
+            let sortedEntry = this.props.sortedList[prev ? sortedIndex - 1 : sortedIndex + 1];
+            if (sortedEntry === undefined) return;
+            this.props.handleGetSession(sortedEntry.libIndex, prev ? sortedIndex - 1 : sortedIndex + 1, sortedEntry.status);
+        }
         return (
             <div id="folder-number">
                 <ButtonGroup>
                     <Button variant="light" 
-                        onClick={() => this.props.loadNextID(true, this.props.currentStage === CurrentStage.SEGMENTATION_CHECK)}
-                        disabled={this.props.currentIndex === 0} 
+                        onClick={() => loadNextID(true)}
+                        disabled={this.props.sortedIndex === 0} 
                         className="nav-button"><GrFormPrevious /></Button>
                     <Button variant="light" onClick={() => this.setState({showSessionsModal: true})}>
-                        Session:   {this.props.currentIndex + 1}/{this.props.library.length}</Button>
+                        Sessions:   {this.props.library.length}</Button>
                     <Button variant="light" 
-                        onClick={() => this.props.loadNextID(false, this.props.currentStage === CurrentStage.SEGMENTATION_CHECK)}
-                        disabled={this.props.currentIndex + 1 === this.props.library.length}
+                        onClick={() => loadNextID(false)}
+                        disabled={this.props.sortedIndex + 1 === this.props.sortedList.length}
                         className="nav-button"><GrFormNext /></Button>
                 </ButtonGroup>
                 <Button variant="secondary" id="quit-button" onClick={() => this.props.toggleModal(true)}>Quit</Button>
@@ -132,8 +150,11 @@ const mapStateToProps = (state: AppState, ownProps: any) => {
         showModal: ownProps.showModal,
         toggleModal: ownProps.toggleModal,
         saveAndQuit: ownProps.saveAndQuit,
-        loadNextID: ownProps.loadNextID,
-        loadSelectedID: ownProps.loadSelectedID
+        loadSelectedID: ownProps.loadSelectedID,
+        loadWithoutSaving: ownProps.loadWithoutSaving,
+        handleGetSession: ownProps.handleGetSession,
+        sortedList: ownProps.sortedList,
+        sortedIndex: ownProps.sortedIndex,
     }
 };
 
