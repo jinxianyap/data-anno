@@ -2,6 +2,7 @@ import { IDState, IDActionTypes, InternalIDState } from './types';
 import { Action } from '../Actions';
 import { IDProcess, Rotation } from '../../utils/enums';
 import { ImageState, IDBox } from '../image/types';
+import { GeneralUtil } from '../../utils/GeneralUtil';
 
 const axios = require('axios');
 
@@ -55,8 +56,8 @@ export function IDReducer(
                 ...action.payload.ID,
                 internalIndex: 0,
                 internalIDs: action.payload.ID.internalIDs.map((each) => {
-                    if (each.processStage === IDProcess.MYKAD_BACK) {
-                        each.processStage = IDProcess.MYKAD_FRONT;
+                    if (each.processStage === IDProcess.DOUBLE_BACK) {
+                        each.processStage = IDProcess.DOUBLE_FRONT;
                     }
                     return each;
                 }),
@@ -64,13 +65,14 @@ export function IDReducer(
             }
         }
         case Action.CREATE_NEW_ID: {
+            let docType = action.payload.documentType !== undefined ? action.payload.documentType : 'MyKad';
             let ID: InternalIDState = {
                 processed: false,
                 source: state.sessionID,
                 originalID: cloneImageState(state.originalID!, action.payload.IDBox, action.payload.passesCrop),
                 backID: cloneImageState(state.backID!),
-                documentType: action.payload.documentType !== undefined ? action.payload.documentType : 'MyKad',
-                processStage: IDProcess.MYKAD_FRONT,
+                documentType: docType,
+                processStage: GeneralUtil.getInitialIDProcess(docType)
             }
             let IDs = state.internalIDs;
             console.log(action.payload.IDBox);
@@ -123,7 +125,7 @@ export function IDReducer(
             }
         }
         case Action.SET_ID_BOX: {
-            if (state.internalIDs[state.internalIndex].processStage === IDProcess.MYKAD_BACK) {
+            if (state.internalIDs[state.internalIndex].processStage === IDProcess.DOUBLE_BACK) {
                 let IDs = state.internalIDs;
                 let internalID = IDs[state.internalIndex];
                 internalID.backID!.IDBox = action.payload.IDBox;
@@ -166,11 +168,9 @@ export function IDReducer(
         case Action.SAVE_DOCUMENT_TYPE: {
             let IDs = state.internalIDs;
             let internalID = state.internalIDs[action.payload.internalIndex];
-            let stage = IDProcess.OTHER;
-            if (action.payload.documentType === 'MyKad') {
-                stage = internalID.processStage === IDProcess.MYKAD_BACK ? IDProcess.MYKAD_BACK : IDProcess.MYKAD_FRONT;
-            } else if (action.payload.documentType === 'Passport') {
-                stage = IDProcess.PASSPORT;
+            let stage = GeneralUtil.getInitialIDProcess(action.payload.documentType);
+            if (stage === IDProcess.DOUBLE_FRONT) {
+                stage = internalID.processStage === IDProcess.DOUBLE_BACK ? IDProcess.DOUBLE_BACK : IDProcess.DOUBLE_FRONT;
             }
             internalID.documentType = action.payload.documentType;
             internalID.processStage = stage;
@@ -190,7 +190,7 @@ export function IDReducer(
             }
         }
         case Action.SET_IMAGE_ROTATION: {
-            if (state.originalIDProcessed && state.internalIDs[state.internalIndex].processStage === IDProcess.MYKAD_BACK) {
+            if (state.originalIDProcessed && state.internalIDs[state.internalIndex].processStage === IDProcess.DOUBLE_BACK) {
                 state.backIDRotation = action.payload.idRotation;
                 state.backID!.image = action.payload.id;
                 if (state.givenData !== undefined && state.givenData.backID !== undefined) {
@@ -209,7 +209,7 @@ export function IDReducer(
                     }
                 }
             } else if (!state.originalIDProcessed ||
-                (state.internalIDs[state.internalIndex] !== undefined && state.internalIDs[state.internalIndex].processStage !== IDProcess.MYKAD_BACK)) {
+                (state.internalIDs[state.internalIndex] !== undefined && state.internalIDs[state.internalIndex].processStage !== IDProcess.DOUBLE_BACK)) {
                 state.originalIDRotation = action.payload.idRotation;
                 state.originalID!.image = action.payload.id;
                 if (state.givenData !== undefined && state.givenData.originalID !== undefined) {
@@ -241,16 +241,16 @@ export function IDReducer(
             let IDs = state.internalIDs;
             let internalID = state.internalIDs[state.internalIndex];
             let backIds = 0;
-            if (internalID.processStage === IDProcess.MYKAD_BACK) {
+            if (internalID.processStage === IDProcess.DOUBLE_BACK) {
                 internalID.backID = action.payload.imageState;
-                internalID.processStage = IDProcess.MYKAD_FRONT;
+                internalID.processStage = IDProcess.DOUBLE_FRONT;
                 state.processed = state.backIDsProcessed + 1 === state.internalIDs.length;
                 backIds = state.backIDsProcessed + 1;
                 internalID.processed = true;
             } else {
                 internalID.originalID = action.payload.imageState;
-                if (internalID.processStage === IDProcess.MYKAD_FRONT) {
-                    internalID.processStage = IDProcess.MYKAD_BACK;
+                if (internalID.processStage === IDProcess.DOUBLE_FRONT) {
+                    internalID.processStage = IDProcess.DOUBLE_BACK;
                     // internalID.processed = false;
                     backIds = state.backIDsProcessed;
                 } else {
@@ -312,8 +312,8 @@ export function IDReducer(
             let idx = state.internalIndex;
             let ids = state.internalIDs;
             let intId = ids[idx];
-            if (intId.processStage === IDProcess.MYKAD_BACK) {
-                intId.processStage = IDProcess.MYKAD_FRONT;
+            if (intId.processStage === IDProcess.DOUBLE_BACK) {
+                intId.processStage = IDProcess.DOUBLE_FRONT;
                 ids.splice(idx, 1, intId);
             }
             return {

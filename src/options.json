@@ -1,5 +1,8 @@
 {
-    "documentTypes": ["MyKad", "Passport", "Other"],
+    "documentTypes": {
+        "single": ["Passport", "Other"],
+        "double": ["MyKad"]
+    },
     "landmark": {
         "keys": ["MyKadFront", "MyKadBack", "Passport", "Other"],
         "codeNames": [

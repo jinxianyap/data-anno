@@ -1,5 +1,6 @@
 import { Position } from "../store/image/types";
-
+import options from '../options.json';
+import { IDProcess } from "./enums";
 
 export class GeneralUtil {
     public static loadImage(elemID: string, imageFile: File, imageID: string): HTMLImageElement {
@@ -36,5 +37,13 @@ export class GeneralUtil {
             && first.y2 === second.y2
             && first.y3 === second.y3
             && first.y4 === second.y4;
+    }
+
+    public static getInitialIDProcess(docType: string): IDProcess {
+        if (options.documentTypes.double.includes(docType)) {
+            return IDProcess.DOUBLE_FRONT;
+        } else {
+            return IDProcess.SINGLE;
+        }
     }
 }

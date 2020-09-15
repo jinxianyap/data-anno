@@ -109,7 +109,7 @@ class SegLabeller extends React.Component<IProps, IState> {
             }
         } else if (this.state.map !== undefined && this.props.currentID.internalIDs.length !== this.state.boxes.length) {
             if (this.props.currentID.originalIDProcessed && this.props.internalIDs[this.props.currentID.internalIndex] !== undefined
-                && this.props.internalIDs[this.props.currentID.internalIndex].processStage === IDProcess.MYKAD_BACK) {
+                && this.props.internalIDs[this.props.currentID.internalIndex].processStage === IDProcess.DOUBLE_BACK) {
                 if (this.props.currentID.internalIDs.filter((each) => each.backID !== undefined && each.backID.IDBox !== undefined).length
                     !== this.state.boxes.length) {
                     this.renderCommittedBoxes();
@@ -286,7 +286,7 @@ class SegLabeller extends React.Component<IProps, IState> {
 
         let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
         if (internalID !== undefined
-            && internalID.processStage === IDProcess.MYKAD_BACK
+            && internalID.processStage === IDProcess.DOUBLE_BACK
             && internalID.backID!.IDBox !== undefined) return; 
 
         this.addCircle(e);

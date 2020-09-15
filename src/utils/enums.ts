@@ -15,10 +15,9 @@ export enum CurrentStage {
 }
 
 export enum IDProcess {
-    MYKAD_FRONT = "MyKadFront",
-    MYKAD_BACK = "MyKadBack",
-    PASSPORT = "Passport",
-    OTHER = "Other"
+    SINGLE = "",
+    DOUBLE_FRONT = "Front",
+    DOUBLE_BACK = "Back"
 }
 
 export enum Rotation {

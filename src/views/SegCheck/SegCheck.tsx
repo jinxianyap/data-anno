@@ -58,7 +58,7 @@ class SegCheck extends React.Component<IProps, IState> {
         if (this.props.originalProcessed) {
             if (this.props.currentID === undefined) return;
             let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
-            if (internalID.processStage === IDProcess.MYKAD_BACK) {
+            if (internalID.processStage === IDProcess.DOUBLE_BACK) {
                 this.setState({
                     originalImage: GeneralUtil.loadImage("segCheckID", this.props.backID!.image, "segCheckBackID"),
                     croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.backID!.croppedImage!, "segCheckCroppedID"),
@@ -93,7 +93,7 @@ class SegCheck extends React.Component<IProps, IState> {
             if (this.props.currentID !== undefined) {
                 let intId = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
                 if (intId !== undefined) {
-                    if (intId.processStage === IDProcess.MYKAD_BACK) {
+                    if (intId.processStage === IDProcess.DOUBLE_BACK) {
                         originalImage.src = GeneralUtil.getSource(this.props.backID!.image);
                         croppedImage.src = GeneralUtil.getSource(this.props.backID!.croppedImage!);
                         front = false;
@@ -146,7 +146,7 @@ class SegCheck extends React.Component<IProps, IState> {
             let originalImage = this.state.originalImage!;
             let croppedImage = this.state.croppedImage!;
             if (!this.state.originalImage || !this.state.croppedImage) {
-                if (internalID.processStage === IDProcess.MYKAD_BACK && this.state.front) {
+                if (internalID.processStage === IDProcess.DOUBLE_BACK && this.state.front) {
                     this.setState({
                         originalImage: GeneralUtil.loadImage("segCheckID", this.props.backID!.image, "segCheckOriginalID"),
                         croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.backID!.croppedImage!, "segCheckCroppedID"),
@@ -160,7 +160,7 @@ class SegCheck extends React.Component<IProps, IState> {
                     })
                 }
             } else {
-                if (internalID.processStage === IDProcess.MYKAD_BACK && this.state.front) {
+                if (internalID.processStage === IDProcess.DOUBLE_BACK && this.state.front) {
                     originalImage.src = GeneralUtil.getSource(this.props.backID!.image);
                     croppedImage.src = GeneralUtil.getSource(this.props.backID!.croppedImage!);
                     this.setState({
@@ -168,7 +168,7 @@ class SegCheck extends React.Component<IProps, IState> {
                         croppedImage: croppedImage,
                         front: false
                     })
-                } else if (internalID.processStage === IDProcess.MYKAD_FRONT && !this.state.front) {
+                } else if (internalID.processStage === IDProcess.DOUBLE_FRONT && !this.state.front) {
                     originalImage.src = GeneralUtil.getSource(this.props.originalID!.image);
                     croppedImage.src = GeneralUtil.getSource(this.props.originalID!.croppedImage!);
                     this.setState({
@@ -253,7 +253,7 @@ class SegCheck extends React.Component<IProps, IState> {
     render() {
         const showIndex = () => {
             if (this.props.currentID !== undefined && this.props.currentID.internalIDs[this.props.currentID.internalIndex] !== undefined
-                && this.props.currentID.internalIDs[this.props.currentID.internalIndex].processStage === IDProcess.MYKAD_BACK) {
+                && this.props.currentID.internalIDs[this.props.currentID.internalIndex].processStage === IDProcess.DOUBLE_BACK) {
                 return (
                     <div id="backTitle">
                         <p>Internal ID {(this.props.currentID.internalIndex + 1).toString() + " of " + this.props.currentID.internalIDs.length.toString()}</p>
