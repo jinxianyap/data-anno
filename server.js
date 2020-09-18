@@ -246,7 +246,9 @@ function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
                 ocr = ocrData.every((ocrs) => {
                     if (ocrs !== undefined) {
                         return ocrs.every((o) => {
-                            if (o.count === 1) {
+                            if (o.codeName === 'religion') {
+                                return true;
+                            } else if (o.count === 1) {
                                 return o.labels.length === 1 && o.labels[0].value !== '' && o.labels[0].value !== undefined;
                             } else if (o.count > 1) {
                                 return o.labels.length === o.count && o.labels.every((lbl) => lbl.value !== '' && lbl.value !== undefined && isValidPosition(lbl.position));
@@ -366,18 +368,12 @@ function updateDataWithJSON(result, data) {
                 if (ocrResults.landmarks !== undefined) {
                     // json data takes precedence over csv data
                     ocrResults.landmarks = landmarks.map((currLm) => {
-                        let csvLm = ocrResults.landmarks;
-                        // if (currLm.length > csvLm.length) {
+                        if (currLm.length > 0) {
                             return currLm.map((landmark) => {
-                                let lm = csvLm.find((l) => l.id === landmark.codeName);
                                 let hgt = front ? data.croppedImageProps.originalID.height : data.croppedImageProps.backID.height;
-                                if (lm !== undefined && lm.id !== undefined) {
-                                    lm.coords = [landmark.position.x1, 
-                                        hgt - landmark.position.y1, 
-                                        landmark.position.x2,
-                                        hgt - landmark.position.y4];
-                                    return lm;
-                                } else {
+                                    if (landmark.position === undefined) {
+                                        return undefined;
+                                    }
                                     return {
                                         id: landmark.codeName,
                                         score: 0,
@@ -386,27 +382,26 @@ function updateDataWithJSON(result, data) {
                                             landmark.position.x2,
                                             hgt - landmark.position.y4]
                                     }
+                            }).filter((each) => each !== undefined);
+                        } else {
+                            return ocrResults.landmarks.map((each) => {
+                                let landmark = currLm.find((llm) => llm.codeName === each.id);
+                                if (landmark !== undefined) {
+                                    if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
+                                        each.coords = [landmark.position.x1, 
+                                            data.croppedImageProps.originalID.height - landmark.position.y1, 
+                                            landmark.position.x2,
+                                            data.croppedImageProps.originalID.height - landmark.position.y4];
+                                    } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
+                                        each.coords = [landmark.position.x1, 
+                                            data.croppedImageProps.backID.height - landmark.position.y1, 
+                                            landmark.position.x2,
+                                            data.croppedImageProps.backID.height - landmark.position.y4];
+                                    }
                                 }
+                                return each;
                             })
-                        // } else {
-                        //     return ocrResults.landmarks.map((each) => {
-                        //         let landmark = currLm.find((llm) => llm.codeName === each.id);
-                        //         if (landmark !== undefined) {
-                        //             if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
-                        //                 each.coords = [landmark.position.x1, 
-                        //                     data.croppedImageProps.originalID.height - landmark.position.y1, 
-                        //                     landmark.position.x2,
-                        //                     data.croppedImageProps.originalID.height - landmark.position.y4];
-                        //             } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
-                        //                 each.coords = [landmark.position.x1, 
-                        //                     data.croppedImageProps.backID.height - landmark.position.y1, 
-                        //                     landmark.position.x2,
-                        //                     data.croppedImageProps.backID.height - landmark.position.y4];
-                        //             }
-                        //         }
-                        //         return each;
-                        //     })
-                        // }
+                        }
                     })  
                 } else {
                     ocrResults.landmarks = landmarks.map((currLm, idx) => {
@@ -427,6 +422,7 @@ function updateDataWithJSON(result, data) {
                             }
                         }
                         return currLm.map((landmark) => {
+                            if (landmark.position === undefined) return undefined;
                             return {
                                 id: landmark.codeName,
                                 score: 0,
@@ -435,7 +431,7 @@ function updateDataWithJSON(result, data) {
                                     landmark.position.x2,
                                     hgt - landmark.position.y4]
                             }
-                        })
+                        }).filter((each) => each !== undefined);
                     })
                 }
             } else {
@@ -445,13 +441,37 @@ function updateDataWithJSON(result, data) {
             if (ocrs !== undefined && ocrs.length > 0) {
                 if (ocrResults.ocr_results !== undefined) {
                     ocrResults.ocr_results = ocrs.map((currOcr) => {
-                        let csvOcr = ocrResults.ocr_results;
-                        // if (currOcr.length > csvOcr.length) {
+                        if (currOcr.length > 0) {
                             // json data takes precedence over csv data
                             return currOcr.map((ocr) => {
-                                let each = csvOcr.find((o) => o.field === ocr.codeName);
-                                if (each !== undefined && each.field !== undefined) {
-                                    each.text = ocr.labels.map((lbl) => lbl.value).join(" ");
+                                return {
+                                    field: ocr.codeName,
+                                    score: 0,
+                                    text: ocr.labels.map((lbl) => lbl.value).join(" "),
+                                    coords: ocr.labels.map((lbl) => {
+                                        if (lbl.position !== undefined) {
+                                            if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
+                                                return [lbl.position.x1, 
+                                                    data.croppedImageProps.originalID.height - lbl.position.y1, 
+                                                    lbl.position.x2,
+                                                    data.croppedImageProps.originalID.height - lbl.position.y4];
+                                            } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
+                                                return [lbl.position.x1, 
+                                                    data.croppedImageProps.backID.height - lbl.position.y1, 
+                                                    lbl.position.x2,
+                                                    data.croppedImageProps.backID.height - lbl.position.y4];
+                                            }
+                                        } else {
+                                            return [];
+                                        }
+                                    })
+                                }
+                            })
+                        } else {
+                            return csvOcr.map((each) => {
+                                let ocr = currOcr.find((o) => o.codeName === each.field);
+                                if (ocr !== undefined) {
+                                    each.text = ocr.labels.map((lbl) => lbl.value).join(" "),
                                     each.coords = ocr.labels.map((lbl) => {
                                         if (lbl.position !== undefined) {
                                             if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
@@ -468,59 +488,11 @@ function updateDataWithJSON(result, data) {
                                         } else {
                                             return [];
                                         }
-                                    });
-                                } else {
-                                    return {
-                                        field: ocr.codeName,
-                                        score: 0,
-                                        text: ocr.labels.map((lbl) => lbl.value).join(" "),
-                                        coords: ocr.labels.map((lbl) => {
-                                            if (lbl.position !== undefined) {
-                                                if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
-                                                    return [lbl.position.x1, 
-                                                        data.croppedImageProps.originalID.height - lbl.position.y1, 
-                                                        lbl.position.x2,
-                                                        data.croppedImageProps.originalID.height - lbl.position.y4];
-                                                } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
-                                                    return [lbl.position.x1, 
-                                                        data.croppedImageProps.backID.height - lbl.position.y1, 
-                                                        lbl.position.x2,
-                                                        data.croppedImageProps.backID.height - lbl.position.y4];
-                                                }
-                                            } else {
-                                                return [];
-                                            }
-                                        })
-                                    }
+                                    })
                                 }
                                 return each;
                             })
-                        // } else {
-                        //     return csvOcr.map((each) => {
-                        //         let ocr = currOcr.find((o) => o.codeName === each.field);
-                        //         if (ocr !== undefined) {
-                        //             each.text = ocr.labels.map((lbl) => lbl.value).join(" "),
-                        //             each.coords = ocr.labels.map((lbl) => {
-                        //                 if (lbl.position !== undefined) {
-                        //                     if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
-                        //                         return [lbl.position.x1, 
-                        //                             data.croppedImageProps.originalID.height - lbl.position.y1, 
-                        //                             lbl.position.x2,
-                        //                             data.croppedImageProps.originalID.height - lbl.position.y4];
-                        //                     } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
-                        //                         return [lbl.position.x1, 
-                        //                             data.croppedImageProps.backID.height - lbl.position.y1, 
-                        //                             lbl.position.x2,
-                        //                             data.croppedImageProps.backID.height - lbl.position.y4];
-                        //                     }
-                        //                 } else {
-                        //                     return [];
-                        //                 }
-                        //             })
-                        //         }
-                        //         return each;
-                        //     })
-                        // }
+                        }
                     })   
                 } else {
                     ocrResults.ocr_results = ocrs.map((currOcr, idx) => {
@@ -580,7 +552,7 @@ function updateDataWithJSON(result, data) {
             ocrResults.croppedImageProps = front ? data.croppedImageProps.originalID : data.croppedImageProps.backID;
             ocrResults.originalImageProps = front ? data.originalImageProps.originalID : data.originalImageProps.backID;
         }
-        return ocrResults
+        return ocrResults;
     }
 
     let newResult = {};
@@ -756,11 +728,7 @@ function mergeJSONData(initial, updated) {
                         if (updatedLm === undefined) {
                             return lm;
                         } else {
-                            if (updatedLm.position !== undefined) {
-                                return updatedLm;
-                            } else {
-                                return lm;
-                            }
+                            return updatedLm;
                         }
                     })
                 }
@@ -789,14 +757,14 @@ function mergeJSONData(initial, updated) {
                         if (!updatedOCR) {
                             return ocr;
                         } else {
-                            if (updatedOCR.count !== ocr.count
-                            || updatedOCR.labels.every((each) => each.position !== undefined)
-                            || updatedOCR.labels.some((each, idx) => each.value !== ocr.labels[idx].value 
-                                || each.position !== ocr.labels[idx].position)) {
+                            // if (updatedOCR.count !== ocr.count
+                            // || updatedOCR.labels.every((each) => each.position !== undefined)
+                            // || updatedOCR.labels.some((each, idx) => each.value !== ocr.labels[idx].value 
+                            //     || each.position !== ocr.labels[idx].position)) {
                                 return updatedOCR;
-                            } else {
-                                return ocr;
-                            }
+                            // } else {
+                            //     return ocr;
+                            // }
                         }
                     })
                 }

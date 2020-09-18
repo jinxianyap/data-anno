@@ -104,7 +104,8 @@ class SessionDropdown extends React.Component<IProps, IState> {
                     <Modal.Header closeButton>
                     <Modal.Title>Save And Quit</Modal.Title>
                     </Modal.Header>
-                    <Modal.Body>Are you sure you would like to quit?</Modal.Body>
+                    <Modal.Body>Are you sure you would like to quit? 
+                        The current session being edited will not be saved.</Modal.Body>
                     <Modal.Footer>
                     <Button variant="secondary" onClick={() => this.props.toggleModal(false)}>
                         Cancel

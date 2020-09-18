@@ -288,7 +288,7 @@ class FacePanel extends React.Component<IProps, IState> {
                             this.state.videoFlags.map((each, idx) => {
                                 return (
                                     <div key={idx}>
-                                        <p>{DatabaseUtil.beautifyWord(each.category)}</p>
+                                        <p>{GeneralUtil.beautifyWord(each.category)}</p>
                                         <ToggleButtonGroup type="checkbox" onChange={(val) => setFlag(val, each.flags)} value={this.state.selectedVideoFlags}>
                                         {
                                             each.flags.map((flag, i) => {
@@ -301,7 +301,7 @@ class FacePanel extends React.Component<IProps, IState> {
                                                         // checked={this.state.selectedVideoFlags.includes(flag)}
                                                         // onChange={() => setFlag(flag)}
                                                         >
-                                                        {DatabaseUtil.beautifyWord(flag)}
+                                                        {GeneralUtil.beautifyWord(flag)}
                                                     </ToggleButton>
                                                 );
                                             })
@@ -404,14 +404,17 @@ class FacePanel extends React.Component<IProps, IState> {
             if (prev) {
                 let idx = this.state.sortedList[this.state.sortedIndex - 1].libIndex;
                 this.props.getSelectedID(idx);
+                this.setState({sortedIndex: this.state.sortedIndex - 1});
             } else {
                 if (this.state.sortedIndex + 1 === this.state.sortedList.length) {
                     // go back to the first session
                     let idx = this.state.sortedList[0].libIndex;
                     this.props.getSelectedID(idx);
+                    this.setState({sortedIndex: 0});
                 } else {
                     let idx = this.state.sortedList[this.state.sortedIndex + 1].libIndex;
                     this.props.getSelectedID(idx);
+                    this.setState({sortedIndex: this.state.sortedIndex + 1});
                 }
             }
         }

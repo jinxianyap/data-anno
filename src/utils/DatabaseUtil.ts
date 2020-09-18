@@ -246,7 +246,10 @@ export class DatabaseUtil {
                                 }
                             } else {
                                 if (frontSeg[segIndex] !== undefined) {
-                                    rDocKey = frontSeg[segIndex].documentType + "Front";
+                                    rDocKey = frontSeg[segIndex].documentType;
+                                    if (options.documentTypes.double.includes(rDocKey)) {
+                                        rDocKey += "Front";
+                                    }
                                 }
                             }
                         }
@@ -285,7 +288,10 @@ export class DatabaseUtil {
                                 }
                             } else {
                                 if (frontSeg[segIndex] !== undefined) {
-                                    rDocKey = frontSeg[segIndex].documentType + "Front";
+                                    rDocKey = frontSeg[segIndex].documentType;
+                                    if (options.documentTypes.double.includes(rDocKey)) {
+                                        rDocKey += 'Front';
+                                    }
                                 }
                             }
                         }
@@ -398,7 +404,6 @@ export class DatabaseUtil {
     public static loadSessionData(session: any, ID: IDState): Promise<IDState> {
         return new Promise<IDState>(async (res, rej) => {
             let sessionID = session.sessionID;
-            console.log(session);
             // console.log(session);
             this.loadGivenData(session).then((givenData) => {
                 res({
@@ -585,10 +590,4 @@ export class DatabaseUtil {
             default: return AnnotationStatus.NOT_APPLICABLE;;
         }
     }
-
-    public static beautifyWord(word: string): string {
-        let separates = word.replace(/([A-Z])/g,' $1');
-        return separates.charAt(0).toUpperCase()+separates.slice(1);
-    }
-
 }

@@ -46,4 +46,10 @@ export class GeneralUtil {
             return IDProcess.SINGLE;
         }
     }
+
+    public static beautifyWord(word: string): string {
+        if (word === undefined) return '';
+        let separates = word.replace(/([A-Z])/g,' $1');
+        return separates.charAt(0).toUpperCase()+separates.slice(1);
+    }
 }

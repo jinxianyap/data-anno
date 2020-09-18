@@ -145,6 +145,7 @@ class SegCheck extends React.Component<IProps, IState> {
             let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
             let originalImage = this.state.originalImage!;
             let croppedImage = this.state.croppedImage!;
+            if (internalID === undefined) return;
             if (!this.state.originalImage || !this.state.croppedImage) {
                 if (internalID.processStage === IDProcess.DOUBLE_BACK && this.state.front) {
                     this.setState({

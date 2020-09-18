@@ -367,7 +367,16 @@ class ControlPanel extends React.Component<IProps, IState> {
                             this.props.saveToInternalID(this.props.currentImage, false);
                             this.props.progressNextStage(CurrentStage.END_STAGE);
                         } else if (this.props.internalID.processStage === IDProcess.SINGLE) {
-                            this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
+                            if (this.props.currentID.selfieVideo!.name !== 'notfound') {
+                                this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
+                            } else if (this.props.currentID.selfieImage!.name !== 'notfound'
+                                && this.props.currentID.croppedFace!.name !== 'notfound'
+                                && this.props.processType !== ProcessType.LIVENESS) {
+                                this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
+                            } else {
+                                this.props.saveToInternalID(this.props.currentImage, true);
+                                this.loadNextID(false, true);
+                            }
                         }
                     }
                 }
@@ -949,7 +958,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                                 value={flag}
                                                 variant="light"
                                                 >
-                                                {DatabaseUtil.beautifyWord(flag)}
+                                                {GeneralUtil.beautifyWord(flag)}
                                             </ToggleButton>);
                                         })
                                     }   
@@ -1205,7 +1214,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     <Form.Group controlId="docType">
                         <Form.Label>Document Type</Form.Label>
                         <Form.Control as="select" value={this.state.singleDocumentType} onChange={(e: any) => setSingleDocType(e)}>
-                            {Object.entries(this.state.documentTypes).map(([key, value]) => <option key={key} value={value}>{value}</option>)}
+                            {Object.entries(this.state.documentTypes).map(([key, value]) => <option key={key} value={value}>{GeneralUtil.beautifyWord(value)}</option>)}
                         </Form.Control>
                     </Form.Group>
                     : <div />
@@ -1228,7 +1237,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                 this.state.overallFlags.map((each, idx) => {
                                     return (
                                         <div key={idx}>
-                                            <p>{DatabaseUtil.beautifyWord(each.category)}</p>
+                                            <p>{GeneralUtil.beautifyWord(each.category)}</p>
                                             {getCategoryFlags(each.flags)}
                                         </div>
                                     );
@@ -1411,7 +1420,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                                         <Form.Label>Document Type</Form.Label>
                                                         {/* <Button onClick={() => {this.setState({showAddDocTypeModal: true})}} style={{padding: "0 0.5rem", margin: "0.5rem 1rem"}}>+</Button> */}
                                                         <Form.Control as="select" value={getValue(idx)} onChange={(e: any) => setDocType(e, idx)}>
-                                                            {Object.entries(this.state.documentTypes).map(([key, value]) => <option key={key} value={value}>{value}</option>)}
+                                                            {Object.entries(this.state.documentTypes).map(([key, value]) => <option key={key} value={value}>{GeneralUtil.beautifyWord(value)}</option>)}
                                                         </Form.Control>
                                                     </Form.Group>
                                                 </Card.Body>
@@ -1475,7 +1484,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                         this.state.landmarkFlags.map((each, idx) => {
                             return (
                                     <div key={idx}>
-                                        <p>{DatabaseUtil.beautifyWord(each.category)}</p>
+                                        <p>{GeneralUtil.beautifyWord(each.category)}</p>
                                         <ToggleButtonGroup type="checkbox" onChange={(val) => setFlag(val)} value={selectedFlags}>
                                             {each.flags.map((flag, idx) => {
                                                 return (
@@ -1485,7 +1494,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                                         value={flag}
                                                         variant="light"
                                                         >
-                                                        {DatabaseUtil.beautifyWord(flag)}
+                                                        {GeneralUtil.beautifyWord(flag)}
                                                     </ToggleButton>
                                                 );
                                             })}
@@ -1534,7 +1543,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <div>
                     <Accordion>
                         {
-                            this.state.currentLandmarks.map((each, idx) => {
+                            this.state.currentLandmarks.sort((a, b) => a.name.localeCompare(b.name)).map((each, idx) => {
                                 return (
                                     <Card key={idx}>
                                         <Accordion.Toggle
@@ -1543,7 +1552,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                             className={getClassName(each)}
                                             key={idx}
                                             onClick={() => setLandmark(each.codeName)}>
-                                                {DatabaseUtil.beautifyWord(each.name)}
+                                                {GeneralUtil.beautifyWord(each.name)}
                                         </Accordion.Toggle>
                                         <Accordion.Collapse eventKey={idx.toString()}>
                                         <Card.Body>
@@ -1605,13 +1614,23 @@ class ControlPanel extends React.Component<IProps, IState> {
         return (
             <Form onSubmit={handleSubmit}>
                 {
-                    this.state.currentOCR.map((each, idx) => {
+                    this.state.currentOCR.filter((ocr) => {
+                        if (ocr.codeName === 'religion') {
+                            let religionLm = this.props.currentImage.landmark.find((lm) => lm.codeName === 'religion');
+                            if (religionLm !== undefined) {
+                                return religionLm.position !== undefined;
+                            }
+                        }
+                        return true;
+                    })
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((each, idx) => {
                         return (
                             <Form.Group key={each.codeName + "OCR"}>
-                                <Form.Label>{DatabaseUtil.beautifyWord(each.name)}</Form.Label>
+                                <Form.Label>{GeneralUtil.beautifyWord(each.name)}</Form.Label>
                                 {/* SKIP_VALIDATION: Remove required */}
                                 <Form.Control required type="text" defaultValue={each.value}
-                                ref={(ref: any) => {refs.push({name: each.name, codeName: each.codeName, mapToLandmark: each.mapToLandmark,ref})}} />
+                                ref={(ref: any) => {refs.push({name: each.name, codeName: each.codeName, mapToLandmark: each.mapToLandmark, ref})}} />
                             </Form.Group>
                         );
                     })
@@ -1691,7 +1710,16 @@ class ControlPanel extends React.Component<IProps, IState> {
                     this.props.saveToInternalID(this.props.currentImage, false);
                     this.props.progressNextStage(CurrentStage.END_STAGE);
                 } else if (this.props.internalID.processStage === IDProcess.SINGLE) {
-                    this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
+                    if (this.props.currentID.selfieVideo!.name !== 'notfound') {
+                        this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
+                    } else if (this.props.currentID.selfieImage!.name !== 'notfound'
+                        && this.props.currentID.croppedFace!.name !== 'notfound'
+                        && this.props.processType !== ProcessType.LIVENESS) {
+                        this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
+                    } else {
+                        this.props.saveToInternalID(this.props.currentImage, true);
+                        this.loadNextID(false, true);
+                    }
                 }
             }
         }
@@ -1703,7 +1731,7 @@ class ControlPanel extends React.Component<IProps, IState> {
             <div>
                 <Accordion activeKey={getActiveKey()}>
                     {
-                        ocrs.map((each, index) => {
+                        ocrs.sort((a, b) => a.name.localeCompare(b.name)).map((each, index) => {
                             if (each.count <= 1) return <div key={index} />;
                             return (
                                 <Card key={index}>
@@ -1715,13 +1743,13 @@ class ControlPanel extends React.Component<IProps, IState> {
                                         onClick={() => {
                                             this.props.setCurrentSymbol(each.codeName, each.mapToLandmark);
                                             this.props.setCurrentWord(each.labels[0]);}}>
-                                        {DatabaseUtil.beautifyWord(each.name)}
+                                        {GeneralUtil.beautifyWord(each.name)}
                                     </Accordion.Toggle>
                                     <Accordion.Collapse eventKey={each.name + " " + each.mapToLandmark}>
                                     <Card.Body>
                                     <ButtonGroup vertical>
                                         {
-                                            each.labels.map((label, idx) => {
+                                            each.labels.sort((a, b) => a.id - b.id).map((label, idx) => {
                                                 return (
                                                     <Button 
                                                         className={getClassNameOcr(each, label)}
@@ -1797,7 +1825,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                             this.state.videoFlags.map((each, idx) => {
                                 return (
                                     <div key={idx}>
-                                        <p>{DatabaseUtil.beautifyWord(each.category)}</p>
+                                        <p>{GeneralUtil.beautifyWord(each.category)}</p>
                                         <ToggleButtonGroup type="checkbox" onChange={(val) => setFlag(val, each.flags)} value={this.state.selectedVideoFlags}>
                                         {
                                             each.flags.map((flag, i) => {
@@ -1807,10 +1835,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                                                         key={i}
                                                         value={flag}
                                                         variant="light"
-                                                        // checked={this.state.selectedVideoFlags.includes(flag)}
-                                                        // onChange={() => setFlag(flag)}
                                                         >
-                                                        {DatabaseUtil.beautifyWord(flag)}
+                                                        {GeneralUtil.beautifyWord(flag)}
                                                     </ToggleButton>
                                                 );
                                             })
@@ -1874,8 +1900,14 @@ class ControlPanel extends React.Component<IProps, IState> {
 
     loadBackId = () => {
         if (this.props.internalID !== undefined && this.props.internalID.backID !== undefined && this.props.internalID.backID.image.name === 'notfound') {
-            let nextSortedIndex = this.state.sortedIndex + 1 === this.state.sortedList.length ? 0 : this.state.sortedIndex + 1;
-            this.handleGetSession(this.state.sortedList[nextSortedIndex].libIndex, nextSortedIndex, this.state.sortedList[nextSortedIndex].status);
+            if (this.props.currentID.phasesChecked.video) {
+                this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
+            } else if (this.props.currentID.phasesChecked.face) {
+                this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
+            } else {
+                let nextSortedIndex = this.state.sortedIndex + 1 === this.state.sortedList.length ? 0 : this.state.sortedIndex + 1;
+                this.handleGetSession(this.state.sortedList[nextSortedIndex].libIndex, nextSortedIndex, this.state.sortedList[nextSortedIndex].status);
+            }
         } else {
             this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
             this.initializeSegCheckData();

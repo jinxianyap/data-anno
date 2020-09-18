@@ -1,22 +1,24 @@
 {
     "documentTypes": {
-        "single": ["passport", "other"],
+        "single": ["passport", "mydl", "other"],
         "double": ["mykad", "fakedoubleID"]
     },
     "landmark": {
-        "keys": ["mykadFront", "mykadBack", "passport", "other", "fakedoubleIDFront", "fakedoubleIDBack"],
+        "keys": ["mykadFront", "mykadBack", "passport", "mydl", "other", "fakedoubleIDFront", "fakedoubleIDBack"],
         "codeNames": [
             ["kpm", "security", "msc", "ghost", "gender", "citizen", "name", "address", "face", "logo", "ic_num", "hibiscus", "flag", "religion"],
             ["coa", "crown", "tower", "touchNgo", "sign", "chip_logo", "serial_num", "kppn", "malaysia_logo", "atm_logo", "ic_num"],
             ["passport_num", "name"],
+            ["coatOfArm", "drvlicLogo", "mysFlag", "malaysiaLogo", "PLogo", "name", "nationality", "idNum", "validity", "drvlicClass", "address", "face", "hibiscusLogo"],
             ["id_num", "name"],
             ["id_num", "name", "dob"],
             ["id_num", "logo"]
         ],
         "displayNames": [
             ["kadPengenalanMalaysiaLandmark", "securityChip", "mscLogo", "ghostImage", "gender", "citizen", "name", "address", "facialImage", "mykadLogo", "mykadNumber", "hibiscusLogo", "malaysiaFlag", "religion"],
-            ["coatOfArmsLandmark", "crown", "klccTower", "touchNGo", "signature", "chipLogo", "serialNumber", "kPPN", "malaysiaLogo", "ATMLogo", "mykadNumber"],
+            ["coatOfArms", "crown", "klccTower", "touchNGo", "signature", "chipLogo", "serialNumber", "kPPN", "malaysiaLogo", "ATMLogo", "mykadNumber"],
             ["passportNumber", "name"],
+            ["coatOfArms", "drivingLicenseLogo", "mysFlag", "malaysiaLogo", "PLogo", "name", "nationality", "IDNumber", "validity", "drivingLicenseClass", "address", "face", "hibiscusLogo"],
             ["IDNumber", "name"],
             ["IDNumber", "name", "dateOfBirth"],
             ["IDNumber", "logo"]
@@ -25,41 +27,46 @@
             ["kpmLogo", "securityChip", "mscLogo", "ghost", "gender", "nationality", "name", "address", "face", "mykadLogo", "idNum", "hibiscusLogo", "mysFlag", "religion"],
             ["coatOfArm", "crown", "twintowerLogo", "touchngoLogo", "signature", "chipLogo", "serialNum", "kppn", "mysLogo", "atmLogo", "idNum"],
             ["idNum", "name"],
+            ["coatOfArm", "drvlicLogo", "mysFlag", "malaysiaLogo", "PLogo", "name", "nationality", "idNum", "validity", "drvlicClass", "address", "face", "hibiscusLogo"],
             ["idNum", "name"],
             ["idNum", "name", "birthdate"],
             ["idNum", "logo"]
         ]
     },
     "ocr": {
-        "keys": ["mykadFront", "mykadBack", "passport", "other", "fakedoubleIDFront", "fakedoubleIDBack"],
+        "keys": ["mykadFront", "mykadBack", "passport", "mydl", "other", "fakedoubleIDFront", "fakedoubleIDBack"],
         "codeNames": [
-            ["ic_num", "name", "address", "gender", "citizen"],
+            ["ic_num", "name", "address", "gender", "citizen", "religion"],
             ["mykad_back_ic_num"],
             ["passport_num", "name"],
+            ["name", "nationality", "idNum", "drvlicClass", "validity", "address"],
             ["id_num"],
             ["id_num", "name", "dob"],
             ["id_num"]
         ],
         "displayNames": [
-            ["mykadNumber", "name", "address", "gender", "citizen"],
+            ["mykadNumber", "name", "address", "gender", "citizen", "religion"],
             ["mykadNumber"],
             ["passportNumber", "name"],
+            ["name", "nationality", "IDNumber", "drivingLicenseClass", "validity", "address"],
             ["IDNumber"],
             ["IDNumber", "name", "dateOfBirth"],
             ["IDNumber"]
         ],
         "mapToLandmark": [
-            ["ic_num", "name", "address", "gender", "citizen"],
+            ["ic_num", "name", "address", "gender", "citizen", "religion"],
             ["ic_num"],
             ["passport_num", "name"],
+            ["name", "nationality", "idNum", "drvlicClass", "validity", "address"],
             ["id_num"],
             ["id_num", "name", "dob"],
             ["id_num"]
         ],
         "outputNames": [
-            ["idNum", "name", "address", "gender", "nationality"],
+            ["idNum", "name", "address", "gender", "nationality", "religion"],
             ["idNum"],
             ["passportNum", "name"],
+            ["name", "nationality", "idNum", "drvlicClass", "validity", "address"],
             ["idNum"],
             ["idNum", "name", "birthdate"],
             ["idNum"]
