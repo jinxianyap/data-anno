@@ -261,7 +261,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     if (previousProps.currentID.internalIndex < this.props.currentID.internalIndex) {
                         if (this.props.currentID.internalIndex < this.props.currentID.internalIDs.length) {
                             if (this.props.internalID === undefined) return;
-                            if (this.props.internalID.documentType !== 'MyKad') {
+                            if (this.props.internalID.processStage === IDProcess.SINGLE) {
                                 this.props.saveToInternalID(this.props.internalID.originalID!, true);
                             } else {
                                 this.props.saveToInternalID(this.props.internalID.originalID!, false);
@@ -669,7 +669,6 @@ class ControlPanel extends React.Component<IProps, IState> {
                 landmarks: landmarks
             });
             if (this.props.internalID.documentType !== undefined && this.props.internalID.processStage !== undefined) {
-                console.log(this.props.internalID.documentType + this.props.internalID.processStage);
                 if (this.props.internalID.documentType + this.props.internalID.processStage === each 
                     && this.props.currentImage.landmark.length === 0) {
                     currentLandmarks = this.initializeLandmarkData(landmarks);
@@ -1299,7 +1298,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 this.props.currentID.internalIDs.forEach((each, idx) => {
                     let selected = this.state.selectedDocumentTypes.find((doc) => doc.id === idx);
                     if (selected === undefined) {
-                        this.props.saveDocumentType(idx, 'MyKad');
+                        this.props.saveDocumentType(idx, 'mykad');
                     } else {
                         this.props.saveDocumentType(selected.id, selected.value);
                     }
@@ -1757,7 +1756,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         const backStage = () => {
             if (this.props.currentID.internalIDs.length === 0) {
                 this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
-            } else if (this.props.internalID.documentType === 'MyKad') {
+            } else if (this.props.internalID.processStage !== IDProcess.SINGLE) {
                 this.props.loadImageState(this.props.internalID.backID!);
                 this.props.progressNextStage(CurrentStage.OCR_EDIT);
             } else {

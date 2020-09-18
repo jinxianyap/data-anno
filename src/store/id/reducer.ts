@@ -65,7 +65,7 @@ export function IDReducer(
             }
         }
         case Action.CREATE_NEW_ID: {
-            let docType = action.payload.documentType !== undefined ? action.payload.documentType : 'MyKad';
+            let docType = action.payload.documentType !== undefined ? action.payload.documentType : 'mykad';
             let ID: InternalIDState = {
                 processed: false,
                 source: state.sessionID,
@@ -75,7 +75,6 @@ export function IDReducer(
                 processStage: GeneralUtil.getInitialIDProcess(docType)
             }
             let IDs = state.internalIDs;
-            console.log(action.payload.IDBox);
             IDs.push(ID);
             return {
                 ...state,

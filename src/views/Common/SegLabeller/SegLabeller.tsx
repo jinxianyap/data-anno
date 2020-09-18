@@ -544,8 +544,6 @@ class SegLabeller extends React.Component<IProps, IState> {
     }
 
     handleSubmit = (box: SegBox, update: boolean) => {
-        // supposed to call crop API first then only send to store
-        console.log('submitting boxes');
         let IDBox: IDBox = {
             id: box.id,
             position: {

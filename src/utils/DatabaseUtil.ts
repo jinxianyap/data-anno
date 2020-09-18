@@ -45,9 +45,6 @@ export class DatabaseUtil {
     }
 
     private static translateTermFromCodeName(doc: string, type: string, key: string, output?: boolean, map?: boolean): string {
-        console.log(doc);
-        console.log(type);
-        console.log(key);
         switch (type) {
             case ('landmark'): { 
                 let idx = options.landmark.keys.findIndex((each) => each === doc);
@@ -109,15 +106,14 @@ export class DatabaseUtil {
             let backOcrProps: ImageProps = {height: -1, width: -1};
             let landmarks = [];
             let ocr = [];
-
             let ocrData = back ? session.raw_data.back_ocr : session.raw_data.front_ocr;
             if (ocrData !== undefined) {
-                let oriSrc = back ? session.mykad_back_ori : session.mykad_front_ori;
+                let oriSrc = back ? session.back_ori : session.front_ori;
                 let oriProps: ImageProps = {height: -1, width: -1};
                 if (ocrData.originalImageProps !== undefined) {
                     oriProps.height = ocrData.originalImageProps.height;
                     oriProps.width = ocrData.originalImageProps.width;
-                } else if (ocrData !== undefined && oriSrc !== undefined) {
+                } else if (oriSrc !== undefined) {
                     oriProps = await new Promise((res, rej) => {
                         let img = new Image();
                         img.onload = () => {
@@ -192,7 +188,7 @@ export class DatabaseUtil {
             }
 
             if (ocrData !== undefined) {
-                let ocrSrc = !back ? session.mykad_front_ocr : session.mykad_back_ocr;
+                let ocrSrc = !back ? session.front_ocr : session.back_ocr;
                 let imgProps: ImageProps = {height: -1, width: -1};
                 if (ocrData.croppedImageProps !== undefined) {
                     imgProps.height = ocrData.croppedImageProps.height;
@@ -402,6 +398,7 @@ export class DatabaseUtil {
     public static loadSessionData(session: any, ID: IDState): Promise<IDState> {
         return new Promise<IDState>(async (res, rej) => {
             let sessionID = session.sessionID;
+            console.log(session);
             // console.log(session);
             this.loadGivenData(session).then((givenData) => {
                 res({
@@ -426,14 +423,14 @@ export class DatabaseUtil {
     }
 
     public static extractOutput(ID: IDState, face?: boolean): any {
-        const translateLandmarkName = (landmark: LandmarkData, front: boolean) => {
-            let outputName = this.translateTermFromCodeName(front ? 'MyKadFront' : 'MyKadBack', 'landmark', landmark.codeName, true);
+        const translateLandmarkName = (docType: string, landmark: LandmarkData, frontBack?: string) => {
+            let outputName = this.translateTermFromCodeName(docType + (frontBack !== undefined ? frontBack : ""), 'landmark', landmark.codeName, true);
             landmark.name = outputName;
             return landmark;
         }
 
-        const translateOCRName = (ocr: OCRData, front: boolean) => {
-            let outputName = this.translateTermFromCodeName(front ? 'MyKadFront' : 'MyKadBack', 'ocr', ocr.codeName, true);
+        const translateOCRName = (docType: string, ocr: OCRData, frontBack?: string) => {
+            let outputName = this.translateTermFromCodeName(docType + (frontBack !== undefined ? frontBack : ""), 'ocr', ocr.codeName, true);
             ocr.name = outputName;
             return ocr;
         }
@@ -460,15 +457,37 @@ export class DatabaseUtil {
             },
             segmentation: {
                 originalID: ID.internalIDs.map((each) => {return {IDBox: each.originalID!.IDBox, passesCrop: each.originalID!.passesCrop}}),
-                backID: ID.internalIDs.map((each) => {return {IDBox: each.backID!.IDBox, passesCrop: each.backID!.passesCrop}})
+                backID: ID.internalIDs.map((each) => {
+                    if (each.backID !== undefined) {
+                        return {IDBox: each.backID!.IDBox, passesCrop: each.backID!.passesCrop};
+                    } else {
+                        return undefined;
+                    }
+                })
             },
             landmarks: {
-                originalID: ID.internalIDs.map((each) => each.originalID!.landmark.map((lm) => translateLandmarkName(lm, true))),
-                backID: ID.internalIDs.map((each) => each.backID!.landmark.map((lm) => translateLandmarkName(lm, false)))
+                originalID: ID.internalIDs.map((each) => each.originalID!.landmark.map((lm) => 
+                    translateLandmarkName(each.documentType!, lm, each.processStage === IDProcess.SINGLE ? "" : "Front"))),
+                backID: ID.internalIDs.map((each) => {
+                    if (each.backID !== undefined) {
+                        return each.backID!.landmark.map((lm) => 
+                        translateLandmarkName(each.documentType!, lm, "Back"));
+                    } else {
+                        return undefined;
+                    }
+                })
             },
             ocr: {
-                originalID: ID.internalIDs.map((each) => each.originalID!.ocr.map((ocr) => translateOCRName(ocr, true))),
-                backID: ID.internalIDs.map((each) => each.backID!.ocr.map((ocr) => translateOCRName(ocr, false))),
+                originalID: ID.internalIDs.map((each) => each.originalID!.ocr.map((ocr) => 
+                    translateOCRName(each.documentType!, ocr, each.processStage === IDProcess.SINGLE ? "" : "Front"))),
+                backID: ID.internalIDs.map((each) => {
+                    if (each.backID !== undefined) {
+                        return each.backID!.ocr.map((ocr) => 
+                            translateOCRName(each.documentType!, ocr, "Back"));
+                    } else {
+                        return undefined;
+                    }
+                })
             },
 
             videoLiveness: ID.videoLiveness,

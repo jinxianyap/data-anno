@@ -364,9 +364,10 @@ function updateDataWithJSON(result, data) {
                 }
 
                 if (ocrResults.landmarks !== undefined) {
+                    // json data takes precedence over csv data
                     ocrResults.landmarks = landmarks.map((currLm) => {
                         let csvLm = ocrResults.landmarks;
-                        if (currLm.length > csvLm.length) {
+                        // if (currLm.length > csvLm.length) {
                             return currLm.map((landmark) => {
                                 let lm = csvLm.find((l) => l.id === landmark.codeName);
                                 let hgt = front ? data.croppedImageProps.originalID.height : data.croppedImageProps.backID.height;
@@ -387,25 +388,25 @@ function updateDataWithJSON(result, data) {
                                     }
                                 }
                             })
-                        } else {
-                            return ocrResults.landmarks.map((each) => {
-                                let landmark = currLm.find((llm) => llm.codeName === each.id);
-                                if (landmark !== undefined) {
-                                    if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
-                                        each.coords = [landmark.position.x1, 
-                                            data.croppedImageProps.originalID.height - landmark.position.y1, 
-                                            landmark.position.x2,
-                                            data.croppedImageProps.originalID.height - landmark.position.y4];
-                                    } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
-                                        each.coords = [landmark.position.x1, 
-                                            data.croppedImageProps.backID.height - landmark.position.y1, 
-                                            landmark.position.x2,
-                                            data.croppedImageProps.backID.height - landmark.position.y4];
-                                    }
-                                }
-                                return each;
-                            })
-                        }
+                        // } else {
+                        //     return ocrResults.landmarks.map((each) => {
+                        //         let landmark = currLm.find((llm) => llm.codeName === each.id);
+                        //         if (landmark !== undefined) {
+                        //             if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
+                        //                 each.coords = [landmark.position.x1, 
+                        //                     data.croppedImageProps.originalID.height - landmark.position.y1, 
+                        //                     landmark.position.x2,
+                        //                     data.croppedImageProps.originalID.height - landmark.position.y4];
+                        //             } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
+                        //                 each.coords = [landmark.position.x1, 
+                        //                     data.croppedImageProps.backID.height - landmark.position.y1, 
+                        //                     landmark.position.x2,
+                        //                     data.croppedImageProps.backID.height - landmark.position.y4];
+                        //             }
+                        //         }
+                        //         return each;
+                        //     })
+                        // }
                     })  
                 } else {
                     ocrResults.landmarks = landmarks.map((currLm, idx) => {
@@ -445,7 +446,8 @@ function updateDataWithJSON(result, data) {
                 if (ocrResults.ocr_results !== undefined) {
                     ocrResults.ocr_results = ocrs.map((currOcr) => {
                         let csvOcr = ocrResults.ocr_results;
-                        if (currOcr.length > csvOcr.length) {
+                        // if (currOcr.length > csvOcr.length) {
+                            // json data takes precedence over csv data
                             return currOcr.map((ocr) => {
                                 let each = csvOcr.find((o) => o.field === ocr.codeName);
                                 if (each !== undefined && each.field !== undefined) {
@@ -493,32 +495,32 @@ function updateDataWithJSON(result, data) {
                                 }
                                 return each;
                             })
-                        } else {
-                            return csvOcr.map((each) => {
-                                let ocr = currOcr.find((o) => o.codeName === each.field);
-                                if (ocr !== undefined) {
-                                    each.text = ocr.labels.map((lbl) => lbl.value).join(" "),
-                                    each.coords = ocr.labels.map((lbl) => {
-                                        if (lbl.position !== undefined) {
-                                            if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
-                                                return [lbl.position.x1, 
-                                                    data.croppedImageProps.originalID.height - lbl.position.y1, 
-                                                    lbl.position.x2,
-                                                    data.croppedImageProps.originalID.height - lbl.position.y4];
-                                            } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
-                                                return [lbl.position.x1, 
-                                                    data.croppedImageProps.backID.height - lbl.position.y1, 
-                                                    lbl.position.x2,
-                                                    data.croppedImageProps.backID.height - lbl.position.y4];
-                                            }
-                                        } else {
-                                            return [];
-                                        }
-                                    })
-                                }
-                                return each;
-                            })
-                        }
+                        // } else {
+                        //     return csvOcr.map((each) => {
+                        //         let ocr = currOcr.find((o) => o.codeName === each.field);
+                        //         if (ocr !== undefined) {
+                        //             each.text = ocr.labels.map((lbl) => lbl.value).join(" "),
+                        //             each.coords = ocr.labels.map((lbl) => {
+                        //                 if (lbl.position !== undefined) {
+                        //                     if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
+                        //                         return [lbl.position.x1, 
+                        //                             data.croppedImageProps.originalID.height - lbl.position.y1, 
+                        //                             lbl.position.x2,
+                        //                             data.croppedImageProps.originalID.height - lbl.position.y4];
+                        //                     } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
+                        //                         return [lbl.position.x1, 
+                        //                             data.croppedImageProps.backID.height - lbl.position.y1, 
+                        //                             lbl.position.x2,
+                        //                             data.croppedImageProps.backID.height - lbl.position.y4];
+                        //                     }
+                        //                 } else {
+                        //                     return [];
+                        //                 }
+                        //             })
+                        //         }
+                        //         return each;
+                        //     })
+                        // }
                     })   
                 } else {
                     ocrResults.ocr_results = ocrs.map((currOcr, idx) => {
@@ -872,7 +874,6 @@ app.post('/loadSessionData', async (req, res) => {
     await new Promise((res, rej) => getCSVData(csvPath, session, res, rej))
         .then((val) => {session = val;})
         .catch((err) => {console.error(err)});
-
     let outputPath = testFolder + "annotation_output/" + db + "/";
     let outputFiles = fs.readdirSync(outputPath);
     if (outputFiles && outputFiles.includes(date)) {
