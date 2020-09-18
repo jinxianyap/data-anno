@@ -122,9 +122,14 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             if (this.props.currentStage === CurrentStage.OCR_EDIT) {
                 this.renderCommittedLandmarks(true);
                 this.renderCommittedOCRs();
+            } else if (this.props.currentStage === CurrentStage.LANDMARK_EDIT) {
+                this.renderCommittedLandmarks();
+                this.renderCommittedOCRs(true);
             } else {
-                    this.renderCommittedLandmarks();
-                    this.renderCommittedOCRs(true);
+                if (this.state.landmarkBoxes.length > 0) {
+                    this.state.landmarkBoxes.forEach((each) => this.removeMapElements(each));
+                };
+                this.renderCommittedOCRs(true);
             }
         }
         if (previousProps.currentStage !== this.props.currentStage && this.state.map !== undefined) {
@@ -269,7 +274,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             this.state.landmarkBoxes.forEach((each) => this.removeMapElements(each));
         };
         let landmarks = this.props.committedLandmarks;
-        console.log(landmarks);
+
         landmarks.forEach((landmark: LandmarkData) => {
             if (landmark.position !== undefined) {
                 if (ocrOnly) {
@@ -582,7 +587,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 e.latlng.lng, 
                 this.props.currentImageState.landmark.find((each) => each.codeName === this.props.currentSymbol)!.name,
                 this.props.currentSymbol,
-                this.props.currentSymbol,
+                this.props.currentImageState.landmark.find((each) => each.codeName === this.props.currentSymbol)!.name,
                 false,
                 true,
                 this.state.currentBox.id,

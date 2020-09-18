@@ -10,18 +10,18 @@ export class DatabaseUtil {
         let id = session.sessionID;
         return {
             originalID: {
-                image: this.dataURLtoFile(session.mykad_front_ori, id + "_mykad_front_ori.jpg"),
-                croppedImage: this.dataURLtoFile(session.mykad_front_ocr, id + "_mykad_front_ocr.jpg"),
+                image: this.dataURLtoFile(session.front_ori, id + "_init_front_ori.jpg"),
+                croppedImage: this.dataURLtoFile(session.front_ocr, id + "_init_front_ocr.jpg"),
                 landmark: [],
                 ocr: [],
             },
             backID: {
-                image: this.dataURLtoFile(session.mykad_back_ori, id + "_mykad_back_ori.jpg"),
-                croppedImage: this.dataURLtoFile(session.mykad_front_ocr, id + "mykad_back_ocr.jpg"),
+                image: this.dataURLtoFile(session.back_ori, id + "_init_back_ori.jpg"),
+                croppedImage: this.dataURLtoFile(session.back_ocr, id + "init_back_ocr.jpg"),
                 landmark: [],
                 ocr: [],
             },
-            croppedFace: this.dataURLtoFile(session.mykad_face, id + "_mykad_face.jpg"),
+            croppedFace: this.dataURLtoFile(session.face, id + "_init_face.jpg"),
             selfieImage: this.dataURLtoFile(session.face, id + "_face.jpg"),
             selfieVideo: this.dataURLtoFile(session.face_video, id + "_face_video.mp4"),
             videoStills: session.face_video_stills !== undefined ? session.face_video_stills.map((each: any, idx: number) => 
@@ -45,6 +45,9 @@ export class DatabaseUtil {
     }
 
     private static translateTermFromCodeName(doc: string, type: string, key: string, output?: boolean, map?: boolean): string {
+        console.log(doc);
+        console.log(type);
+        console.log(key);
         switch (type) {
             case ('landmark'): { 
                 let idx = options.landmark.keys.findIndex((each) => each === doc);
@@ -73,11 +76,16 @@ export class DatabaseUtil {
         return '';
     }
 
-    private static loadMyKadID(session: any, id: string, front: boolean): ImageState {
-        let oriSrc = front ? session.mykad_front_ori : session.mykad_back_ori;
-        let ocrSrc = front ? session.mykad_front_ocr : session.mykad_back_ocr;
-        let oriSrcName = front ? "_mykad_front_ori.jpg" : "_mykad_back_ori.jpg";
-        let ocrSrcName = front ? "_mykad_front_ocr.jpg" : "mykad_back_ocr.jpg";
+    private static loadImageState(session: any, id: string, front: boolean): ImageState | undefined {
+        if (session.doc_faces === 1 && !front) {
+            return undefined;
+        }
+
+        let oriSrc = front ? session.front_ori : session.back_ori;
+        let ocrSrc = front ? session.front_ocr : session.back_ocr;
+
+        let oriSrcName = front ? "_" + session.doc_type + "_front_ori.jpg" : "_" + session.doc_type + "_back_ori.jpg";
+        let ocrSrcName = front ? "_" + session.doc_type + "_front_ocr.jpg" : "_" + session.doc_type + "_back_ocr.jpg";
 
         let ID: ImageState = {
             image: this.dataURLtoFile(oriSrc, id + oriSrcName),
@@ -89,11 +97,10 @@ export class DatabaseUtil {
         return ID;
     }
 
-    private static loadMyKadGivenData(session: any): Promise<GivenData> {
+    private static loadGivenData(session: any): Promise<GivenData> {
         let result: GivenData = {};
-        let docKey = ['MyKadFront', 'MyKadBack'];
 
-        const load = async (docKey: string, front: boolean, given: GivenData) => {
+        const load = async (docKey: string, given: GivenData, back?: boolean) => {
             let frontSeg: {documentType: string, IDBox: IDBox, passesCrop: boolean}[] = [];
             let backSeg: {IDBox: IDBox, passesCrop: boolean}[] = [];
             let frontOriProps: ImageProps = {height: -1, width: -1};
@@ -103,9 +110,9 @@ export class DatabaseUtil {
             let landmarks = [];
             let ocr = [];
 
-            let ocrData = front ? session.raw_data.front_ocr : session.raw_data.back_ocr;
+            let ocrData = back ? session.raw_data.back_ocr : session.raw_data.front_ocr;
             if (ocrData !== undefined) {
-                let oriSrc = front ? session.mykad_front_ori : session.mykad_back_ori;
+                let oriSrc = back ? session.mykad_back_ori : session.mykad_front_ori;
                 let oriProps: ImageProps = {height: -1, width: -1};
                 if (ocrData.originalImageProps !== undefined) {
                     oriProps.height = ocrData.originalImageProps.height;
@@ -124,16 +131,16 @@ export class DatabaseUtil {
                     })
                 }
 
-                if (front) {
-                    frontOriProps = oriProps;
-                } else {
+                if (back) {
                     backOriProps = oriProps;
+                } else {
+                    frontOriProps = oriProps;
                 }
 
                 let segData = session.raw_data.segmentation !== undefined ? 
-                    (front ? session.raw_data.segmentation.originalID : session.raw_data.segmentation.backID) : undefined;
+                    (back ? session.raw_data.segmentation.backID : session.raw_data.segmentation.originalID) : undefined;
                 if (segData !== undefined) {
-                    if (front) {
+                    if (!back) {
                         frontSeg = segData.map((e: any, idx: number) => {
                             let each = e.coords;
                             if (each === undefined) {
@@ -185,7 +192,7 @@ export class DatabaseUtil {
             }
 
             if (ocrData !== undefined) {
-                let ocrSrc = front ? session.mykad_front_ocr : session.mykad_back_ocr;
+                let ocrSrc = !back ? session.mykad_front_ocr : session.mykad_back_ocr;
                 let imgProps: ImageProps = {height: -1, width: -1};
                 if (ocrData.croppedImageProps !== undefined) {
                     imgProps.height = ocrData.croppedImageProps.height;
@@ -204,13 +211,13 @@ export class DatabaseUtil {
                     })
                 }
 
-                if (front) {
+                if (!back) {
                     frontOcrProps = imgProps;
                 } else {
                     backOcrProps = imgProps;
                 }
 
-                const handleLandmarks = (each: any) => {
+                const handleLandmarks = (each: any, segIndex?: number) => {
                     if (each === null) return null;
                     return each.filter((lm: any) => lm !== null).map((lm: any, idx: number) => {
                         let flags: string[] = [];
@@ -222,24 +229,37 @@ export class DatabaseUtil {
                         }
 
                         if (imgProps.height === -1 || imgProps.width === -1) {
-                            if (front && frontSeg[idx] !== undefined) {
+                            if (!back && frontSeg[idx] !== undefined) {
                                 imgProps = {
                                     height: frontSeg[idx].IDBox.position.y1 - frontSeg[idx].IDBox.position.y4, 
                                     width: frontSeg[idx].IDBox.position.x2 - frontSeg[idx].IDBox.position.x1
                                 }
-                            } else if (!front && backSeg[idx] !== undefined) {
+                            } else if (back && backSeg[idx] !== undefined) {
                                 imgProps = {
                                     height: backSeg[idx].IDBox.position.y1 - backSeg[idx].IDBox.position.y4, 
                                     width: backSeg[idx].IDBox.position.x2 - backSeg[idx].IDBox.position.x1
                                 }
                             }
                         }
-    
+                        
+                        let rDocKey = undefined;
+                        if (segIndex !== undefined) {
+                            if (back) {
+                                if (given.originalID !== undefined && given.originalID.segmentation !== undefined && given.originalID.segmentation[segIndex] !== undefined) {
+                                    rDocKey = given.originalID.segmentation[segIndex]!.documentType + "Back";
+                                }
+                            } else {
+                                if (frontSeg[segIndex] !== undefined) {
+                                    rDocKey = frontSeg[segIndex].documentType + "Front";
+                                }
+                            }
+                        }
+
                         let landmark: LandmarkData = {
                             id: idx,
                             type: 'landmark',
                             codeName: lm.id,
-                            name: this.translateTermFromCodeName(docKey, 'landmark', lm.id),
+                            name: this.translateTermFromCodeName(rDocKey !== undefined ? rDocKey : docKey, 'landmark', lm.id),
                             flags: flags,
                             position: {
                                 x1: lm.coords[0],
@@ -256,16 +276,30 @@ export class DatabaseUtil {
                     }).filter((each: LandmarkData) => each.name !== '');
                 }
 
-                const handleOCRs = (each: any) => {
+                const handleOCRs = (each: any, segIndex?: number) => {
                     if (each === null) return null;
                     return each.filter((lm: any) => lm !== null).map((o: any, idx: number) => {
                         let text: string[] = o.text.split('\n').join(' ').split(' ');
+                        
+                        let rDocKey = undefined;
+                        if (segIndex !== undefined) {
+                            if (back) {
+                                if (given.originalID !== undefined && given.originalID.segmentation !== undefined && given.originalID.segmentation[segIndex] !== undefined) {
+                                    rDocKey = given.originalID.segmentation[segIndex]!.documentType + "Back";
+                                }
+                            } else {
+                                if (frontSeg[segIndex] !== undefined) {
+                                    rDocKey = frontSeg[segIndex].documentType + "Front";
+                                }
+                            }
+                        }
+
                         let ocr: OCRData = {
                             id: idx,
                             type: 'OCR',
                             codeName: o.field,
-                            mapToLandmark: this.translateTermFromCodeName(docKey, 'ocr', o.field, false, true),
-                            name: this.translateTermFromCodeName(docKey, 'ocr', o.field),
+                            mapToLandmark: this.translateTermFromCodeName(rDocKey !== undefined ? rDocKey : docKey, 'ocr', o.field, false, true),
+                            name: this.translateTermFromCodeName(rDocKey !== undefined ? rDocKey : docKey, 'ocr', o.field),
                             labels: text.map((lbl, idx) => { 
                                 let pos = undefined;
                                 if (o.coords !== undefined && o.coords[idx] !== undefined && o.coords[idx].length > 0) {
@@ -295,8 +329,8 @@ export class DatabaseUtil {
 
                 if (ocrData.landmarks !== undefined && ocrData.ocr_results !== undefined) {
                     if (session.raw_data.source === 'json') {
-                        landmarks = ocrData.landmarks.map((each: any) => handleLandmarks(each)).filter((each: any) => each !== null);
-                        ocr = ocrData.ocr_results.map((each: any) => handleOCRs(each)).filter((each: any) => each !== null);
+                        landmarks = ocrData.landmarks.map((each: any, idx: number) => handleLandmarks(each, idx)).filter((each: any) => each !== null);
+                        ocr = ocrData.ocr_results.map((each: any, idx: number) => handleOCRs(each, idx)).filter((each: any) => each !== null);
                     } else if (session.raw_data.source === 'csv') {
                         landmarks = [handleLandmarks(ocrData.landmarks)].filter((each: any) => each !== null);
                         ocr = [handleOCRs(ocrData.ocr_results)].filter((each: any) => each !== null);
@@ -304,7 +338,7 @@ export class DatabaseUtil {
                 }
             }
 
-            if (front) {
+            if (!back) {
                 given.originalID = {
                     originalImageProps: frontOriProps,
                     croppedImageProps: frontOcrProps,
@@ -336,34 +370,46 @@ export class DatabaseUtil {
             return given;
         }
     
-        return new Promise((res, rej) => {
-            load(docKey[0], true, result)
-            .then((val) => load(docKey[1], false, val)
-                            .then((fin) => {
-                                if (fin === {}) {
-                                    res(undefined);
-                                } else {
-                                    res(fin);
-                                }
-                            }))
-            .catch((err) => { console.error(err);
-                res(result); });
-        })
-
+        if (session.doc_faces === 1) {
+            return new Promise((res, rej) => {
+                load(session.doc_type, result, undefined)
+                .then((val) => {
+                    if (val === {}){
+                        res(undefined);
+                    } else {
+                        res(val);
+                    }
+                })
+                .catch((err) => { console.error(err); res(result);})
+            })
+        } else {
+            return new Promise((res, rej) => {
+                load(session.doc_type + "Front", result, false)
+                .then((val) => load(session.doc_type + "Back", val, true)
+                                .then((fin) => {
+                                    if (fin === {}) {
+                                        res(undefined);
+                                    } else {
+                                        res(fin);
+                                    }
+                                }))
+                .catch((err) => { console.error(err);
+                    res(result); });
+            })
+        }
     }
 
     public static loadSessionData(session: any, ID: IDState): Promise<IDState> {
         return new Promise<IDState>(async (res, rej) => {
             let sessionID = session.sessionID;
             // console.log(session);
-            this.loadMyKadGivenData(session).then((givenData) => {
+            this.loadGivenData(session).then((givenData) => {
                 res({
                     ...ID,
                     dataLoaded: true,
-                    // what if its not mykad????
-                    originalID: this.loadMyKadID(session, sessionID, true),
-                    backID: this.loadMyKadID(session, sessionID, false),
-                    croppedFace: this.dataURLtoFile(session.mykad_face, sessionID + "_mykad_face.jpg"),
+                    originalID: this.loadImageState(session, sessionID, true),
+                    backID: this.loadImageState(session, sessionID, false),
+                    croppedFace: this.dataURLtoFile(session.cropped_face, sessionID + "cropped_face.jpg"),
                     selfieImage: this.dataURLtoFile(session.face, sessionID + "_face.jpg"),
                     selfieVideo: this.dataURLtoFile(session.face_video, sessionID + "_face_video.mp4"),
                     videoStills: session.face_video_stills !== undefined ? session.face_video_stills.map((each: any, idx: number) => 

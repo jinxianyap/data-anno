@@ -19,12 +19,12 @@ const ccHeaders = {
 }
 
 const fileType = {
-    mykad_front_ori: '0',
-    mykad_back_ori: '1',
+    front_ori: '0',
+    back_ori: '1',
 
-    mykad_front_ocr: '2',
-    mykad_back_ocr: '3',
-    mykad_face: '4',
+    front_ocr: '2',
+    back_ocr: '3',
+    cropped_face: '4',
 
     face: '5',
     face_video: '6',
@@ -55,19 +55,24 @@ function withinDateRange(date, start, end) {
     return (fromStringToDate(date) >= fromStringToDate(start) && fromStringToDate(date) <= fromStringToDate(end));
 }
 
+function getInitialDoctype(filename) {
+    let keys = filename.split('.')[0].split('_').slice(1);
+    return keys[0];
+}
+
 function getFileType(filename) {
     let keys = filename.split('.')[0].split('_').slice(1);
     if (keys[0] === 'mykad') {
         switch (keys[1]) {
             case ('front'): {
-                return keys[2] === 'ocr' ? fileType.mykad_front_ocr : fileType.mykad_front_ori;
+                return keys[2] === 'ocr' ? fileType.front_ocr : fileType.front_ori;
             }
             case ('back'): {
-                return keys[2] === 'ocr' ? fileType.mykad_back_ocr : fileType.mykad_back_ori;
+                return keys[2] === 'ocr' ? fileType.back_ocr : fileType.back_ori;
             }
             case ('face'):
             default: {
-                return fileType.mykad_face;
+                return fileType.cropped_face;
             }
         }
     } else {
@@ -85,13 +90,15 @@ function getFileType(filename) {
 
 // transforms each image into base64 representation
 function allocateFiles(sessionID, route, files) {
-    var mykad_front_ori,
-        mykad_back_ori,
-        mykad_front_ocr,
-        mykad_back_ocr,
-        mykad_face,
+    var front_ori,
+        back_ori,
+        front_ocr,
+        back_ocr,
+        cropped_face,
         face,
-        face_video;
+        face_video,
+        doc_type,
+        doc_faces;
     var face_video_stills = [];
 
     for (let i = 0; i < files.length; i++) {
@@ -104,11 +111,11 @@ function allocateFiles(sessionID, route, files) {
             let type = getFileType(files[i]);
             let imgPrefix = 'data:image/jpg;base64,';
             switch (type) {
-                case (fileType.mykad_front_ori): mykad_front_ori = imgPrefix + file; break;
-                case (fileType.mykad_back_ori): mykad_back_ori = imgPrefix + file; break;
-                case (fileType.mykad_front_ocr): mykad_front_ocr = imgPrefix + file; break;
-                case (fileType.mykad_back_ocr): mykad_back_ocr = imgPrefix + file; break;
-                case (fileType.mykad_face): mykad_face = imgPrefix + file; break;
+                case (fileType.front_ori): front_ori = imgPrefix + file; doc_type = getInitialDoctype(files[i]); break;
+                case (fileType.back_ori): back_ori = imgPrefix + file; break;
+                case (fileType.front_ocr): front_ocr = imgPrefix + file; break;
+                case (fileType.back_ocr): back_ocr = imgPrefix + file; break;
+                case (fileType.cropped_face): cropped_face = imgPrefix + file; break;
                 case (fileType.face): face = imgPrefix + file; break;
                 case (fileType.face_video): face_video = 'data:video/mp4;base64,' + file; break;
                 case (fileType.face_video_still): face_video_stills.push(imgPrefix + file); break;
@@ -117,13 +124,21 @@ function allocateFiles(sessionID, route, files) {
         }
     }
 
+    if (doc_type === 'mykad') {
+        doc_faces = 2;
+    } else {
+        doc_faces = 1;
+    }
+
     return {
         sessionID: sessionID,
-        mykad_front_ori: mykad_front_ori,
-        mykad_back_ori: mykad_back_ori,
-        mykad_front_ocr: mykad_front_ocr,
-        mykad_back_ocr: mykad_back_ocr,
-        mykad_face: mykad_face,
+        doc_type: doc_type,
+        doc_faces: doc_faces,
+        front_ori: front_ori,
+        back_ori: back_ori,
+        front_ocr: front_ocr,
+        back_ocr: back_ocr,
+        cropped_face: cropped_face,
         face: face,
         face_video: face_video,
         face_video_stills: face_video_stills
@@ -134,11 +149,11 @@ function allocateFiles(sessionID, route, files) {
 function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
     function getFilesExistence(sessionRoute) {
         var existence = {
-            mykad_front_ori: false,
-            mykad_back_ori: false,
-            mykad_front_ocr: false,
-            mykad_back_ocr: false,
-            mykad_face: false,
+            front_ori: false,
+            back_ori: false,
+            front_ocr: false,
+            back_ocr: false,
+            cropped_face: false,
             face: false,
             face_video: false,
             face_video_stills: 0
@@ -154,11 +169,11 @@ function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
                     if (file) {
                         let type = getFileType(files[i]);
                         switch (type) {
-                            case (fileType.mykad_front_ori): existence.mykad_front_ori = true; break;
-                            case (fileType.mykad_back_ori): existence.mykad_back_ori = true; break;
-                            case (fileType.mykad_front_ocr): existence.mykad_front_ocr = true; break;
-                            case (fileType.mykad_back_ocr): existence.mykad_back_ocr = true; break;
-                            case (fileType.mykad_face): existence.mykad_face = true; break;
+                            case (fileType.front_ori): existence.front_ori = true; break;
+                            case (fileType.back_ori): existence.back_ori = true; break;
+                            case (fileType.front_ocr): existence.front_ocr = true; break;
+                            case (fileType.back_ocr): existence.back_ocr = true; break;
+                            case (fileType.cropped_face): existence.cropped_face = true; break;
                             case (fileType.face): existence.face = true; break;
                             case (fileType.face_video): existence.face_video = true; break;
                             case (fileType.face_video_still): existence.face_video_stills++; break;
@@ -228,8 +243,7 @@ function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
         } else if (landmark === true) {
             let ocrData = front ? json.ocr.originalID : json.ocr.backID;
             if (ocrData !== undefined && ocrData.length > 0 && ocrData.length === segData.length) {
-                ocr = ocrData.every((each) => {
-                    let ocrs = each.filter((o) => o.codeName === 'ic_num' || o.codeName === 'name' || o.codeName === 'address');
+                ocr = ocrData.every((ocrs) => {
                     if (ocrs !== undefined) {
                         return ocrs.every((o) => {
                             if (o.count === 1) {
@@ -253,10 +267,10 @@ function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
     var existence = getFilesExistence(sessionRoute);
     if (existence !== undefined) {
         var phasesToCheck = {
-            front: existence.mykad_front_ori,
-            back: existence.mykad_back_ori,
+            front: existence.front_ori,
+            back: existence.back_ori,
             video: existence.face_video,
-            face: existence.mykad_front_ori && existence.face
+            face: existence.front_ori && existence.face
         }
         var annotationStates = {
             front: {
@@ -338,6 +352,15 @@ function updateDataWithJSON(result, data) {
                             return each;
                         })
                     });
+                } else {
+                    ocrResults.glare_results = landmarks.map((lm) => {
+                        return lm.map((each) => {
+                            return { 
+                                field: each.codeName,
+                                glare: each.flags.includes('glare')
+                            }
+                        })
+                    })
                 }
 
                 if (ocrResults.landmarks !== undefined) {
@@ -346,20 +369,21 @@ function updateDataWithJSON(result, data) {
                         if (currLm.length > csvLm.length) {
                             return currLm.map((landmark) => {
                                 let lm = csvLm.find((l) => l.id === landmark.codeName);
+                                let hgt = front ? data.croppedImageProps.originalID.height : data.croppedImageProps.backID.height;
                                 if (lm !== undefined && lm.id !== undefined) {
                                     lm.coords = [landmark.position.x1, 
-                                        data.croppedImageProps.originalID.height - landmark.position.y1, 
+                                        hgt - landmark.position.y1, 
                                         landmark.position.x2,
-                                        data.croppedImageProps.originalID.height - landmark.position.y4];
+                                        hgt - landmark.position.y4];
                                     return lm;
                                 } else {
                                     return {
                                         id: landmark.codeName,
                                         score: 0,
                                         coords: [landmark.position.x1, 
-                                            data.croppedImageProps.originalID.height - landmark.position.y1, 
+                                            hgt - landmark.position.y1, 
                                             landmark.position.x2,
-                                            data.croppedImageProps.originalID.height - landmark.position.y4]
+                                            hgt - landmark.position.y4]
                                     }
                                 }
                             })
@@ -383,42 +407,98 @@ function updateDataWithJSON(result, data) {
                             })
                         }
                     })  
+                } else {
+                    ocrResults.landmarks = landmarks.map((currLm, idx) => {
+                        let hgt = 0;
+                        if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
+                            if (data.croppedImageProps.originalID.height === -1) {
+                                segCrop = data.segmentation.originalID;
+                                if (segCrop[idx] !== undefined && segCrop[idx].IDBox !== undefined) {
+                                    hgt = segCrop[idx].IDBox.position.y1 - segCrop[idx].IDBox.position.y4;
+                                }
+                            }
+                        } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
+                            if (data.croppedImageProps.backID.height === -1) {
+                                segCrop = data.segmentation.backID;
+                                if (segCrop[idx] !== undefined && segCrop[idx].IDBox !== undefined) {
+                                    hgt = segCrop[idx].IDBox.position.y1 - segCrop[idx].IDBox.position.y4;
+                                }
+                            }
+                        }
+                        return currLm.map((landmark) => {
+                            return {
+                                id: landmark.codeName,
+                                score: 0,
+                                coords: [landmark.position.x1, 
+                                    hgt - landmark.position.y1, 
+                                    landmark.position.x2,
+                                    hgt - landmark.position.y4]
+                            }
+                        })
+                    })
                 }
             } else {
                 ocrResults.glare_results = [ocrResults.glare_results];
                 ocrResults.landmarks = [ocrResults.landmarks];
             }
-            if (ocrs !== undefined && ocrs.length > 0 && ocrResults.ocr_results !== undefined) {
-                ocrResults.ocr_results = ocrs.map((currOcr) => {
-                    let csvOcr = ocrResults.ocr_results;
-                    if (currOcr.length > csvOcr.length) {
-                        return currOcr.map((ocr) => {
-                            let each = csvOcr.find((o) => o.field === ocr.codeName);
-                            if (each !== undefined && each.field !== undefined) {
-                                each.text = ocr.labels.map((lbl) => lbl.value).join(" ");
-                                each.coords = ocr.labels.map((lbl) => {
-                                    if (lbl.position !== undefined) {
-                                        if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
-                                            return [lbl.position.x1, 
-                                                data.croppedImageProps.originalID.height - lbl.position.y1, 
-                                                lbl.position.x2,
-                                                data.croppedImageProps.originalID.height - lbl.position.y4];
-                                        } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
-                                            return [lbl.position.x1, 
-                                                data.croppedImageProps.backID.height - lbl.position.y1, 
-                                                lbl.position.x2,
-                                                data.croppedImageProps.backID.height - lbl.position.y4];
+            if (ocrs !== undefined && ocrs.length > 0) {
+                if (ocrResults.ocr_results !== undefined) {
+                    ocrResults.ocr_results = ocrs.map((currOcr) => {
+                        let csvOcr = ocrResults.ocr_results;
+                        if (currOcr.length > csvOcr.length) {
+                            return currOcr.map((ocr) => {
+                                let each = csvOcr.find((o) => o.field === ocr.codeName);
+                                if (each !== undefined && each.field !== undefined) {
+                                    each.text = ocr.labels.map((lbl) => lbl.value).join(" ");
+                                    each.coords = ocr.labels.map((lbl) => {
+                                        if (lbl.position !== undefined) {
+                                            if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
+                                                return [lbl.position.x1, 
+                                                    data.croppedImageProps.originalID.height - lbl.position.y1, 
+                                                    lbl.position.x2,
+                                                    data.croppedImageProps.originalID.height - lbl.position.y4];
+                                            } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
+                                                return [lbl.position.x1, 
+                                                    data.croppedImageProps.backID.height - lbl.position.y1, 
+                                                    lbl.position.x2,
+                                                    data.croppedImageProps.backID.height - lbl.position.y4];
+                                            }
+                                        } else {
+                                            return [];
                                         }
-                                    } else {
-                                        return [];
+                                    });
+                                } else {
+                                    return {
+                                        field: ocr.codeName,
+                                        score: 0,
+                                        text: ocr.labels.map((lbl) => lbl.value).join(" "),
+                                        coords: ocr.labels.map((lbl) => {
+                                            if (lbl.position !== undefined) {
+                                                if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
+                                                    return [lbl.position.x1, 
+                                                        data.croppedImageProps.originalID.height - lbl.position.y1, 
+                                                        lbl.position.x2,
+                                                        data.croppedImageProps.originalID.height - lbl.position.y4];
+                                                } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
+                                                    return [lbl.position.x1, 
+                                                        data.croppedImageProps.backID.height - lbl.position.y1, 
+                                                        lbl.position.x2,
+                                                        data.croppedImageProps.backID.height - lbl.position.y4];
+                                                }
+                                            } else {
+                                                return [];
+                                            }
+                                        })
                                     }
-                                });
-                            } else {
-                                return {
-                                    field: ocr.codeName,
-                                    score: 0,
-                                    text: ocr.labels.map((lbl) => lbl.value).join(" "),
-                                    coords: ocr.labels.map((lbl) => {
+                                }
+                                return each;
+                            })
+                        } else {
+                            return csvOcr.map((each) => {
+                                let ocr = currOcr.find((o) => o.codeName === each.field);
+                                if (ocr !== undefined) {
+                                    each.text = ocr.labels.map((lbl) => lbl.value).join(" "),
+                                    each.coords = ocr.labels.map((lbl) => {
                                         if (lbl.position !== undefined) {
                                             if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
                                                 return [lbl.position.x1, 
@@ -436,36 +516,47 @@ function updateDataWithJSON(result, data) {
                                         }
                                     })
                                 }
+                                return each;
+                            })
+                        }
+                    })   
+                } else {
+                    ocrResults.ocr_results = ocrs.map((currOcr, idx) => {
+                        let hgt = 0;
+                        if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
+                            if (data.croppedImageProps.originalID.height === -1) {
+                                segCrop = data.segmentation.originalID;
+                                if (segCrop[idx] !== undefined && segCrop[idx].IDBox !== undefined) {
+                                    hgt = segCrop[idx].IDBox.position.y1 - segCrop[idx].IDBox.position.y4;
+                                }
                             }
-                            return each;
-                        })
-                    } else {
-                        return csvOcr.map((each) => {
-                            let ocr = currOcr.find((o) => o.codeName === each.field);
-                            if (ocr !== undefined) {
-                                each.text = ocr.labels.map((lbl) => lbl.value).join(" "),
-                                each.coords = ocr.labels.map((lbl) => {
+                        } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
+                            if (data.croppedImageProps.backID.height === -1) {
+                                segCrop = data.segmentation.backID;
+                                if (segCrop[idx] !== undefined && segCrop[idx].IDBox !== undefined) {
+                                    hgt = segCrop[idx].IDBox.position.y1 - segCrop[idx].IDBox.position.y4;
+                                }
+                            }
+                        }
+                        return currOcr.map((ocr) => {
+                            return {
+                                field: ocr.codeName,
+                                score: 0,
+                                text: ocr.labels.map((lbl) => lbl.value).join(" "),
+                                coords: ocr.labels.map((lbl) => {
                                     if (lbl.position !== undefined) {
-                                        if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
-                                            return [lbl.position.x1, 
-                                                data.croppedImageProps.originalID.height - lbl.position.y1, 
-                                                lbl.position.x2,
-                                                data.croppedImageProps.originalID.height - lbl.position.y4];
-                                        } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
-                                            return [lbl.position.x1, 
-                                                data.croppedImageProps.backID.height - lbl.position.y1, 
-                                                lbl.position.x2,
-                                                data.croppedImageProps.backID.height - lbl.position.y4];
-                                        }
+                                        return [lbl.position.x1, 
+                                            hgt - lbl.position.y1, 
+                                            lbl.position.x2,
+                                            hgt - lbl.position.y4];
                                     } else {
                                         return [];
                                     }
                                 })
                             }
-                            return each;
                         })
-                    }
-                })   
+                    })
+                }
             } else {
                 ocrResults.ocr_results = [ocrResults.ocr_results];
             }
@@ -475,7 +566,14 @@ function updateDataWithJSON(result, data) {
                 } else {
                     ocrResults.spoof_results.is_card_spoof = data.backIDFlags !== undefined ? data.backIDFlags.includes('spoof') : false;
                 }
+            } else {
+                if (front) {
+                    ocrResults.spoof_results = { is_card_spoof: data.frontIDFlags !== undefined ? data.frontIDFlags.includes('spoof') : false }
+                } else {
+                    ocrResults.spoof_results = { is_card_spoof: data.backIDFlags !== undefined ? data.backIDFlags.includes('spoof') : false }
+                }
             }
+
             ocrResults.flags = front ? data.frontIDFlags : data.backIDFlags;
             ocrResults.croppedImageProps = front ? data.croppedImageProps.originalID : data.croppedImageProps.backID;
             ocrResults.originalImageProps = front ? data.originalImageProps.originalID : data.originalImageProps.backID;
@@ -528,7 +626,7 @@ function updateDataWithJSON(result, data) {
     return newResult;
 }
 
-function getCSVData(filepath, session, res, rej) {9
+function getCSVData(filepath, session, res, rej) {
     csv()
     .fromFile(filepath)
     .then(async (json)=>{
@@ -536,7 +634,7 @@ function getCSVData(filepath, session, res, rej) {9
         let sessionData = json.filter((each) => each.session_id === session.sessionID);
         // front ocr data
         // both ori and ocr images are present -> front ocr succeeded
-        if (session.mykad_front_ori && session.mykad_front_ocr) {
+        if (session.front_ori && session.front_ocr) {
             let frontEntries = sessionData.filter((each) => each.doc_type === 'MYKAD_FRONT');
             if (frontEntries.length === 6) {
                 // this means a selfie video was uploaded
@@ -614,7 +712,7 @@ function getCSVData(filepath, session, res, rej) {9
 
         // back ocr data
         // both ori and ocr images are present -> back ocr succeeded
-        if (session.mykad_back_ori && session.mykad_back_ocr) {
+        if (session.back_ori && session.back_ocr) {
             let backEntries = sessionData.filter((each) => each.doc_type === 'MYKAD_BACK');
             if (backEntries.length > 0) {
                 // all back ids have the same result_ocr

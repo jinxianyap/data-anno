@@ -86,11 +86,6 @@ class SegLabeller extends React.Component<IProps, IState> {
         }
     }
 
-    componentWillMount() {
-        // console.log('mount');
-        // console.log(this.props.image);
-    }
-
     componentDidMount() {
         if (this.props.IDImage.image.size !== 0 && this.props.IDImage.image.name !== '') {
             this.loadImageData();
@@ -118,7 +113,6 @@ class SegLabeller extends React.Component<IProps, IState> {
                 this.renderCommittedBoxes();
             }
         }
-        console.log(this.state.boxes);
     }
 
     componentWillUnmount() {
@@ -204,12 +198,14 @@ class SegLabeller extends React.Component<IProps, IState> {
     renderCommittedBoxes = () => {
         let boxes = this.props.committedBoxes;
         let map = this.state.map!;
-        this.state.boxes.forEach((box) => {
-            box.circles.forEach((circle) => circle.remove());
-            box.lines.forEach((line) => line.remove());
-            box.textMarker!.remove();
-        });
-        this.setState({boxes: []});
+        if (this.state.boxes.length > 0) {
+            this.state.boxes.forEach((box) => {
+                box.circles.forEach((circle) => circle.remove());
+                box.lines.forEach((line) => line.remove());
+                box.textMarker!.remove();
+            });
+            this.setState({boxes: []});
+        }
 
         let newBoxes: SegBox[] = [];
         boxes.forEach((box) => {
@@ -520,9 +516,10 @@ class SegLabeller extends React.Component<IProps, IState> {
 
         let box = this.state.currentBox;
         let circle = box.circles[circleIndex];
-        circle.remove();
 
         if (circleIndex + 1 === box.circles.length) {
+            circle.remove();
+
             let circles = box.circles;
             circles.splice(-1, 1);
             let lines = box.lines;

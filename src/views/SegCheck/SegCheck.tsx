@@ -257,7 +257,7 @@ class SegCheck extends React.Component<IProps, IState> {
                 return (
                     <div id="backTitle">
                         <p>Internal ID {(this.props.currentID.internalIndex + 1).toString() + " of " + this.props.currentID.internalIDs.length.toString()}</p>
-                        <p>MyKad Back</p>
+                        <p>{this.props.currentID.internalIDs[this.props.currentID.internalIndex].documentType} Back</p>
                     </div>
                 ); 
             }

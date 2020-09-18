@@ -1,53 +1,67 @@
 {
     "documentTypes": {
-        "single": ["Passport", "Other"],
-        "double": ["MyKad"]
+        "single": ["passport", "other"],
+        "double": ["mykad", "fakedoubleID"]
     },
     "landmark": {
-        "keys": ["MyKadFront", "MyKadBack", "Passport", "Other"],
+        "keys": ["mykadFront", "mykadBack", "passport", "other", "fakedoubleIDFront", "fakedoubleIDBack"],
         "codeNames": [
             ["kpm", "security", "msc", "ghost", "gender", "citizen", "name", "address", "face", "logo", "ic_num", "hibiscus", "flag", "religion"],
             ["coa", "crown", "tower", "touchNgo", "sign", "chip_logo", "serial_num", "kppn", "malaysia_logo", "atm_logo", "ic_num"],
             ["passport_num", "name"],
-            ["id_num", "name"]
+            ["id_num", "name"],
+            ["id_num", "name", "dob"],
+            ["id_num", "logo"]
         ],
         "displayNames": [
             ["kadPengenalanMalaysiaLandmark", "securityChip", "mscLogo", "ghostImage", "gender", "citizen", "name", "address", "facialImage", "mykadLogo", "mykadNumber", "hibiscusLogo", "malaysiaFlag", "religion"],
             ["coatOfArmsLandmark", "crown", "klccTower", "touchNGo", "signature", "chipLogo", "serialNumber", "kPPN", "malaysiaLogo", "ATMLogo", "mykadNumber"],
             ["passportNumber", "name"],
-            ["IDNumber", "name"]
+            ["IDNumber", "name"],
+            ["IDNumber", "name", "dateOfBirth"],
+            ["IDNumber", "logo"]
         ],
         "outputNames": [
             ["kpmLogo", "securityChip", "mscLogo", "ghost", "gender", "nationality", "name", "address", "face", "mykadLogo", "idNum", "hibiscusLogo", "mysFlag", "religion"],
             ["coatOfArm", "crown", "twintowerLogo", "touchngoLogo", "signature", "chipLogo", "serialNum", "kppn", "mysLogo", "atmLogo", "idNum"],
             ["idNum", "name"],
-            ["idNum", "name"]
+            ["idNum", "name"],
+            ["idNum", "name", "birthdate"],
+            ["idNum", "logo"]
         ]
     },
     "ocr": {
-        "keys": ["MyKadFront", "MyKadBack", "Passport", "Other"],
+        "keys": ["mykadFront", "mykadBack", "passport", "other", "fakedoubleIDFront", "fakedoubleIDBack"],
         "codeNames": [
             ["ic_num", "name", "address", "gender", "citizen"],
             ["mykad_back_ic_num"],
             ["passport_num", "name"],
+            ["id_num"],
+            ["id_num", "name", "dob"],
             ["id_num"]
         ],
         "displayNames": [
             ["mykadNumber", "name", "address", "gender", "citizen"],
             ["mykadNumber"],
             ["passportNumber", "name"],
+            ["IDNumber"],
+            ["IDNumber", "name", "dateOfBirth"],
             ["IDNumber"]
         ],
         "mapToLandmark": [
             ["ic_num", "name", "address", "gender", "citizen"],
             ["ic_num"],
             ["passport_num", "name"],
+            ["id_num"],
+            ["id_num", "name", "dob"],
             ["id_num"]
         ],
         "outputNames": [
             ["idNum", "name", "address", "gender", "nationality"],
             ["idNum"],
             ["passportNum", "name"],
+            ["idNum"],
+            ["idNum", "name", "birthdate"],
             ["idNum"]
         ]
     },

@@ -368,14 +368,25 @@ class FacePanel extends React.Component<IProps, IState> {
                 if (prev) {
                     let idx = this.state.sortedList[this.state.sortedIndex - 1].libIndex;
                     this.props.getSelectedID(idx, res.data);
+                    this.setState({sortedIndex: this.state.sortedIndex - 1});
                 } else {
                     if (this.state.sortedIndex + 1 === this.state.sortedList.length) {
                         // go back to the first session
                         let idx = this.state.sortedList[0].libIndex;
                         this.props.getSelectedID(idx, res.data);
+                        this.setState({sortedIndex: 0});
                     } else {
-                        let idx = this.state.sortedList[this.state.sortedIndex + 1].libIndex;
-                        this.props.getSelectedID(idx, res.data);
+                        let next = this.state.sortedList[this.state.sortedIndex + 1];
+                        if (DatabaseUtil.getOverallStatus(next.ID.phasesChecked, next.ID.annotationState, this.props.processType)
+                        === AnnotationStatus.NOT_APPLICABLE) {
+                            let idx = this.state.sortedList[0].libIndex;
+                            this.props.getSelectedID(idx, res.data);
+                            this.setState({sortedIndex: 0});
+                        } else {
+                            let idx = next.libIndex;
+                            this.props.getSelectedID(idx, res.data);
+                            this.setState({sortedIndex: this.state.sortedIndex + 1});
+                        }
                     }
                 }
                 if (DatabaseUtil.getOverallStatus(res.data.phasesChecked, res.data.annotationState, this.props.processType)
@@ -406,7 +417,7 @@ class FacePanel extends React.Component<IProps, IState> {
         }
     }
 
-    loadSelectedID = (index: number) => {
+    loadSelectedID = (index: number, sortedIndex: number) => {
         if (index === this.props.currentIndex) return;
         this.resetState();
         this.props.saveToLibrary(this.props.currentID);
@@ -422,6 +433,7 @@ class FacePanel extends React.Component<IProps, IState> {
                 === AnnotationStatus.COMPLETE) {
                     this.mapIDLibrary();
                 }
+            this.setState({sortedIndex: sortedIndex});
             this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
         }).catch((err: any) => {
             console.error(err);
@@ -482,8 +494,7 @@ class FacePanel extends React.Component<IProps, IState> {
 
     handleGetSession = (libIndex: number, sortedIndex: number, status: AnnotationStatus) => {
         if (status === AnnotationStatus.NOT_APPLICABLE) return;
-        this.loadSelectedID(libIndex);
-        this.setState({sortedIndex: sortedIndex});
+        this.loadSelectedID(libIndex, sortedIndex);
     }
 
     render() {
