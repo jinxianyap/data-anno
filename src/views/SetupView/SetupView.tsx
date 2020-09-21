@@ -114,27 +114,6 @@ class SetupView extends React.Component<IProps, IState> {
                             IDs.push(DatabaseUtil.initializeID(res.data[i].sessions[j], res.data[i].date, IDs.length));
                         }
                     }
-                    // this.props.loadFromDatabase(IDs.sort((first, second) => {
-                    //     let firstStatus = DatabaseUtil.getOverallStatus(first.phasesChecked, first.annotationState, st.processType);
-                    //     let secondStatus = DatabaseUtil.getOverallStatus(second.phasesChecked, second.annotationState, st.processType);
-                    //     if (firstStatus === AnnotationStatus.INCOMPLETE) {
-                    //         if (secondStatus === AnnotationStatus.INCOMPLETE) {
-                    //             return 0;
-                    //         } else {
-                    //             return -1;
-                    //         }
-                    //     } else if (firstStatus === AnnotationStatus.COMPLETE) {
-                    //         if (secondStatus === AnnotationStatus.INCOMPLETE) {
-                    //             return 1;
-                    //         } else if (secondStatus === AnnotationStatus.NOT_APPLICABLE) {
-                    //             return -1;
-                    //         } else {
-                    //             return 0;
-                    //         }
-                    //     } else {
-                    //         return secondStatus === AnnotationStatus.NOT_APPLICABLE ? 0 : 1;
-                    //     }
-                    // }));
                     this.props.loadFromDatabase(IDs);
 
                     if (st.processType === ProcessType.FACE) {
@@ -205,46 +184,6 @@ class SetupView extends React.Component<IProps, IState> {
                                 <option key="face" value={ProcessType.FACE}>Liveness &amp; Face Comparison Only</option>
                             </Form.Control>
                         </Form.Group>
-
-                        
-
-                        {/* <Form.Group controlId="fileUpload">
-                        <Form.File
-                            className="position-relative"
-                            required
-                            name="file"
-                            label="IC Front"
-                            onChange={(e: any) => this.handleUpload(e)}
-                            />
-                        <Form.File
-                            className="position-relative"
-                            required
-                            name="file"
-                            label="IC cropped"
-                            onChange={(e: any) => this.handleUpload(e)}
-                            />
-                        <Form.File
-                            className="position-relative"
-                            required
-                            name="file"
-                            label="IC Back"
-                            onChange={(e: any) => this.handleUpload(e)}
-                            />
-                        <Form.File
-                            className="position-relative"
-                            required
-                            name="file"
-                            label="Selfie Video"
-                            onChange={(e: any) => this.handleUpload(e)}
-                            />
-                        <Form.File
-                            className="position-relative"
-                            required
-                            name="file"
-                            label="JSON"
-                            onChange={(e: any) => this.handleUpload(e)}
-                            />
-                        </Form.Group> */}
 
                         { this.state.incomplete
                             ? <p color='red'>Form not complete.</p>

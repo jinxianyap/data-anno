@@ -44,7 +44,7 @@ export class DatabaseUtil {
         }
     }
 
-    private static translateTermFromCodeName(doc: string, type: string, key: string, output?: boolean, map?: boolean): string {
+    public static translateTermFromCodeName(doc: string, type: string, key: string, output?: boolean, map?: boolean): string {
         switch (type) {
             case ('landmark'): { 
                 let idx = options.landmark.keys.findIndex((each) => each === doc);

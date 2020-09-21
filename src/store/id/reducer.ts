@@ -112,9 +112,16 @@ export function IDReducer(
             if (!state.originalIDProcessed) {
                 let id = ids[action.payload.index!];
                 id.originalID!.croppedImage = action.payload.croppedImage;
+                if (action.payload.landmarks !== undefined) {
+                    id.originalID!.landmark = action.payload.landmarks;
+                }
+                ids.splice(action.payload.index!, 1, id);
             } else {
                 let id = ids[state.internalIndex];
                 id.backID!.croppedImage = action.payload.croppedImage;
+                if (action.payload.landmarks !== undefined) {
+                    id.backID!.landmark = action.payload.landmarks;
+                }
                 ids.splice(state.internalIndex, 1, id);
             }
 

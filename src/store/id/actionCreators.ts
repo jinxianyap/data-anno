@@ -1,6 +1,6 @@
 import { IDActionTypes, IDState } from "./types";
 import { Action } from "../Actions";
-import { ImageState, IDBox } from "../image/types";
+import { ImageState, IDBox, LandmarkData } from "../image/types";
 import { Rotation } from "../../utils/enums";
 
 export function loadNextID(ID: IDState): IDActionTypes {
@@ -32,12 +32,13 @@ export function deleteIDBox(index: number): IDActionTypes {
     }
 }
 
-export function saveCroppedImage(image: File, index?: number): IDActionTypes {
+export function saveCroppedImage(image: File, index?: number, landmarks?: LandmarkData[]): IDActionTypes {
     return {
         type: Action.SAVE_CROPPED_IMAGE,
         payload: {
             index: index,
-            croppedImage: image
+            croppedImage: image,
+            landmarks: landmarks
         }
     }
 }

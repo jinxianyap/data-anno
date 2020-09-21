@@ -101,7 +101,13 @@
             ["idNum"],
             ["idNum", "name", "birthdate"],
             ["idNum"]
-        ]
+        ],
+        "specialFormat": [{
+            "ocrItem": "validity",
+            "type": "daterange",
+            "dateDelimiter": "-",
+            "delimiter": "/"
+        }]
     },
     "flags": {
         "overall": {

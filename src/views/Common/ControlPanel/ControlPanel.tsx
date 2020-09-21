@@ -2,7 +2,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { CurrentStage, IDProcess, ProcessType, AnnotationStatus } from '../../../utils/enums';
 import { AppState } from '../../../store';
-import { Form, Modal, Button, ButtonGroup, ToggleButton, ToggleButtonGroup, Card, Accordion, Spinner } from 'react-bootstrap';
+import { Form, Button, ButtonGroup, ToggleButton, ToggleButtonGroup, Card, Accordion, Spinner } from 'react-bootstrap';
 import options from '../../../options.json';
 import './ControlPanel.scss';
 import { GeneralActionTypes } from '../../../store/general/types';
@@ -42,7 +42,7 @@ interface IProps {
     createNewID: (IDBox: IDBox, passesCrop?: boolean, documentType?: string) => IDActionTypes;
     setIDBox: (IDBox: IDBox, croppedImage?: File) => IDActionTypes;
     deleteIDBox: (index: number) => IDActionTypes;
-    saveCroppedImage: (croppedImage: File, index?: number) => IDActionTypes;
+    saveCroppedImage: (croppedImage: File, index?: number, landmarks?: LandmarkData[]) => IDActionTypes;
     refreshIDs: (originalProcessed: boolean) => IDActionTypes;
     saveDocumentType: (internalIndex: number, documentType: string) => IDActionTypes;
     updateFrontIDFlags: (flags: string[]) => IDActionTypes;
@@ -1002,7 +1002,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 // only when processing front ID: to clear out internal IDs in case any were created before skipping
                 this.props.clearInternalIDs();
             }
-            if ((this.props.processType === ProcessType.WHOLE || this.props.processType === ProcessType.LIVENESS)) {
+            if (this.props.processType === ProcessType.WHOLE || this.props.processType === ProcessType.LIVENESS) {
                 if (this.props.currentID.selfieVideo!.name !== 'notfound') {
                     this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
                 } else if (this.props.currentID.selfieImage!.name !== 'notfound'
@@ -1355,6 +1355,18 @@ class ControlPanel extends React.Component<IProps, IState> {
             let cropsDone = 0;
 
             if (this.props.internalID.processStage !== IDProcess.DOUBLE_BACK) {
+                const moveOnFront = () => {
+                    if (cropsDone === this.props.currentID.internalIDs.length) {
+                        this.setState({isCropping: false});
+                        if (this.props.processType === ProcessType.SEGMENTATION) {
+                            this.props.progressNextStage(CurrentStage.INTER_STAGE);
+                        } else {
+                            this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
+                            this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                        }
+                    }
+                }
+
                 for (let i = 0; i < this.props.currentID.internalIDs.length; i++) {
                     let each = this.props.currentID.internalIDs[i];
                     let points = each.originalID!.IDBox!.position;
@@ -1368,36 +1380,64 @@ class ControlPanel extends React.Component<IProps, IState> {
                         if (res.status === 200) {
                             let image: File = DatabaseUtil.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename + "_cropped");
 
-                            // if (each.documentType !== undefined && each.documentType === 'mykad') {
-                            //     console.log('here');
-                            //     axios.post(
-                            //         HOST + ":" + PORT + LANDMARK,
-                            //         this.createLandmarkFormData(image, 'mykad_front'),
-                            //         header
-                            //     ).catch((err: any) => {console.error(err);
-                            //     }).then((landmarkRes: any) => {
-                            //         console.log(landmarkRes);
-                            //         if (landmarkRes.status === 200) {
-                            //             console.log('success');
-                            //         }
-                            //     })
-                            // }
-                            this.props.saveCroppedImage(image, i);
-
-                            cropsDone++;
-                            if (cropsDone === this.props.currentID.internalIDs.length) {
-                                this.setState({isCropping: false});
-                                if (this.props.processType === ProcessType.SEGMENTATION) {
-                                    this.props.progressNextStage(CurrentStage.INTER_STAGE);
-                                } else {
-                                    this.props.loadImageState(this.props.internalID.originalID!, this.state.passesCrop);
-                                    this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
-                                }
-                            }
+                            if (each.documentType !== undefined && each.documentType === 'mykad') {
+                                axios.post(
+                                    HOST + ":" + PORT + LANDMARK,
+                                    this.createLandmarkFormData(image, 'mykad_front'),
+                                    header
+                                ).catch((err: any) => {
+                                    console.error(err);
+                                    this.props.saveCroppedImage(image, i);
+                                    moveOnFront();
+                                }).then((landmarkRes: any) => {
+                                    if (landmarkRes.status === 200) {
+                                        this.props.saveCroppedImage(image, i, landmarkRes.data.map((each: any, idx: number) => {
+                                            let lm: LandmarkData = {
+                                                id: idx,
+                                                type: "landmark",
+                                                codeName: each.id,
+                                                name: DatabaseUtil.translateTermFromCodeName('mykadFront', 'landmark', each.id, false),
+                                                position: {
+                                                    x1: each.coords.x1[0],
+                                                    y1: each.coords.x1[1],
+                                                    x2: each.coords.x2[0],
+                                                    y2: each.coords.x2[1],
+                                                    x3: each.coords.x3[0],
+                                                    y3: each.coords.x3[1],
+                                                    x4: each.coords.x4[0],
+                                                    y4: each.coords.x4[1]
+                                                },
+                                                flags: []
+                                            }
+                                            return lm;
+                                        }));
+                                        cropsDone++;
+                                        moveOnFront();
+                                    } else {
+                                        this.props.saveCroppedImage(image, i);
+                                        cropsDone++;
+                                        moveOnFront();
+                                    }
+                                })
+                            } else {
+                                this.props.saveCroppedImage(image, i);
+                                cropsDone++;
+                                moveOnFront();
+                            } 
                         }                
                     });
                 }
             } else {
+                const moveOnBack = () => {
+                    this.setState({isCropping: false});
+                    if (this.props.processType === ProcessType.SEGMENTATION) {
+                        this.props.progressNextStage(CurrentStage.INTER_STAGE);
+                    } else {
+                        this.props.loadImageState(this.props.internalID.backID!, this.state.passesCrop);
+                        this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                    }
+                }
+
                 axios.post(
                     HOST + ":" + PORT + TRANSFORM,
                     this.createCropFormData(this.props.internalID.backID!.image, this.props.internalID.backID!.IDBox!.position),
@@ -1407,25 +1447,46 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }).then((res: any) => {
                     if (res.status === 200) {
                         let image: File = DatabaseUtil.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename);
-                        // if (this.props.internalID.documentType !== undefined && this.props.internalID.documentType === 'mykad') {
-                        //     axios.post(
-                        //         HOST + ":" + PORT + LANDMARK,
-                        //         this.createLandmarkFormData(image, 'mykad_back'),
-                        //         header
-                        //     ).catch((err: any) => console.error(err)
-                        //     ).then((landmarkRes: any) => {
-                        //         if (landmarkRes.status === 200) {
-                        //             console.log(landmarkRes);
-                        //         }
-                        //     })
-                        // }
-                        this.props.saveCroppedImage(image);
-                        this.setState({isCropping: false});
-                        if (this.props.processType === ProcessType.SEGMENTATION) {
-                            this.props.progressNextStage(CurrentStage.INTER_STAGE);
+                        if (this.props.internalID.documentType !== undefined && this.props.internalID.documentType === 'mykad') {
+                            axios.post(
+                                HOST + ":" + PORT + LANDMARK,
+                                this.createLandmarkFormData(image, 'mykad_back'),
+                                header
+                            ).catch((err: any) => {
+                                console.error(err);
+                                this.props.saveCroppedImage(image);
+                                moveOnBack();
+                            }).then((landmarkRes: any) => {
+                                if (landmarkRes.status === 200) {
+                                    this.props.saveCroppedImage(image, undefined, landmarkRes.data.map((each: any, idx: number) => {
+                                        let lm: LandmarkData = {
+                                            id: idx,
+                                            type: "landmark",
+                                            codeName: each.id,
+                                            name: DatabaseUtil.translateTermFromCodeName('mykadBack', 'landmark', each.id, false),
+                                            position: {
+                                                x1: each.coords.x1[0],
+                                                y1: each.coords.x1[1],
+                                                x2: each.coords.x2[0],
+                                                y2: each.coords.x2[1],
+                                                x3: each.coords.x3[0],
+                                                y3: each.coords.x3[1],
+                                                x4: each.coords.x4[0],
+                                                y4: each.coords.x4[1]
+                                            },
+                                            flags: []
+                                        }
+                                        return lm;
+                                    }));
+                                    moveOnBack();
+                                } else {
+                                    this.props.saveCroppedImage(image);
+                                    moveOnBack();
+                                }
+                            })
                         } else {
-                            this.props.loadImageState(this.props.internalID.backID!, this.state.passesCrop);
-                            this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
+                            this.props.saveCroppedImage(image);
+                            moveOnBack();
                         }
                     }                
                 });

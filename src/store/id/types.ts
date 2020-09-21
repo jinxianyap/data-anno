@@ -148,7 +148,8 @@ interface SaveCroppedImages {
     type: typeof Action.SAVE_CROPPED_IMAGE;
     payload: {
         index?: number,
-        croppedImage: File
+        croppedImage: File,
+        landmarks?: LandmarkData[]
     }
 }
 
