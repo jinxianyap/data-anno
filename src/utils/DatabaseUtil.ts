@@ -49,12 +49,21 @@ export class DatabaseUtil {
             case ('landmark'): { 
                 let idx = options.landmark.keys.findIndex((each) => each === doc);
                 if (idx === -1) return '';
-                let i = options.landmark.codeNames[idx].findIndex((each) => each === key);
-                if (i === -1) return '';
-                if (output) {
-                    return options.landmark.outputNames[idx][i];
+                let i = options.landmark.compulsory.codeNames[idx].findIndex((each) => each === key);
+                if (i === -1) {
+                    i = options.landmark.optional.codeNames[idx].findIndex((each) => each === key);
+                    if (i === -1) return '';
+                    if (output) {
+                        return options.landmark.optional.outputNames[idx][i];
+                    } else {
+                        return options.landmark.optional.displayNames[idx][i]; 
+                    }
                 } else {
-                    return options.landmark.displayNames[idx][i]; 
+                    if (output) {
+                        return options.landmark.compulsory.outputNames[idx][i];
+                    } else {
+                        return options.landmark.compulsory.displayNames[idx][i]; 
+                    }
                 }
             }
             case ('ocr'): { 

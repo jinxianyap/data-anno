@@ -8,10 +8,12 @@ import { AppState } from '../../../store';
 import { CurrentStage } from '../../../utils/enums';
 import './LandmarkLabeller.scss';
 import { GeneralUtil } from '../../../utils/GeneralUtil';
+import { InternalIDState } from '../../../store/id/types';
 
 interface IProps {
     currentStage: CurrentStage;
     currentImageState: ImageState,
+    internalID: InternalIDState,
     currentSymbol: string,
     ocrToLandmark: string,
     currentWord: OCRWord,
@@ -473,7 +475,8 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
     }
 
     handleNextLandmark = () => {
-        let landmark = this.props.currentImageState.landmark.filter((each) => each.position === undefined).sort((a, b) => a.id - b.id);
+        let landmark = this.props.currentImageState.landmark
+        .filter((each) => !GeneralUtil.isOptionalLandmark(each.codeName, this.props.internalID.documentType, this.props.internalID.processStage) && each.position === undefined).sort((a, b) => a.id - b.id);
         if (landmark === undefined || landmark.length === 0) return false;
         this.props.setCurrentSymbol(landmark[0].codeName);
         return true;
@@ -1322,6 +1325,7 @@ const mapStateToProps = (state: AppState, ownProps: any) => {
     return {
         currentStage: state.general.currentStage,
         currentImageState: state.image,
+        internalID: state.id.internalIDs[state.id.internalIndex],
         currentSymbol: state.image.currentSymbol!,
         ocrToLandmark: state.image.ocrToLandmark!,
         currentWord: state.image.currentWord!,

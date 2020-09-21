@@ -5,33 +5,64 @@
     },
     "landmark": {
         "keys": ["mykadFront", "mykadBack", "passport", "mydl", "other", "fakedoubleIDFront", "fakedoubleIDBack"],
-        "codeNames": [
-            ["kpm", "security", "msc", "ghost", "gender", "citizen", "name", "address", "face", "logo", "ic_num", "hibiscus", "flag", "religion"],
-            ["coa", "crown", "tower", "touchNgo", "sign", "chip_logo", "serial_num", "kppn", "malaysia_logo", "atm_logo", "ic_num"],
-            ["passport_num", "name"],
-            ["coatOfArm", "drvlicLogo", "mysFlag", "malaysiaLogo", "PLogo", "name", "nationality", "idNum", "validity", "drvlicClass", "address", "face", "hibiscusLogo"],
-            ["id_num", "name"],
-            ["id_num", "name", "dob"],
-            ["id_num", "logo"]
-        ],
-        "displayNames": [
-            ["kadPengenalanMalaysiaLandmark", "securityChip", "mscLogo", "ghostImage", "gender", "citizen", "name", "address", "facialImage", "mykadLogo", "mykadNumber", "hibiscusLogo", "malaysiaFlag", "religion"],
-            ["coatOfArms", "crown", "klccTower", "touchNGo", "signature", "chipLogo", "serialNumber", "kPPN", "malaysiaLogo", "ATMLogo", "mykadNumber"],
-            ["passportNumber", "name"],
-            ["coatOfArms", "drivingLicenseLogo", "mysFlag", "malaysiaLogo", "PLogo", "name", "nationality", "IDNumber", "validity", "drivingLicenseClass", "address", "face", "hibiscusLogo"],
-            ["IDNumber", "name"],
-            ["IDNumber", "name", "dateOfBirth"],
-            ["IDNumber", "logo"]
-        ],
-        "outputNames": [
-            ["kpmLogo", "securityChip", "mscLogo", "ghost", "gender", "nationality", "name", "address", "face", "mykadLogo", "idNum", "hibiscusLogo", "mysFlag", "religion"],
-            ["coatOfArm", "crown", "twintowerLogo", "touchngoLogo", "signature", "chipLogo", "serialNum", "kppn", "mysLogo", "atmLogo", "idNum"],
-            ["idNum", "name"],
-            ["coatOfArm", "drvlicLogo", "mysFlag", "malaysiaLogo", "PLogo", "name", "nationality", "idNum", "validity", "drvlicClass", "address", "face", "hibiscusLogo"],
-            ["idNum", "name"],
-            ["idNum", "name", "birthdate"],
-            ["idNum", "logo"]
-        ]
+        "compulsory": {
+            "codeNames": [
+                ["kpm", "logo", "flag", "ic_num", "security", "msc", "ghost", "face", "name", "address", "hibiscus", "citizen", "gender"],
+                ["coa", "tower", "sign", "kppn", "ic_num", "crown", "touchNgo", "malaysia_logo", "chip_logo", "serial_num"],
+                ["passport_num", "name"],
+                ["coatOfArm", "drvlicLogo", "mysFlag", "malaysiaLogo", "face", "name", "nationality", "idNum", "drvlicClass", "validity", "address", "hibiscusLogo"],
+                ["id_num", "name"],
+                ["id_num", "name", "dob"],
+                ["id_num", "logo"]
+            ],
+            "displayNames": [
+                ["kadPengenalanMalaysiaLandmark", "mykadLogo", "malaysiaFlag", "mykadNumber", "securityChip", "mscLogo", "ghostImage", "facialImage", "name", "address", "hibiscusLogo", "citizen", "gender"],
+                ["coatOfArms", "klccTower", "signature", "kPPN", "mykadNumber", "crown", "touchNGo", "malaysiaLogo", "chipLogo", "serialNumber"],
+                ["passportNumber", "name"],
+                ["coatOfArms", "drivingLicenseLogo", "mysFlag", "malaysiaLogo", "face", "name", "nationality", "IDNumber", "drivingLicenseClass", "validity", "address", "hibiscusLogo"],
+                ["IDNumber", "name"],
+                ["IDNumber", "name", "dateOfBirth"],
+                ["IDNumber", "logo"]
+            ],
+            "outputNames": [
+                ["kpmLogo", "mykadLogo", "mysFlag", "idNum", "securityChip", "mscLogo", "ghost", "face", "name", "address", "hibiscusLogo", "nationality", "gender"],
+                ["coatOfArm", "twintowerLogo", "signature", "kppn", "idNum", "crown", "touchngoLogo", "mysLogo", "chipLogo", "serialNum"],
+                ["idNum", "name"],
+                ["coatOfArm", "drvlicLogo", "mysFlag", "malaysiaLogo", "face", "name", "nationality", "idNum", "drvlicClass", "validity", "address", "hibiscusLogo"],
+                ["idNum", "name"],
+                ["idNum", "name", "birthdate"],
+                ["idNum", "logo"]
+            ]
+        },
+        "optional": {
+            "codeNames": [
+                ["religion"],
+                ["atm_logo"],
+                [],
+                ["PLogo"],
+                [],
+                [],
+                []
+            ],
+            "displayNames": [
+                ["religion"],
+                ["ATMLogo"],
+                [],
+                ["PLogo"],
+                [],
+                [],
+                []
+            ],
+            "outputNames": [
+                ["religion"],
+                ["atmLogo"],
+                [],
+                ["PLogo"],
+                [],
+                [],
+                []
+            ]
+        }
     },
     "ocr": {
         "keys": ["mykadFront", "mykadBack", "passport", "mydl", "other", "fakedoubleIDFront", "fakedoubleIDBack"],

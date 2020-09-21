@@ -12,8 +12,9 @@ import { progressNextStage, getPreviousID, getNextID, getSelectedID, saveToLibra
 import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, setFaceCompareMatch, backToOriginal, saveToInternalID, updateFrontIDFlags, updateBackIDFlags, restoreID, clearInternalIDs } from '../../../store/id/actionCreators';
 import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, addLandmarkData, updateLandmarkFlags, addOCRData, restoreImage } from '../../../store/image/actionCreators';
 import { DatabaseUtil } from '../../../utils/DatabaseUtil';
-import { HOST, PORT, TRANSFORM } from '../../../config';
+import { HOST, PORT, TRANSFORM, LANDMARK } from '../../../config';
 import { GeneralUtil } from '../../../utils/GeneralUtil';
+import { CgCheckO } from 'react-icons/cg';
 import SessionDropdown from '../SessionDropdown/SessionDropdown';
 const axios = require('axios');
 
@@ -666,10 +667,17 @@ class ControlPanel extends React.Component<IProps, IState> {
         let flags: {category: string, flags: string[]}[] = [];
         options.landmark.keys.forEach((each, idx) => {
             let landmarks: {name: string, codeName: string, flags: string[]}[] = [];
-            options.landmark.displayNames[idx].forEach((each, i) => {
+            options.landmark.compulsory.displayNames[idx].forEach((each, i) => {
                 landmarks.push({
                     name: each,
-                    codeName: options.landmark.codeNames[idx][i],
+                    codeName: options.landmark.compulsory.codeNames[idx][i],
+                    flags: []
+                });
+            });
+            options.landmark.optional.displayNames[idx].forEach((each, i) => {
+                landmarks.push({
+                    name: each,
+                    codeName: options.landmark.optional.codeNames[idx][i],
                     flags: []
                 });
             });
@@ -707,7 +715,7 @@ class ControlPanel extends React.Component<IProps, IState> {
             };
             
             let stLandmark = this.props.currentImage.landmark.find((lm) => each.codeName === lm.codeName);
-            if (stLandmark !== undefined && stLandmark.position !== undefined) {
+            if (stLandmark !== undefined) {
                 landmark.position = stLandmark.position;
             } else if (this.props.currentID.givenData !== undefined) {
                 // if db csv already has ocr data
@@ -782,7 +790,7 @@ class ControlPanel extends React.Component<IProps, IState> {
             };
             
             let stOcr = this.props.currentImage.ocr.find((lm) => each.codeName === lm.codeName);
-            if (stOcr !== undefined && stOcr.labels.some((e) => e.position !== undefined)) {
+            if (stOcr !== undefined) {
                 ocr.labels = stOcr.labels;
                 ocr.count = stOcr.count;
             } else if (this.props.currentID.givenData !== undefined) {
@@ -890,7 +898,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
     }
 
-    createFormData = (image: File, points: any) => {
+    createCropFormData = (image: File, points: any) => {
         const data = new FormData();
         data.append("image", image);
         data.append("x1", points.x1.toString());
@@ -901,6 +909,13 @@ class ControlPanel extends React.Component<IProps, IState> {
         data.append("y2", points.y2.toString());
         data.append("y3", points.y3.toString());
         data.append("y4", points.y4.toString());
+        return data;
+    }
+
+    createLandmarkFormData = (image: File, docType: string) => {
+        const data = new FormData();
+        data.append("image", image);
+        data.append("card_type", docType);
         return data;
     }
 
@@ -1345,13 +1360,28 @@ class ControlPanel extends React.Component<IProps, IState> {
                     let points = each.originalID!.IDBox!.position;
                     axios.post(
                         HOST + ":" + PORT + TRANSFORM,
-                        this.createFormData(each.originalID!.image, points),
+                        this.createCropFormData(each.originalID!.image, points),
                         header
                     ).catch((err: any) => {
                         console.error(err);
                     }).then((res: any) => {
                         if (res.status === 200) {
                             let image: File = DatabaseUtil.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename + "_cropped");
+
+                            // if (each.documentType !== undefined && each.documentType === 'mykad') {
+                            //     console.log('here');
+                            //     axios.post(
+                            //         HOST + ":" + PORT + LANDMARK,
+                            //         this.createLandmarkFormData(image, 'mykad_front'),
+                            //         header
+                            //     ).catch((err: any) => {console.error(err);
+                            //     }).then((landmarkRes: any) => {
+                            //         console.log(landmarkRes);
+                            //         if (landmarkRes.status === 200) {
+                            //             console.log('success');
+                            //         }
+                            //     })
+                            // }
                             this.props.saveCroppedImage(image, i);
 
                             cropsDone++;
@@ -1370,13 +1400,25 @@ class ControlPanel extends React.Component<IProps, IState> {
             } else {
                 axios.post(
                     HOST + ":" + PORT + TRANSFORM,
-                    this.createFormData(this.props.internalID.backID!.image, this.props.internalID.backID!.IDBox!.position),
+                    this.createCropFormData(this.props.internalID.backID!.image, this.props.internalID.backID!.IDBox!.position),
                     header
                 ).catch((err: any) => {
                     console.error(err);
                 }).then((res: any) => {
                     if (res.status === 200) {
                         let image: File = DatabaseUtil.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename);
+                        // if (this.props.internalID.documentType !== undefined && this.props.internalID.documentType === 'mykad') {
+                        //     axios.post(
+                        //         HOST + ":" + PORT + LANDMARK,
+                        //         this.createLandmarkFormData(image, 'mykad_back'),
+                        //         header
+                        //     ).catch((err: any) => console.error(err)
+                        //     ).then((landmarkRes: any) => {
+                        //         if (landmarkRes.status === 200) {
+                        //             console.log(landmarkRes);
+                        //         }
+                        //     })
+                        // }
                         this.props.saveCroppedImage(image);
                         this.setState({isCropping: false});
                         if (this.props.processType === ProcessType.SEGMENTATION) {
@@ -1543,7 +1585,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <div>
                     <Accordion>
                         {
-                            this.state.currentLandmarks.sort((a, b) => a.name.localeCompare(b.name)).map((each, idx) => {
+                            this.state.currentLandmarks.map((each, idx) => {
                                 return (
                                     <Card key={idx}>
                                         <Accordion.Toggle
@@ -1553,6 +1595,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                             key={idx}
                                             onClick={() => setLandmark(each.codeName)}>
                                                 {GeneralUtil.beautifyWord(each.name)}
+                                                <CgCheckO className="landmark-done-tick" />
                                         </Accordion.Toggle>
                                         <Accordion.Collapse eventKey={idx.toString()}>
                                         <Card.Body>
@@ -1567,7 +1610,10 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <Button variant="secondary" className="common-button" onClick={backStage}>Back</Button>
                 {/* SKIP_VALIDATION: comment out disabled attribute */}
                 <Button className="common-button"
-                    disabled={this.props.currentImage.landmark.filter((each) => each.codeName !== 'religion' && each.position === undefined).length > 0}
+                    disabled={this.props.currentImage.landmark.filter((each) => {
+                        return !GeneralUtil.isOptionalLandmark(each.codeName, this.props.internalID.documentType, this.props.internalID.processStage)
+                            && each.position === undefined
+                    }).length > 0}
                     onClick={submitLandmark}>Done</Button>
             </div>
         );
@@ -1615,10 +1661,10 @@ class ControlPanel extends React.Component<IProps, IState> {
             <Form onSubmit={handleSubmit}>
                 {
                     this.state.currentOCR.filter((ocr) => {
-                        if (ocr.codeName === 'religion') {
-                            let religionLm = this.props.currentImage.landmark.find((lm) => lm.codeName === 'religion');
-                            if (religionLm !== undefined) {
-                                return religionLm.position !== undefined;
+                        if (GeneralUtil.isOptionalLandmark(ocr.mapToLandmark, this.props.internalID.documentType, this.props.internalID.processStage)) {
+                            let lm = this.props.currentImage.landmark.find((lm) => lm.codeName === ocr.mapToLandmark);
+                            if (lm !== undefined) {
+                                return lm.position !== undefined;
                             }
                         }
                         return true;

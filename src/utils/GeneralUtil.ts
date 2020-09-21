@@ -47,6 +47,13 @@ export class GeneralUtil {
         }
     }
 
+    public static isOptionalLandmark(codeName: string, documentType?: string, processStage?: IDProcess): boolean {
+        if (documentType === undefined || processStage === undefined) return true;
+        let idx = options.landmark.keys.findIndex((each) => each === documentType + processStage);
+        if (idx === -1) return true;
+        return options.landmark.optional.codeNames[idx].includes(codeName);
+    }
+
     public static beautifyWord(word: string): string {
         if (word === undefined) return '';
         let separates = word.replace(/([A-Z])/g,' $1');

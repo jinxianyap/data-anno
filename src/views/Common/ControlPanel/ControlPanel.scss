@@ -35,6 +35,10 @@
         }
     }
 
+    .landmark-done-tick {
+        display: none;
+    }
+
     .landmark-tab, .ocr-tab {
         color: grey;
     }
@@ -42,6 +46,11 @@
     .labelled-landmark.landmark-tab {
         background-color: #d3d3d3;
         color: black;
+
+        .landmark-done-tick {
+            display: block;
+            float: right;
+        }
     }
 
     .selected-landmark, .selected-ocr {

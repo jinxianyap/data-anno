@@ -31,6 +31,8 @@ const fileType = {
     face_video_still: '7'
 }
 
+const optionalLandmarks = ['religion', 'atm_logo', 'PLogo'];
+
 Object.freeze(fileType);
 
 function fromDateToString(dateObj, isOutput) {
@@ -209,7 +211,12 @@ function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
             if (segData.length === 1 && segData[0].IDBox === undefined) {
                 // single empty entry
                 skippedSeg = true;
-                seg = front ? segFlags.length > 0 : (segFlags.length > 0 ? true : json.frontIDFlags.length > 0);
+                if (front) {
+                    seg = segFlags.length > 0;
+                } else {
+                    seg = segFlags.length > 0 ? true : (json.frontIDFlags.length > 0 || 
+                        (json.processStage[0] !== undefined && json.processStage[0] === ''));
+                }
             } else {
                 // check if coordinates are present
                 seg = segData.every((each) => each.IDBox !== undefined && isValidPosition(each.IDBox.position));
@@ -217,7 +224,12 @@ function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
         } else {
             // no segData, check if got flags to justify
             skippedSeg = true;
-            seg = front ? segFlags.length > 0 : (segFlags.length > 0 ? true : json.frontIDFlags.length > 0);
+            if (front) {
+                seg = segFlags.length > 0;
+            } else {
+                seg = segFlags.length > 0 ? true : (json.frontIDFlags.length > 0 || 
+                    (json.processStage[0] !== undefined && json.processStage[0] === ''));
+            }
         }
 
         // go on to check landmark if seg is annotated
@@ -230,7 +242,7 @@ function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
                 // religion optional
                 landmark = landmarkData.every((each) => {
                     if (each.length > 0) {
-                        return each.every((lm) => lm.codeName === 'religion' || isValidPosition(lm.position))
+                        return each.every((lm) => optionalLandmarks.includes(lm.codeName) || isValidPosition(lm.position))
                     }
                     return false;
                 });
@@ -246,7 +258,7 @@ function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
                 ocr = ocrData.every((ocrs) => {
                     if (ocrs !== undefined) {
                         return ocrs.every((o) => {
-                            if (o.codeName === 'religion') {
+                            if (optionalLandmarks.includes(o.mapToLandmark)) {
                                 return true;
                             } else if (o.count === 1) {
                                 return o.labels.length === 1 && o.labels[0].value !== '' && o.labels[0].value !== undefined;
