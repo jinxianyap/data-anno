@@ -857,24 +857,27 @@ app.post('/loadSessionData', async (req, res) => {
         .then((val) => {session = val;})
         .catch((err) => {console.error(err)});
     let outputPath = testFolder + "annotation_output/" + db + "/";
-    let outputFiles = fs.readdirSync(outputPath);
-    if (outputFiles && outputFiles.includes(date)) {
-        let dateOutputPath = outputPath + date + "/";
-        let jsonFilename = sessionID + ".json";
-        let dateOutputFiles = fs.readdirSync(dateOutputPath);
-        if (dateOutputFiles && dateOutputFiles.includes(jsonFilename)) {
-            try {
-                let jsonData = fs.readFileSync(dateOutputPath + jsonFilename);
-                if (jsonData) {
-                    let data = JSON.parse(jsonData);
-                    let updatedData = updateDataWithJSON(session.raw_data, data);
-                    session.raw_data = updatedData;
+    try {
+        let outputFiles = fs.readdirSync(outputPath);
+        if (outputFiles && outputFiles.includes(date)) {
+            let dateOutputPath = outputPath + date + "/";
+            let jsonFilename = sessionID + ".json";
+            let dateOutputFiles = fs.readdirSync(dateOutputPath);
+            if (dateOutputFiles && dateOutputFiles.includes(jsonFilename)) {
+                try {
+                    let jsonData = fs.readFileSync(dateOutputPath + jsonFilename);
+                    if (jsonData) {
+                        let data = JSON.parse(jsonData);
+                        let updatedData = updateDataWithJSON(session.raw_data, data);
+                        session.raw_data = updatedData;
+                    }
+                } catch (err) {
+                    console.error('Session ID: ' + sessionID + ' - No output json found.');
                 }
-            } catch (err) {
-                console.error('Session ID: ' + sessionID + ' - No output json found.');
-                session.raw_data = csvData;
             }
         }
+    } catch (err) {
+        console.error('Session ID: ' + sessionID + ' - No output json DB folder found.');
     }
 
     res.status(200).send(session);
