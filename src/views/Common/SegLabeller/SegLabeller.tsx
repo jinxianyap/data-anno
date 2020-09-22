@@ -198,6 +198,7 @@ class SegLabeller extends React.Component<IProps, IState> {
     renderCommittedBoxes = () => {
         let boxes = this.props.committedBoxes;
         let map = this.state.map!;
+
         if (this.state.boxes.length > 0) {
             this.state.boxes.forEach((box) => {
                 box.circles.forEach((circle) => circle.remove());
@@ -207,8 +208,7 @@ class SegLabeller extends React.Component<IProps, IState> {
             this.setState({boxes: []});
         }
 
-        let newBoxes: SegBox[] = [];
-        boxes.forEach((box) => {
+        let newBoxes: SegBox[] = boxes.map((box) => {
             let x1 = box.position.x1 / this.state.ratio;
             let x2 = box.position.x2 / this.state.ratio;
             let x3 = box.position.x3 / this.state.ratio;
@@ -265,7 +265,7 @@ class SegLabeller extends React.Component<IProps, IState> {
                 lines: lines
             }
 
-            newBoxes.push(segBox);
+            return segBox;
         });
         this.setState({boxes: newBoxes});
     }
@@ -279,11 +279,6 @@ class SegLabeller extends React.Component<IProps, IState> {
                 }
             }
         }
-
-        let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
-        if (internalID !== undefined
-            && internalID.processStage === IDProcess.DOUBLE_BACK
-            && internalID.backID!.IDBox !== undefined) return; 
 
         this.addCircle(e);
     }
@@ -388,8 +383,12 @@ class SegLabeller extends React.Component<IProps, IState> {
     }
 
     addCircle = (e: any) => {
-        if (this.props.originalProcessed && this.props.internalIDs.length <= this.state.boxes.length) {
-            return;
+        if (this.props.originalProcessed) {
+            let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
+            if (internalID !== undefined
+                && internalID.processStage === IDProcess.DOUBLE_BACK
+                && internalID.backID!.IDBox !== undefined) return; 
+            if (this.props.internalIDs.length <= this.state.boxes.length) return;
         }
 
         let st = this.state;
@@ -574,8 +573,14 @@ class SegLabeller extends React.Component<IProps, IState> {
 const mapStateToProps = (state: AppState, ownProps: any) => {
     let boxes: IDBox[] = [];
     state.id.internalIDs.forEach((each) => {
-        if (state.id.originalIDProcessed && each.backID!.IDBox !== undefined) {
-            boxes.push(each.backID!.IDBox);
+        if (state.id.originalIDProcessed) {
+            if (state.id.internalIDs[state.id.internalIndex].processStage === IDProcess.DOUBLE_BACK
+                && each.backID!.IDBox !== undefined) {
+                boxes.push(each.backID!.IDBox);
+            } else if (state.id.internalIDs[state.id.internalIndex].processStage !== IDProcess.DOUBLE_BACK
+                && each.originalID!.IDBox !== undefined) {
+                    boxes.push(each.originalID!.IDBox);
+                }
         } else if (!state.id.originalIDProcessed && each.originalID!.IDBox !== undefined) {
             boxes.push(each.originalID!.IDBox);
         }
@@ -585,7 +590,9 @@ const mapStateToProps = (state: AppState, ownProps: any) => {
         currentID: state.id,
         internalIDs: state.id.internalIDs,
         originalProcessed: state.id.originalIDProcessed,
-        IDImage: state.id.originalIDProcessed ? state.id.backID! : state.id.originalID!,
+        IDImage: state.id.originalIDProcessed 
+            ? (state.id.internalIDs[state.id.internalIndex].processStage === IDProcess.DOUBLE_BACK ? state.id.backID! : state.id.originalID!) 
+            : state.id.originalID!,
         committedBoxes: boxes
 }};
     

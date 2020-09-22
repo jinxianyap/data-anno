@@ -84,7 +84,6 @@ class SessionDropdown extends React.Component<IProps, IState> {
         }
         const sessionStatus = this.props.sortedList[this.props.sortedIndex] !== undefined ? this.props.sortedList[this.props.sortedIndex].status : "";
         const maxIndex = this.props.sortedList.filter((each) => each.status !== AnnotationStatus.NOT_APPLICABLE).length;
-        let currIndex = this.props.sortedList[this.props.sortedIndex] !== undefined ? this.props.sortedList[this.props.sortedIndex].libIndex : -1;
 
         return (
             <div id="folder-number">
@@ -94,7 +93,7 @@ class SessionDropdown extends React.Component<IProps, IState> {
                         disabled={this.props.sortedIndex === 0} 
                         className="nav-button"><GrFormPrevious /></Button>
                     <Button id="sessions-btn" className={sessionStatus} variant="light" onClick={() => this.setState({showSessionsModal: true})}>
-                        Session   {currIndex + 1} / {this.props.library.length}</Button>
+                        Session   {this.props.currentIndex + 1} / {this.props.library.length}</Button>
                     <Button variant="light" 
                         onClick={() => loadNextID(false)}
                         disabled={this.props.sortedIndex + 1 === maxIndex}

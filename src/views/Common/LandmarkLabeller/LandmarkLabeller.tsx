@@ -793,7 +793,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
     withinLandmarkRectangleBounds = (e: any, symbol?: string, move?: boolean) => {
         if (move && symbol === undefined) return undefined;
         if (symbol !== undefined) {
-            for (let i = 0; i < this.state.landmarkBoxes.length; i++) {
+            for (let i = this.state.landmarkBoxes.length - 1; i >= 0; i--) {
                 if ((this.state.landmarkBoxes[i].rectangle!.getBounds().contains(e.latlng))
                 // || this.state.landmarkBoxes[i].wrapper!.getBounds().contains(e.latlng))
                 && this.state.landmarkBoxes[i].codeName === symbol) {
@@ -802,7 +802,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             }
             return undefined;
         } else if (!move) {
-            for (let i = 0; i < this.state.landmarkBoxes.length; i++) {
+            for (let i = this.state.landmarkBoxes.length - 1; i >= 0; i--) {
                 if (this.state.landmarkBoxes[i].rectangle!.getBounds().contains(e.latlng)
                 // || this.state.landmarkBoxes[i].wrapper!.getBounds().contains(e.latlng)
                 ) {

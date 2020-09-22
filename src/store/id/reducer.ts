@@ -1,10 +1,9 @@
 import { IDState, IDActionTypes, InternalIDState } from './types';
 import { Action } from '../Actions';
 import { IDProcess, Rotation } from '../../utils/enums';
-import { ImageState, IDBox } from '../image/types';
+import { ImageState, IDBox, LandmarkData } from '../image/types';
 import { GeneralUtil } from '../../utils/GeneralUtil';
-
-const axios = require('axios');
+import options from '../../options.json';
 
 const initialState: IDState = {
     dirty: false,
@@ -113,15 +112,107 @@ export function IDReducer(
                 let id = ids[action.payload.index!];
                 id.originalID!.croppedImage = action.payload.croppedImage;
                 if (action.payload.landmarks !== undefined) {
-                    id.originalID!.landmark = action.payload.landmarks;
+                    let landmarks: LandmarkData[] = [];
+                    if (id.originalID!.landmark.length === 0) {
+                        landmarks = action.payload.landmarks;
+                    } else {
+                        landmarks = id.originalID!.landmark.map((each) => {
+                            let acLm = action.payload.landmarks!.find((lm) => lm.codeName === each.codeName);
+                            if (acLm === undefined) {
+                                return each;
+                            } else {
+                                return acLm;
+                            }
+                        })
+                    }
+                    
+                    // append missing (usually optional) landmarks
+                    if (id.documentType !== undefined && id.processStage !== undefined) {
+                        let docIndex = options.landmark.keys.findIndex((each) => each === id.documentType! + id.processStage!);
+                        if (docIndex !== -1) {
+                            let comp = options.landmark.compulsory.codeNames[docIndex];
+                            let opt = options.landmark.optional.codeNames[docIndex];
+                            if (landmarks.length < comp.length + opt.length) {
+                                comp.forEach((each, idx) => {
+                                    if (landmarks.find((lm) => lm.codeName === each) === undefined) {
+                                        landmarks.push({
+                                            id: landmarks.length,
+                                            type: 'landmark',
+                                            codeName: each,
+                                            name: options.landmark.compulsory.displayNames[docIndex][idx],
+                                            flags: []
+                                        })
+                                    }
+                                })
+                                opt.forEach((each, idx) => {
+                                    if (landmarks.find((lm) => lm.codeName === each) === undefined) {
+                                        landmarks.push({
+                                            id: landmarks.length,
+                                            type: 'landmark',
+                                            codeName: each,
+                                            name: options.landmark.optional.displayNames[docIndex][idx],
+                                            flags: []
+                                        })
+                                    }
+                                })
+                            }
+                        }
+                    }
+                    id.originalID!.landmark = landmarks;
                 }
                 ids.splice(action.payload.index!, 1, id);
             } else {
                 let id = ids[state.internalIndex];
                 id.backID!.croppedImage = action.payload.croppedImage;
                 if (action.payload.landmarks !== undefined) {
-                    id.backID!.landmark = action.payload.landmarks;
+                    let landmarks: LandmarkData[] = [];
+                    if (id.backID!.landmark.length === 0) {
+                        landmarks = action.payload.landmarks;
+                    } else {
+                        landmarks = id.backID!.landmark.map((each) => {
+                            let acLm = action.payload.landmarks!.find((lm) => lm.codeName === each.codeName);
+                            if (acLm === undefined) {
+                                return each;
+                            } else {
+                                return acLm;
+                            }
+                        })
+                    }
+
+                    if (id.documentType !== undefined && id.processStage !== undefined) {
+                        let docIndex = options.landmark.keys.findIndex((each) => each === id.documentType! + id.processStage!);
+                        if (docIndex !== -1) {
+                            let comp = options.landmark.compulsory.codeNames[docIndex];
+                            let opt = options.landmark.optional.codeNames[docIndex];
+                            if (landmarks.length < comp.length + opt.length) {
+                                comp.forEach((each, idx) => {
+                                    if (landmarks.find((lm) => lm.codeName === each) === undefined) {
+                                        landmarks.push({
+                                            id: landmarks.length,
+                                            type: 'landmark',
+                                            codeName: each,
+                                            name: options.landmark.compulsory.displayNames[docIndex][idx],
+                                            flags: []
+                                        })
+                                    }
+                                })
+                                opt.forEach((each, idx) => {
+                                    if (landmarks.find((lm) => lm.codeName === each) === undefined) {
+                                        landmarks.push({
+                                            id: landmarks.length,
+                                            type: 'landmark',
+                                            codeName: each,
+                                            name: options.landmark.optional.displayNames[docIndex][idx],
+                                            flags: []
+                                        })
+                                    }
+                                })
+                            }
+                        }
+                    }
+                    id.backID!.landmark = landmarks;
                 }
+                
                 ids.splice(state.internalIndex, 1, id);
             }
 
@@ -178,17 +269,20 @@ export function IDReducer(
             if (stage === IDProcess.DOUBLE_FRONT) {
                 stage = internalID.processStage === IDProcess.DOUBLE_BACK ? IDProcess.DOUBLE_BACK : IDProcess.DOUBLE_FRONT;
             }
+            if (internalID.documentType !== action.payload.documentType) {
+                internalID.faceCompareMatch = undefined;
+                internalID.originalID!.landmark = [];
+                internalID.originalID!.ocr = [];
+                internalID.originalID!.currentSymbol = undefined;
+                internalID.originalID!.currentWord = undefined;
+                internalID.backID!.landmark = [];
+                internalID.backID!.ocr = [];
+                internalID.backID!.currentSymbol = undefined;
+                internalID.backID!.currentWord = undefined;
+            }
             internalID.documentType = action.payload.documentType;
             internalID.processStage = stage;
-            internalID.faceCompareMatch = undefined;
-            internalID.originalID!.landmark = [];
-            internalID.originalID!.ocr = [];
-            internalID.originalID!.currentSymbol = undefined;
-            internalID.originalID!.currentWord = undefined;
-            internalID.backID!.landmark = [];
-            internalID.backID!.ocr = [];
-            internalID.backID!.currentSymbol = undefined;
-            internalID.backID!.currentWord = undefined;
+           
             IDs.splice(action.payload.internalIndex, 1, internalID);
             return {
                 ...state,

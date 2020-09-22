@@ -349,6 +349,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 break;
             }
             case (CurrentStage.OCR_EDIT): {
+                if (previousProps.currentStage === this.props.currentStage) break;
                 if (this.props.internalID !== undefined && this.props.currentImage.ocr.every((each) => each.count <= 1)) {
                     if (this.props.processType === ProcessType.OCR) {
                         if (this.props.internalID.processStage === IDProcess.DOUBLE_FRONT) {
@@ -360,7 +361,6 @@ class ControlPanel extends React.Component<IProps, IState> {
                         }
                     } else {
                         if (this.props.internalID.processStage === IDProcess.DOUBLE_FRONT) {
-                            this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
                             this.props.saveToInternalID(this.props.currentImage, false);            
                             this.loadBackId();
                         } else if (this.props.internalID.processStage === IDProcess.DOUBLE_BACK
@@ -713,7 +713,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 flags: each.flags,
                 type: 'landmark'
             };
-            
+
             let stLandmark = this.props.currentImage.landmark.find((lm) => each.codeName === lm.codeName);
             if (stLandmark !== undefined) {
                 landmark.position = stLandmark.position;
@@ -1357,7 +1357,7 @@ class ControlPanel extends React.Component<IProps, IState> {
             if (this.props.internalID.processStage !== IDProcess.DOUBLE_BACK) {
                 const moveOnFront = () => {
                     if (cropsDone === this.props.currentID.internalIDs.length) {
-                        this.setState({isCropping: false});
+                        this.setState({isCropping: false}, () => GeneralUtil.toggleOverlay(false));
                         if (this.props.processType === ProcessType.SEGMENTATION) {
                             this.props.progressNextStage(CurrentStage.INTER_STAGE);
                         } else {
@@ -1379,8 +1379,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                     }).then((res: any) => {
                         if (res.status === 200) {
                             let image: File = DatabaseUtil.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename + "_cropped");
-
-                            if (each.documentType !== undefined && each.documentType === 'mykad') {
+                            if (each.originalID!.landmark.length === 0 && each.documentType !== undefined && each.documentType === 'mykad') {
                                 axios.post(
                                     HOST + ":" + PORT + LANDMARK,
                                     this.createLandmarkFormData(image, 'mykad_front'),
@@ -1429,7 +1428,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
             } else {
                 const moveOnBack = () => {
-                    this.setState({isCropping: false});
+                    this.setState({isCropping: false}, () => GeneralUtil.toggleOverlay(false));
                     if (this.props.processType === ProcessType.SEGMENTATION) {
                         this.props.progressNextStage(CurrentStage.INTER_STAGE);
                     } else {
@@ -1447,7 +1446,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }).then((res: any) => {
                     if (res.status === 200) {
                         let image: File = DatabaseUtil.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename);
-                        if (this.props.internalID.documentType !== undefined && this.props.internalID.documentType === 'mykad') {
+                        if (this.props.internalID.backID!.landmark.length === 0 && 
+                            this.props.internalID.documentType !== undefined && this.props.internalID.documentType === 'mykad') {
                             axios.post(
                                 HOST + ":" + PORT + LANDMARK,
                                 this.createLandmarkFormData(image, 'mykad_back'),
@@ -1459,11 +1459,13 @@ class ControlPanel extends React.Component<IProps, IState> {
                             }).then((landmarkRes: any) => {
                                 if (landmarkRes.status === 200) {
                                     this.props.saveCroppedImage(image, undefined, landmarkRes.data.map((each: any, idx: number) => {
+                                        let translatedCodeName = each.id.split('_').filter((t: string) => t !== this.props.internalID.documentType
+                                            && t !== 'back').join('_');
                                         let lm: LandmarkData = {
                                             id: idx,
                                             type: "landmark",
-                                            codeName: each.id,
-                                            name: DatabaseUtil.translateTermFromCodeName('mykadBack', 'landmark', each.id, false),
+                                            codeName: translatedCodeName,
+                                            name: DatabaseUtil.translateTermFromCodeName('mykadBack', 'landmark', translatedCodeName, false),
                                             position: {
                                                 x1: each.coords.x1[0],
                                                 y1: each.coords.x1[1],
@@ -1538,8 +1540,10 @@ class ControlPanel extends React.Component<IProps, IState> {
                 <Button variant="secondary" className="common-button" onClick={backStage}>Back</Button>
                 {/* SKIP_VALIDATION: comment out disabled attribute */}
                 <Button disabled={this.props.currentID.internalIDs.length === 0 || this.state.isCropping 
-                || this.props.currentID.originalIDProcessed && this.props.internalID.backID!.IDBox === undefined} 
-                    className="common-button" onClick={() => this.setState({isCropping: true}, loadImageAndProgress)}>
+                || this.props.currentID.originalIDProcessed && this.props.internalID.processStage === IDProcess.DOUBLE_BACK && 
+                    this.props.internalID.backID!.IDBox === undefined} 
+                    className="common-button" onClick={() => this.setState({isCropping: true}, () => {
+                        GeneralUtil.toggleOverlay(true); loadImageAndProgress(); })}>
                     { this.state.isCropping
                         ? <Spinner animation="border" role="status" size="sm">
                             <span className="sr-only">Loading...</span>
@@ -1889,14 +1893,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
 
         const backStage = () => {
-            if (this.props.currentID.internalIDs.length === 0) {
-                this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
-            } else if (this.props.internalID.processStage !== IDProcess.SINGLE) {
-                this.props.loadImageState(this.props.internalID.backID!);
-                this.props.progressNextStage(CurrentStage.OCR_EDIT);
-            } else {
-                this.props.progressNextStage(CurrentStage.OCR_EDIT);
-            }
+            this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
         }
 
         const submitLiveness = () => {
@@ -1955,10 +1952,10 @@ class ControlPanel extends React.Component<IProps, IState> {
                         }
                     </Card.Body>
                 </Card>
-                <Button variant="secondary" className="common-button" onClick={backStage}>
-                    Back
+                <Button variant="secondary" className="block-button" onClick={backStage}>
+                    Back To Segmentation
                 </Button>
-                <Button className="common-button" onClick={submitLiveness} 
+                <Button className="block-button" onClick={submitLiveness} 
                 disabled={!this.state.livenessValidation}>
                     Done
                 </Button>
