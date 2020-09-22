@@ -1705,6 +1705,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 {/* SKIP_VALIDATION: comment out disabled attribute */}
                 <Button className="common-button"
                     disabled={this.props.currentImage.landmark.filter((each) => {
+                        if (this.props.internalID === undefined) return false;
                         return !GeneralUtil.isOptionalLandmark(each.codeName, this.props.internalID.documentType, this.props.internalID.processStage)
                             && each.position === undefined
                     }).length > 0}
@@ -1884,6 +1885,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                                             this.props.setCurrentSymbol(each.codeName, each.mapToLandmark);
                                             this.props.setCurrentWord(each.labels[0]);}}>
                                         {GeneralUtil.beautifyWord(each.name)}
+                                        <CgCheckO className="ocr-done-tick" />
                                     </Accordion.Toggle>
                                     <Accordion.Collapse eventKey={each.name + " " + each.mapToLandmark}>
                                     <Card.Body>

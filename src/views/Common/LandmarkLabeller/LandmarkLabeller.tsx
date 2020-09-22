@@ -476,7 +476,8 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
 
     handleNextLandmark = () => {
         let landmark = this.props.currentImageState.landmark
-        .filter((each) => !GeneralUtil.isOptionalLandmark(each.codeName, this.props.internalID.documentType, this.props.internalID.processStage) && each.position === undefined).sort((a, b) => a.id - b.id);
+        .filter((each) => !GeneralUtil.isOptionalLandmark(each.codeName, this.props.internalID.documentType, this.props.internalID.processStage) 
+            && each.position === undefined).sort((a, b) => a.id - b.id);
         if (landmark === undefined || landmark.length === 0) return false;
         this.props.setCurrentSymbol(landmark[0].codeName);
         return true;

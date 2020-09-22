@@ -35,7 +35,7 @@
         }
     }
 
-    .landmark-done-tick {
+    .landmark-done-tick, .ocr-done-tick {
         display: none;
     }
 
@@ -48,6 +48,11 @@
         color: black;
 
         .landmark-done-tick {
+            display: block;
+            float: right;
+        }
+
+        .ocr-done-tick {
             display: block;
             float: right;
         }

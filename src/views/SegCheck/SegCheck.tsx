@@ -62,20 +62,23 @@ class SegCheck extends React.Component<IProps, IState> {
                 this.setState({
                     originalImage: GeneralUtil.loadImage("segCheckID", this.props.backID!.image, "segCheckBackID"),
                     croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.backID!.croppedImage!, "segCheckCroppedID"),
-                    front: false
+                    front: false,
+                    originalImageRotation: this.props.currentID !== undefined ? this.props.currentID.backIDRotation : Rotation.ROT0
                 })
             } else {
                 this.setState({
                     originalImage: GeneralUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
                     croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID"),
-                    front: true
+                    front: true,
+                    originalImageRotation: this.props.currentID !== undefined ? this.props.currentID.originalIDRotation : Rotation.ROT0
                 })
             }
         } else if (this.props.originalID !== undefined) {
             this.setState({
                 originalImage: GeneralUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
                 croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID"),
-                front: true
+                front: true,
+                originalImageRotation: this.props.currentID !== undefined ? this.props.currentID.originalIDRotation : Rotation.ROT0
             })
         }
     }
@@ -90,6 +93,7 @@ class SegCheck extends React.Component<IProps, IState> {
             let originalImage = this.state.originalImage;
             let croppedImage = this.state.croppedImage;
             let front = true;
+            let rot = Rotation.ROT0;
             if (this.props.currentID !== undefined) {
                 let intId = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
                 if (intId !== undefined) {
@@ -97,24 +101,28 @@ class SegCheck extends React.Component<IProps, IState> {
                         if (intId.processStage === IDProcess.DOUBLE_BACK) {
                             originalImage.src = GeneralUtil.getSource(this.props.backID!.image);
                             croppedImage.src = GeneralUtil.getSource(this.props.backID!.croppedImage!);
-                            front = false;
+                            front = false;                
+                            rot = this.props.currentID !== undefined ? this.props.currentID.backIDRotation : Rotation.ROT0;
                         } else {
                             originalImage.src = GeneralUtil.getSource(this.props.originalID!.image);
                             croppedImage.src = GeneralUtil.getSource(this.props.originalID!.croppedImage!);
                             front = true;
+                            rot = this.props.currentID !== undefined ? this.props.currentID.originalIDRotation : Rotation.ROT0;
                         }
                     } else {
                         if (intId.processStage === IDProcess.DOUBLE_BACK) {
                             this.setState({
                                 originalImage: GeneralUtil.loadImage("segCheckID", this.props.backID!.image, "segCheckOriginalID"),
                                 croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.backID!.croppedImage!, "segCheckCroppedID"),
-                                front: false
+                                front: false,
+                                originalImageRotation: this.props.currentID !== undefined ? this.props.currentID.backIDRotation : Rotation.ROT0
                             })
                         } else {
                             this.setState({
                                 originalImage: GeneralUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
                                 croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID"),
-                                front: true
+                                front: true,
+                                originalImageRotation: this.props.currentID !== undefined ? this.props.currentID.originalIDRotation : Rotation.ROT0
                             })
                         }
                     }
@@ -124,7 +132,8 @@ class SegCheck extends React.Component<IProps, IState> {
             this.setState({
                 originalImage: originalImage,
                 croppedImage: croppedImage,
-                front: front
+                front: front,
+                originalImageRotation: rot
             })
         } else if (!this.props.originalProcessed && this.state.originalImage === undefined && this.state.croppedImage === undefined
             && this.props.originalID !== undefined) {
@@ -132,7 +141,8 @@ class SegCheck extends React.Component<IProps, IState> {
             this.setState({
                 originalImage: GeneralUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
                 croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID"),
-                front: true
+                front: true,
+                originalImageRotation: this.props.currentID !== undefined ? this.props.currentID.originalIDRotation : Rotation.ROT0
             })
         } else if ((!previousProps.currentID!.dataLoaded && this.props.currentID!.dataLoaded) || 
             (previousProps.currentID!.sessionID !== this.props.currentID!.sessionID)) {
@@ -141,7 +151,8 @@ class SegCheck extends React.Component<IProps, IState> {
                 this.setState({
                     originalImage: GeneralUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
                     croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID"),
-                    front: true
+                    front: true,
+                    originalImageRotation: this.props.currentID !== undefined ? this.props.currentID.originalIDRotation : Rotation.ROT0
                 })
             } else {
                 let originalImage = this.state.originalImage!;
@@ -152,7 +163,8 @@ class SegCheck extends React.Component<IProps, IState> {
                 this.setState({
                     originalImage: originalImage,
                     croppedImage: croppedImage,
-                    front: true
+                    front: true,
+                    originalImageRotation: this.props.currentID !== undefined ? this.props.currentID.originalIDRotation : Rotation.ROT0
                 })
             }
         } else if (this.props.originalProcessed && this.props.currentID !== undefined && this.props.currentID.internalIDs.length > 0
@@ -167,13 +179,15 @@ class SegCheck extends React.Component<IProps, IState> {
                     this.setState({
                         originalImage: GeneralUtil.loadImage("segCheckID", this.props.backID!.image, "segCheckOriginalID"),
                         croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.backID!.croppedImage!, "segCheckCroppedID"),
-                        front: false
+                        front: false,
+                        originalImageRotation: this.props.currentID !== undefined ? this.props.currentID.backIDRotation : Rotation.ROT0
                     })
                 } else {
                     this.setState({
                         originalImage: GeneralUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
                         croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID"),
-                        front: true
+                        front: true,
+                        originalImageRotation: this.props.currentID !== undefined ? this.props.currentID.originalIDRotation : Rotation.ROT0
                     })
                 }
             } else {
@@ -183,7 +197,8 @@ class SegCheck extends React.Component<IProps, IState> {
                     this.setState({
                         originalImage: originalImage,
                         croppedImage: croppedImage,
-                        front: false
+                        front: false,
+                        originalImageRotation: this.props.currentID !== undefined ? this.props.currentID.backIDRotation : Rotation.ROT0
                     })
                 } else if (internalID.processStage === IDProcess.DOUBLE_FRONT && !this.state.front) {
                     originalImage.src = GeneralUtil.getSource(this.props.originalID!.image);
@@ -191,20 +206,21 @@ class SegCheck extends React.Component<IProps, IState> {
                     this.setState({
                         originalImage: originalImage,
                         croppedImage: croppedImage,
-                        front: true
+                        front: true,
+                        originalImageRotation: this.props.currentID !== undefined ? this.props.currentID.originalIDRotation : Rotation.ROT0
                     })
                 }
             }
         }
 
-        if (this.state.isRotating) {
-            setTimeout(() => this.rotateCropped(false, this.state.ccw), 1);
-        }
+        // if (this.state.isRotating) {
+        //     setTimeout(, 1);
+        // }
     }
 
     disableControls = (cropped: boolean, ccw: boolean) => {
         GeneralUtil.toggleOverlay(true);
-        this.setState({isRotating: true, ccw: ccw});
+        this.setState({isRotating: true, ccw: ccw}, () => this.rotateCropped(false, this.state.ccw));
     }
 
     rotateCropped = (cropped: boolean, ccw: boolean) => {
@@ -228,7 +244,7 @@ class SegCheck extends React.Component<IProps, IState> {
             }
         }
 
-    let parent: HTMLElement = document.getElementById(cropped ? "segCheckCropped" : "segCheckID")!;
+        let parent: HTMLElement = document.getElementById(cropped ? "segCheckCropped" : "segCheckID")!;
         let img: HTMLImageElement = cropped ? this.state.croppedImage! : this.state.originalImage!;
         parent.removeChild(img);
         

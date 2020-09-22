@@ -7,6 +7,7 @@ const port = process.env.PORT || 5000;
 const csv = require('csvtojson');
 const pkg = require('./package.json');
 const testFolder = pkg.dbDirectory;
+const outputFolder = 'annotation_output';
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -830,19 +831,6 @@ function mergeJSONData(initial, updated) {
     }
 }
 
-app.get('/testEvaluation', async (req, res) => {
-    let sessionID = "5ec3872b-0c65-4e41-8fc0-f9e2b2100d6f";
-    let jsonPath = testFolder + "annotation_output/db2/20200805/5ec3872b-0c65-4e41-8fc0-f9e2b2100d6f.json";
-    let sessionRoute = testFolder + "db2/images/20200805/5ec3872b-0c65-4e41-8fc0-f9e2b2100d6f/";
-    let jsonData = fs.readFileSync(jsonPath);
-    if (jsonData) {
-        let result = evaluateSessionState(sessionRoute, sessionID, JSON.parse(jsonData));
-        res.status(200).send(result);
-    } else {
-        res.status(500).send('cant open json');
-    }
-})
-
 app.post('/loadSessionData', async (req, res) => {
     let db = req.body.database;
     let date = req.body.date;
@@ -856,7 +844,7 @@ app.post('/loadSessionData', async (req, res) => {
     await new Promise((res, rej) => getCSVData(csvPath, session, res, rej))
         .then((val) => {session = val;})
         .catch((err) => {console.error(err)});
-    let outputPath = testFolder + "annotation_output/" + db + "/";
+    let outputPath = testFolder + outputFolder + "/" + db + "/";
     try {
         let outputFiles = fs.readdirSync(outputPath);
         if (outputFiles && outputFiles.includes(date)) {
@@ -902,7 +890,7 @@ app.post('/loadDatabase', async (req, res) => {
         if (sessions) {
             for (let j = 0; j < sessions.length; j++) {
                 let folderRoute = sessionRoute + sessions[j] + "/";
-                let jsonPath = testFolder + "annotation_output/" + db + "/" + dateImgs[i] + "/" + sessions[j] + ".json";
+                let jsonPath = testFolder + outputFolder + "/" + db + "/" + dateImgs[i] + "/" + sessions[j] + ".json";
                 try {
                     let jsonData = fs.readFileSync(jsonPath);
                     if (jsonData) {
@@ -934,7 +922,7 @@ app.get('/getDatabases', (req, res) => {
     res.set(ccHeaders);
     let folders = fs.readdirSync(testFolder);
     if (folders && folders.length) {
-        let results = folders.map((each) => {
+        let results = folders.filter((each) => each !== outputFolder).map((each) => {
             return new Promise((res, rej) => {
                 try {
                     let dates = fs.readdirSync(testFolder + each + '/images');
@@ -964,7 +952,7 @@ app.get('/getDatabases', (req, res) => {
 app.post('/saveOutput', async (req, res) => {
     let { ID, database, overwrite } = req.body;
     let today = fromDateToString(new Date(), true);
-    let topLevel = testFolder + "annotation_output/"
+    let topLevel = testFolder + outputFolder + "/"
     let route = topLevel + database + "/";
 
     // creating required folders if not present
@@ -981,7 +969,7 @@ app.post('/saveOutput', async (req, res) => {
     }
 
     if (!overwrite) {
-        route = testFolder + "annotation_output/" + database + "/output_" + today + "/";
+        route = testFolder + outputFolder + "/" + database + "/output_" + today + "/";
         fs.mkdirSync(route, {recursive: true}, (err) => {
             if (err) throw err;
         });
@@ -1045,7 +1033,7 @@ app.post('/saveOutput', async (req, res) => {
 app.post('/saveBulkOutput', async (req, res) => {
     let { library, database, overwrite } = req.body;
     let today = fromDateToString(new Date(), true);
-    let topLevel = testFolder + "annotation_output/"
+    let topLevel = testFolder + outputFolder + "/"
     let route = topLevel + database + "/";
 
     let dbs = fs.readdirSync(topLevel);
@@ -1061,7 +1049,7 @@ app.post('/saveBulkOutput', async (req, res) => {
     }
 
     if (!overwrite) {
-        route = testFolder + "annotation_output/" + database + "/output_" + today + "/";
+        route = testFolder + outputFolder + "/" + database + "/output_" + today + "/";
         fs.mkdirSync(route, {recursive: true}, (err) => {
             if (err) throw err;
         });

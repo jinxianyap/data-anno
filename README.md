@@ -14,7 +14,7 @@ npm install
 npm run dev
 ```
 ## System Overview
-![Overview Diagram](https://drive.google.com/uc?export=view&id=1zYWzoMPN-c9MpbB6rXqTqYB5_zEczYTT)
+![Overview Diagram](https://drive.google.com/uc?export=view&id=1ozcn9QxYjyhQkRcxsjKObbYPBBwFU5GL)
 
 This diagram illustrates the main views of the project which are displayed to users. ControlPanel acts as the main control to move between stages. The Main View is painted according to the current stage.
 
@@ -107,8 +107,8 @@ The ImageState is the main state to keep track of landmark and OCR labelling and
 When retrieving the correct landmark set and OCR set from options.json, use a combination of the internal ID `documentType` and the `processStage`. Eg: 
 ```bash
 documentType = mykad;
-processStage = IDProcess.DOUBLE_FRONT #(='Front');
-key = documentType + processStage  #(='mykadFront');
+processStage = IDProcess.DOUBLE_FRONT; #(='Front')
+key = documentType + processStage;  #(='mykadFront')
 ```
 
 - **Completion of InternalIDState Annotation**

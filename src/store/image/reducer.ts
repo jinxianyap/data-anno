@@ -55,7 +55,7 @@ export function imageReducer(
 
             return {
                 ...state,
-                landmark: landmarks
+                landmark: landmarks.sort((a, b) => a.id - b.id)
             }
         }
 
@@ -77,7 +77,7 @@ export function imageReducer(
             } 
             return {
                 ...state,
-                landmark: landmarks
+                landmark: landmarks.sort((a, b) => a.id - b.id)
             }
         }
 
@@ -94,7 +94,7 @@ export function imageReducer(
 
             return {
                 ...state,
-                landmark: landmarks
+                landmark: landmarks.sort((a, b) => a.id - b.id)
             }
         }
 

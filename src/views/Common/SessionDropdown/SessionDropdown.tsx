@@ -58,7 +58,7 @@ class SessionDropdown extends React.Component<IProps, IState> {
                                 return (
                                     <ListGroup.Item action={each.status !== AnnotationStatus.NOT_APPLICABLE} variant={variant} key={this.props.sortedIndex + '' + idx} 
                                     onClick={() => this.setState({showSessionsModal: false}, () => this.props.handleGetSession(each.libIndex, idx, each.status))} className={itemClass}>
-                                        {each.ID.sessionID}
+                                        {each.ID.index + 1}: {each.ID.sessionID}
                                     </ListGroup.Item>
                                 )
                             })

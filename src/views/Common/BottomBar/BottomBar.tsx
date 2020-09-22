@@ -17,7 +17,7 @@ interface IProps {
 const BottomBar: React.FC<IProps> = ({index, numberOfIDs, processType, dateCreated, currentIDSource, database}) => {
 
     return (
-        <Navbar fixed="bottom">
+        <Navbar fixed="bottom" style={{zIndex: 10000}}>
             <Navbar.Brand> Database: {database}</Navbar.Brand>
             <Navbar.Brand style={{marginLeft: "3rem"}}>Process Type: {processType}</Navbar.Brand>
             <Navbar.Toggle />

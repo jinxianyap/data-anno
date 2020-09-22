@@ -227,6 +227,10 @@ export function IDReducer(
                 let internalID = IDs[state.internalIndex];
                 internalID.backID!.IDBox = action.payload.IDBox;
                 internalID.backID!.croppedImage = action.payload.croppedImage;
+                if (JSON.stringify(action.payload.IDBox.position) !== JSON.stringify(internalID.backID!.IDBox)) {
+                    internalID.backID!.landmark = [];
+                    internalID.backID!.ocr = [];
+                }
                 IDs.splice(state.internalIndex, 1, internalID);
                 return {
                     ...state,
@@ -237,6 +241,10 @@ export function IDReducer(
                 let idx = state.internalIDs.findIndex((each) => each.originalID!.IDBox!.id === action.payload.IDBox.id)!;
                 let internalID = IDs[idx];
                 internalID.originalID!.IDBox = action.payload.IDBox;
+                if (JSON.stringify(action.payload.IDBox.position) !== JSON.stringify(internalID.originalID!.IDBox)) {
+                    internalID.originalID!.landmark = [];
+                    internalID.originalID!.ocr = [];
+                }
                 IDs.splice(idx, 1, internalID);
                 return {
                     ...state,

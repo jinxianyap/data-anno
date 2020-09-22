@@ -48,7 +48,7 @@ const TopBar: React.FC<IProps> = ({processType, currentStage}) => {
     }
 
     return (
-        <Navbar>
+        <Navbar style={{zIndex: 10000}}>
             {getNavbarItems()}
             <Navbar.Toggle />
             <Navbar.Collapse className="justify-content-end">
