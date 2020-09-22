@@ -262,7 +262,6 @@ export class DatabaseUtil {
                                 }
                             }
                         }
-
                         let landmark: LandmarkData = {
                             id: idx,
                             type: 'landmark',

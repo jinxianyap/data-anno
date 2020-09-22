@@ -108,8 +108,8 @@ class FacePanel extends React.Component<IProps, IState> {
                     if (res.status === 200) {
                         DatabaseUtil.loadSessionData(res.data, this.props.indexedID).then((completeID) => {
                             this.props.loadNextID(completeID);
-                            this.initializeLiveness();
                             this.initializeFaceCompareMatch();
+                            this.initializeLiveness();
                             GeneralUtil.toggleOverlay(false);
                         });
                     }
@@ -185,12 +185,12 @@ class FacePanel extends React.Component<IProps, IState> {
             let flags = options.flags.video.values[idx];
             vidFlags.push({category: each, flags: flags});
         });
-        this.setState({videoFlags: vidFlags, videoFlagsLoaded: true}, this.initializeLiveness);
+        this.setState({videoFlags: vidFlags, videoFlagsLoaded: true, livenessInit: false}, this.initializeLiveness);
     }
 
     initializeLiveness = () => {
-        if (this.state.videoFlagsLoaded && this.state.passesLiveness === undefined) {
-            if (this.props.currentID.videoLiveness !== undefined) {
+        if (this.state.videoFlagsLoaded) {
+            if (this.props.currentID.videoLiveness !== undefined || (this.props.currentID.videoFlags !== undefined && this.props.currentID.videoFlags.length > 0)) {
                 this.setState({
                     passesLiveness: this.props.currentID.videoLiveness,
                     selectedVideoFlags: this.props.currentID.videoFlags !== undefined ? this.props.currentID.videoFlags: [],
@@ -210,12 +210,12 @@ class FacePanel extends React.Component<IProps, IState> {
     initializeFaceCompareMatch = () => {
         if (this.state.faceCompareMatch === undefined) {
             if (this.props.currentID.faceCompareMatch !== undefined) {
-                this.setState({faceCompareMatch: this.props.currentID.faceCompareMatch, matchInit: true});
+                this.setState({livenessInit: false, faceCompareMatch: this.props.currentID.faceCompareMatch, matchInit: true});
             } else if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.face !== undefined) {
                 let match = this.props.currentID.givenData.face.match;
                 if (match === undefined || match.length === 0) return;
                 let value = match[this.props.currentID.internalIndex];
-                this.setState({faceCompareMatch: value, matchInit: true}, () => {
+                this.setState({faceCompareMatch: value, matchInit: true, livenessInit: false}, () => {
                     if (value !== undefined) this.props.setIDFaceMatch(value);
                 });
             }

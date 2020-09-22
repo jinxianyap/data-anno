@@ -58,7 +58,7 @@ class SegCheck extends React.Component<IProps, IState> {
         if (this.props.originalProcessed) {
             if (this.props.currentID === undefined) return;
             let internalID = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
-            if (internalID.processStage === IDProcess.DOUBLE_BACK) {
+            if (internalID !== undefined && internalID.processStage === IDProcess.DOUBLE_BACK) {
                 this.setState({
                     originalImage: GeneralUtil.loadImage("segCheckID", this.props.backID!.image, "segCheckBackID"),
                     croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.backID!.croppedImage!, "segCheckCroppedID"),
@@ -87,20 +87,36 @@ class SegCheck extends React.Component<IProps, IState> {
         }
         if (!previousProps.originalProcessed && this.props.originalProcessed) {
             // when reverting to a previous ID that has already been processed
-            let originalImage = this.state.originalImage!;
-            let croppedImage = this.state.croppedImage!;
+            let originalImage = this.state.originalImage;
+            let croppedImage = this.state.croppedImage;
             let front = true;
             if (this.props.currentID !== undefined) {
                 let intId = this.props.currentID.internalIDs[this.props.currentID.internalIndex];
                 if (intId !== undefined) {
-                    if (intId.processStage === IDProcess.DOUBLE_BACK) {
-                        originalImage.src = GeneralUtil.getSource(this.props.backID!.image);
-                        croppedImage.src = GeneralUtil.getSource(this.props.backID!.croppedImage!);
-                        front = false;
+                    if (originalImage !== undefined && croppedImage !== undefined) {
+                        if (intId.processStage === IDProcess.DOUBLE_BACK) {
+                            originalImage.src = GeneralUtil.getSource(this.props.backID!.image);
+                            croppedImage.src = GeneralUtil.getSource(this.props.backID!.croppedImage!);
+                            front = false;
+                        } else {
+                            originalImage.src = GeneralUtil.getSource(this.props.originalID!.image);
+                            croppedImage.src = GeneralUtil.getSource(this.props.originalID!.croppedImage!);
+                            front = true;
+                        }
                     } else {
-                        originalImage.src = GeneralUtil.getSource(this.props.originalID!.image);
-                        croppedImage.src = GeneralUtil.getSource(this.props.originalID!.croppedImage!);
-                        front = true;
+                        if (intId.processStage === IDProcess.DOUBLE_BACK) {
+                            this.setState({
+                                originalImage: GeneralUtil.loadImage("segCheckID", this.props.backID!.image, "segCheckOriginalID"),
+                                croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.backID!.croppedImage!, "segCheckCroppedID"),
+                                front: false
+                            })
+                        } else {
+                            this.setState({
+                                originalImage: GeneralUtil.loadImage("segCheckID", this.props.originalID!.image, "segCheckOriginalID"),
+                                croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.originalID!.croppedImage!, "segCheckCroppedID"),
+                                front: true
+                            })
+                        }
                     }
                 }
             }
@@ -151,7 +167,7 @@ class SegCheck extends React.Component<IProps, IState> {
                     this.setState({
                         originalImage: GeneralUtil.loadImage("segCheckID", this.props.backID!.image, "segCheckOriginalID"),
                         croppedImage: GeneralUtil.loadImage("segCheckCropped", this.props.backID!.croppedImage!, "segCheckCroppedID"),
-                        front: true
+                        front: false
                     })
                 } else {
                     this.setState({

@@ -188,7 +188,7 @@ function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
                 return undefined;
             }
         } catch(err) {
-            console.error(err);
+            console.error('Session ID: ' + sessionID + ' - Failed to read session files.');
             return undefined;
         }
     }
@@ -237,7 +237,8 @@ function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
             landmark = true;
         } else if (seg === true) {
             let landmarkData = front ? json.landmarks.originalID: json.landmarks.backID;
-            if (landmarkData !== undefined && landmarkData.length > 0 && landmarkData.length === segData.length) {
+            if (landmarkData !== undefined && landmarkData.length > 0 && landmarkData.length === segData.length
+                && landmarkData.every((e) => e.length > 0)) {
                 // Q: need to check if the set of landmark is complete?????
                 // religion optional
                 landmark = landmarkData.every((each) => {
@@ -254,7 +255,8 @@ function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
             ocr = true;
         } else if (landmark === true) {
             let ocrData = front ? json.ocr.originalID : json.ocr.backID;
-            if (ocrData !== undefined && ocrData.length > 0 && ocrData.length === segData.length) {
+            if (ocrData !== undefined && ocrData.length > 0 && ocrData.length === segData.length
+                && ocrData.every((e) => e.length > 0)) {
                 ocr = ocrData.every((ocrs) => {
                     if (ocrs !== undefined) {
                         return ocrs.every((o) => {
@@ -325,7 +327,7 @@ function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
             }
 
             // check liveness
-            annotationStates.video = phasesToCheck.liveness ? (json.videoLiveness === true || json.videoLiveness === false) : true;
+            annotationStates.video = phasesToCheck.video ? (json.videoLiveness === true || json.videoLiveness === false) : true;
             // check seg originalid exists same for ladmark and ocr
             // check face
             if (phasesToCheck.face && !shouldIgnore.face) {
@@ -355,7 +357,7 @@ function updateDataWithJSON(result, data) {
         if (ocrResults !== undefined) {
             let landmarks = front ? data.landmarks.originalID : data.landmarks.backID;
             let ocrs = front ? data.ocr.originalID : data.ocr.backID;
-            if (landmarks !== undefined && landmarks.length > 0) {
+            if (landmarks !== undefined && landmarks.length > 0 && !(landmarks.length === 1 && landmarks[0].length === 0)) {
                 if (ocrResults.glare_results !== undefined) {
                     ocrResults.glare_results = landmarks.map((lm) => {
                         return ocrResults.glare_results.map((each) => {
@@ -450,7 +452,7 @@ function updateDataWithJSON(result, data) {
                 ocrResults.glare_results = [ocrResults.glare_results];
                 ocrResults.landmarks = [ocrResults.landmarks];
             }
-            if (ocrs !== undefined && ocrs.length > 0) {
+            if (ocrs !== undefined && ocrs.length > 0 && !(ocrs.length === 1 && ocrs[0].length === 0)) {
                 if (ocrResults.ocr_results !== undefined) {
                     ocrResults.ocr_results = ocrs.map((currOcr) => {
                         if (currOcr.length > 0) {
@@ -584,11 +586,11 @@ function updateDataWithJSON(result, data) {
             }
         }) : [],
         backID: data.segmentation.backID !== undefined ? data.segmentation.backID.filter((each) =>  each.IDBox !== null).map((each) => {
-            if (each.passesCrop === undefined || each.IDBox === undefined) {
+            if (each.IDBox === undefined) {
                 return {};
             }
             return {
-                passesCrop: each.passesCrop,
+                passesCrop: each.passesCrop !== undefined ? each.passesCrop : false,
                 coords: [each.IDBox.position.x1, 
                     each.IDBox.position.y1, 
                     each.IDBox.position.x2,
@@ -718,7 +720,7 @@ function getCSVData(filepath, session, res, rej) {
         res(session);
     })
     .catch((err) => {
-        console.error(err);
+        console.error('Session ID: ' + session.sessionID + ' - Error reading csv');
         res(undefined);
     })
 }
@@ -869,8 +871,8 @@ app.post('/loadSessionData', async (req, res) => {
                     session.raw_data = updatedData;
                 }
             } catch (err) {
-                // console.error(err);
-                // session.raw_data = csvData;
+                console.error('Session ID: ' + sessionID + ' - No output json found.');
+                session.raw_data = csvData;
             }
         }
     }
@@ -906,7 +908,7 @@ app.post('/loadDatabase', async (req, res) => {
                         sessionIDs.push(evaluateSessionState(folderRoute, sessions[j], false));
                     }
                 } catch(err) {
-                    console.error(err);
+                    console.error('Session ID: ' + sessions[j] + ' - No output json found.');
                     sessionIDs.push(evaluateSessionState(folderRoute, sessions[j], false));
                 }
             }
@@ -1024,7 +1026,7 @@ app.post('/saveOutput', async (req, res) => {
                         throw err;
                     }
                 } catch(err) {
-                    console.error(err);
+                    console.error('Session ID: ' + ID.sessionID + ' - Failed to save output json.')
                     res({sessionID: ID.sessionID, success: false});
                 }
             } else {
