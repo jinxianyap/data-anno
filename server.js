@@ -427,6 +427,8 @@ function updateDataWithJSON(result, data) {
                                 if (segCrop[idx] !== undefined && segCrop[idx].IDBox !== undefined) {
                                     hgt = segCrop[idx].IDBox.position.y1 - segCrop[idx].IDBox.position.y4;
                                 }
+                            } else {
+                                hgt = data.croppedImageProps.originalID.height;
                             }
                         } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
                             if (data.croppedImageProps.backID.height === -1) {
@@ -434,6 +436,8 @@ function updateDataWithJSON(result, data) {
                                 if (segCrop[idx] !== undefined && segCrop[idx].IDBox !== undefined) {
                                     hgt = segCrop[idx].IDBox.position.y1 - segCrop[idx].IDBox.position.y4;
                                 }
+                            } else {
+                                hgt = data.croppedImageProps.backID.height;
                             }
                         }
                         return currLm.map((landmark) => {
@@ -518,6 +522,8 @@ function updateDataWithJSON(result, data) {
                                 if (segCrop[idx] !== undefined && segCrop[idx].IDBox !== undefined) {
                                     hgt = segCrop[idx].IDBox.position.y1 - segCrop[idx].IDBox.position.y4;
                                 }
+                            } else {
+                                hgt = data.croppedImageProps.originalID.height;
                             }
                         } else if (!front && data.croppedImageProps.backID !== undefined && data.croppedImageProps.backID.height !== undefined) {
                             if (data.croppedImageProps.backID.height === -1) {
@@ -525,6 +531,8 @@ function updateDataWithJSON(result, data) {
                                 if (segCrop[idx] !== undefined && segCrop[idx].IDBox !== undefined) {
                                     hgt = segCrop[idx].IDBox.position.y1 - segCrop[idx].IDBox.position.y4;
                                 }
+                            } else {
+                                hgt = data.croppedImageProps.backID.height;
                             }
                         }
                         return currOcr.map((ocr) => {
@@ -562,11 +570,70 @@ function updateDataWithJSON(result, data) {
                     ocrResults.spoof_results = { is_card_spoof: data.backIDFlags !== undefined ? data.backIDFlags.includes('spoof') : false }
                 }
             }
+        } else {
+            // if no csv but has json
+            ocrResults = {};
+            let landmarks = front ? data.landmarks.originalID : data.landmarks.backID;
+            let ocrs = front ? data.ocr.originalID : data.ocr.backID;
+            if (landmarks !== undefined && landmarks.length > 0 && !(landmarks.length === 1 && landmarks[0].length === 0)) {
+                ocrResults.glare_results = landmarks.map((lm) => {
+                    return lm.map((each) => {
+                        return { 
+                            field: each.codeName,
+                            glare: each.flags.includes('glare')
+                        }
+                    })
+                })
 
-            ocrResults.flags = front ? data.frontIDFlags : data.backIDFlags;
-            ocrResults.croppedImageProps = front ? data.croppedImageProps.originalID : data.croppedImageProps.backID;
-            ocrResults.originalImageProps = front ? data.originalImageProps.originalID : data.originalImageProps.backID;
+                ocrResults.landmarks = landmarks.map((currLm, idx) => {
+                    let hgt = front ? data.croppedImageProps.originalID.height : data.croppedImageProps.backID.height;
+                    return currLm.map((landmark) => {
+                        if (landmark.position === undefined) return undefined;
+                        return {
+                            id: landmark.codeName,
+                            score: 0,
+                            coords: [landmark.position.x1, 
+                                hgt - landmark.position.y1, 
+                                landmark.position.x2,
+                                hgt - landmark.position.y4]
+                        }
+                    }).filter((each) => each !== undefined);
+                })
+            }
+            if (ocrs !== undefined && ocrs.length > 0 && !(ocrs.length === 1 && ocrs[0].length === 0)) {
+                ocrResults.ocr_results = ocrs.map((currOcr, idx) => {
+                    let hgt = front ? data.croppedImageProps.originalID.height : data.croppedImageProps.backID.height;
+
+                    return currOcr.map((ocr) => {
+                        return {
+                            field: ocr.codeName,
+                            score: 0,
+                            text: ocr.labels.map((lbl) => lbl.value).join(" "),
+                            coords: ocr.labels.map((lbl) => {
+                                if (lbl.position !== undefined) {
+                                    return [lbl.position.x1, 
+                                        hgt - lbl.position.y1, 
+                                        lbl.position.x2,
+                                        hgt - lbl.position.y4];
+                                } else {
+                                    return [];
+                                }
+                            })
+                        }
+                    })
+                })
+            }
+            if (front) {
+                ocrResults.spoof_results = { is_card_spoof: data.frontIDFlags !== undefined ? data.frontIDFlags.includes('spoof') : false }
+            } else {
+                ocrResults.spoof_results = { is_card_spoof: data.backIDFlags !== undefined ? data.backIDFlags.includes('spoof') : false }
+            }
         }
+
+        ocrResults.flags = front ? data.frontIDFlags : data.backIDFlags;
+        ocrResults.croppedImageProps = front ? data.croppedImageProps.originalID : data.croppedImageProps.backID;
+        ocrResults.originalImageProps = front ? data.originalImageProps.originalID : data.originalImageProps.backID;
+
         return ocrResults;
     }
 
@@ -604,8 +671,8 @@ function updateDataWithJSON(result, data) {
         }) : []
     }
 
-    newResult.front_ocr = updateOCR(result.front_ocr, true);
-    newResult.back_ocr = updateOCR(result.back_ocr, false);
+    newResult.front_ocr = updateOCR(result !== undefined ? result.front_ocr : undefined, true);
+    newResult.back_ocr = updateOCR(result !== undefined ? result.back_ocr : undefined, false);
     newResult.face_compare = {
         faceCompareMatch: data.faceCompareMatch,
         liveness: data.videoLiveness,
@@ -722,7 +789,7 @@ function getCSVData(filepath, session, res, rej) {
     })
     .catch((err) => {
         console.error('Session ID: ' + session.sessionID + ' - Error reading csv');
-        res(undefined);
+        res(session);
     })
 }
 
@@ -795,17 +862,17 @@ function mergeJSONData(initial, updated) {
         frontIDFlags: updated.frontIDFlags,
         backIDFlags: updated.backIDFlags,
         
-        processed: updated.processed,
-        processStage: updated.processStage,
-        documentType: updated.documentType,
+        processed: updated.processed.length != updated.segmentation.originalID.length ? updated.processed : initial.processed,
+        processStage: updated.processStage.length != updated.segmentation.originalID.length ? updated.processStage : initial.processStage,
+        documentType: updated.documentType.length != updated.segmentation.originalID.length ? updated.documentType : initial.documentType,
 
         originalImageProps: {
-            originalID: updated.originalImageProps !== undefined ? updated.originalImageProps.originalID : undefined,
-            backID: updated.originalImageProps !== undefined ? updated.originalImageProps.backID : undefined
+            originalID: updated.originalImageProps !== undefined ? updated.originalImageProps.originalID : initial.originalImageProps.originalID,
+            backID: updated.originalImageProps !== undefined ? updated.originalImageProps.backID : initial.originalImageProps.backID
         },
         croppedImageProps: {
-            originalID: updated.croppedImageProps !== undefined ? updated.croppedImageProps.originalID : undefined,
-            backID: updated.croppedImageProps !== undefined ? updated.croppedImageProps.backID : undefined
+            originalID: updated.croppedImageProps !== undefined ? updated.croppedImageProps.originalID : initial.croppedImageProps.originalID,
+            backID: updated.croppedImageProps !== undefined ? updated.croppedImageProps.backID : initial.croppedImageProps.backID
         },
         segmentation: updated.segmentation !== undefined ? {
             originalID: updated.segmentation.originalID.length > 0 ? updated.segmentation.originalID : initial.segmentation.originalID,
@@ -860,11 +927,13 @@ app.post('/loadSessionData', async (req, res) => {
                         session.raw_data = updatedData;
                     }
                 } catch (err) {
+                    console.error(err);
                     console.error('Session ID: ' + sessionID + ' - No output json found.');
                 }
             }
         }
     } catch (err) {
+        console.error(err);
         console.error('Session ID: ' + sessionID + ' - No output json DB folder found.');
     }
 

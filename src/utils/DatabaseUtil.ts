@@ -115,14 +115,276 @@ export class DatabaseUtil {
             let backOcrProps: ImageProps = {height: -1, width: -1};
             let landmarks = [];
             let ocr = [];
-            let ocrData = back ? session.raw_data.back_ocr : session.raw_data.front_ocr;
-            if (ocrData !== undefined) {
+
+            if (session.raw_data !== undefined) {
+                let ocrData = back ? session.raw_data.back_ocr : session.raw_data.front_ocr;
+                if (ocrData !== undefined) {
+                    let oriSrc = back ? session.back_ori : session.front_ori;
+                    let oriProps: ImageProps = {height: -1, width: -1};
+                    if (ocrData.originalImageProps !== undefined) {
+                        oriProps.height = ocrData.originalImageProps.height;
+                        oriProps.width = ocrData.originalImageProps.width;
+                    } else if (oriSrc !== undefined) {
+                        oriProps = await new Promise((res, rej) => {
+                            let img = new Image();
+                            img.onload = () => {
+                                let props: ImageProps = {
+                                    height: img.height,
+                                    width: img.width
+                                }
+                                res(props);
+                            }
+                            img.src = oriSrc;
+                        })
+                    }
+
+                    if (back) {
+                        backOriProps = oriProps;
+                    } else {
+                        frontOriProps = oriProps;
+                    }
+
+                    let segData = session.raw_data.segmentation !== undefined ? 
+                        (back ? session.raw_data.segmentation.backID : session.raw_data.segmentation.originalID) : undefined;
+                    if (segData !== undefined) {
+                        if (!back) {
+                            frontSeg = segData.map((e: any, idx: number) => {
+                                let each = e.coords;
+                                if (each === undefined) {
+                                    return undefined;
+                                }
+                                return {
+                                    documentType: e.documentType !== undefined ? e.documentType : '',
+                                    passesCrop: e. passesCrop,
+                                    IDBox: {
+                                        id: idx,
+                                        position: {
+                                            x1: each[0],
+                                            x2: each[2],
+                                            x3: each[4],
+                                            x4: each[6],
+                                            y1: each[1],
+                                            y2: each[3],
+                                            y3: each[5],
+                                            y4: each[7],
+                                        }
+                                    }
+                                }
+                            })
+                        } else {
+                            backSeg = segData.map((e: any, idx: number) => {
+                                let each = e.coords;
+                                if (each === undefined) {
+                                    return undefined;
+                                }
+                                return {
+                                    passesCrop: e.passesCrop,
+                                    IDBox: {
+                                        id: idx,
+                                        position: {
+                                            x1: each[0],
+                                            x2: each[2],
+                                            x3: each[4],
+                                            x4: each[6],
+                                            y1: each[1],
+                                            y2: each[3],
+                                            y3: each[5],
+                                            y4: each[7],
+                                        }
+                                    }
+                                }
+                            })
+                        }
+                    }
+                }
+
+                if (ocrData !== undefined) {
+                    let ocrSrc = !back ? session.front_ocr : session.back_ocr;
+                    let imgProps: ImageProps = {height: -1, width: -1};
+                    if (ocrData.croppedImageProps !== undefined) {
+                        imgProps.height = ocrData.croppedImageProps.height;
+                        imgProps.width = ocrData.croppedImageProps.width;
+                    } else if (ocrSrc !== undefined) {
+                        imgProps = await new Promise((res, rej) => {
+                            let img = new Image();
+                            img.onload = () => {
+                                let props: ImageProps = {
+                                    height: img.height,
+                                    width: img.width
+                                }
+                                res(props);
+                            }
+                            img.src = ocrSrc;
+                        })
+                    }
+
+                    if (!back) {
+                        frontOcrProps = imgProps;
+                    } else {
+                        backOcrProps = imgProps;
+                    }
+
+                    const handleLandmarks = (each: any, segIndex?: number) => {
+                        if (each === null) return null;
+                        return each.filter((lm: any) => lm !== null).map((lm: any, idx: number) => {
+                            let flags: string[] = [];
+                            let glare = ocrData.glare_results.find((glare: any) => glare.field === lm.id);
+                            if (glare !== undefined) {
+                                if (glare.glare) {
+                                    flags = ['glare'];
+                                }
+                            }
+
+                            if (imgProps.height === -1 || imgProps.width === -1) {
+                                if (!back && frontSeg[idx] !== undefined) {
+                                    imgProps = {
+                                        height: frontSeg[idx].IDBox.position.y1 - frontSeg[idx].IDBox.position.y4, 
+                                        width: frontSeg[idx].IDBox.position.x2 - frontSeg[idx].IDBox.position.x1
+                                    }
+                                } else if (back && backSeg[idx] !== undefined) {
+                                    imgProps = {
+                                        height: backSeg[idx].IDBox.position.y1 - backSeg[idx].IDBox.position.y4, 
+                                        width: backSeg[idx].IDBox.position.x2 - backSeg[idx].IDBox.position.x1
+                                    }
+                                }
+                            }
+                            
+                            let rDocKey = undefined;
+                            if (segIndex !== undefined) {
+                                if (back) {
+                                    if (given.originalID !== undefined && given.originalID.segmentation !== undefined && given.originalID.segmentation[segIndex] !== undefined) {
+                                        rDocKey = given.originalID.segmentation[segIndex]!.documentType + "Back";
+                                    }
+                                } else {
+                                    if (frontSeg[segIndex] !== undefined) {
+                                        rDocKey = frontSeg[segIndex].documentType;
+                                        if (options.documentTypes.double.includes(rDocKey)) {
+                                            rDocKey += "Front";
+                                        }
+                                    }
+                                }
+                            }
+                            let landmark: LandmarkData = {
+                                id: idx,
+                                type: 'landmark',
+                                codeName: lm.id,
+                                name: this.translateTermFromCodeName(rDocKey !== undefined ? rDocKey : docKey, 'landmark', lm.id),
+                                flags: flags,
+                                position: {
+                                    x1: lm.coords[0],
+                                    x2: lm.coords[2],
+                                    x3: lm.coords[2],
+                                    x4: lm.coords[0],
+                                    y1: imgProps.height - lm.coords[1],
+                                    y2: imgProps.height - lm.coords[1],
+                                    y3: imgProps.height - lm.coords[3],
+                                    y4: imgProps.height - lm.coords[3]
+                                }
+                            }
+                            return landmark;
+                        }).filter((each: LandmarkData) => each.name !== '');
+                    }
+
+                    const handleOCRs = (each: any, segIndex?: number) => {
+                        if (each === null) return null;
+                        return each.filter((lm: any) => lm !== null).map((o: any, idx: number) => {
+                            let text: string[] = o.text.split('\n').join(' ').split(' ');
+                            
+                            let rDocKey = undefined;
+                            if (segIndex !== undefined) {
+                                if (back) {
+                                    if (given.originalID !== undefined && given.originalID.segmentation !== undefined && given.originalID.segmentation[segIndex] !== undefined) {
+                                        rDocKey = given.originalID.segmentation[segIndex]!.documentType + "Back";
+                                    }
+                                } else {
+                                    if (frontSeg[segIndex] !== undefined) {
+                                        rDocKey = frontSeg[segIndex].documentType;
+                                        if (options.documentTypes.double.includes(rDocKey)) {
+                                            rDocKey += 'Front';
+                                        }
+                                    }
+                                }
+                            }
+
+                            let ocr: OCRData = {
+                                id: idx,
+                                type: 'OCR',
+                                codeName: o.field,
+                                mapToLandmark: this.translateTermFromCodeName(rDocKey !== undefined ? rDocKey : docKey, 'ocr', o.field, false, true),
+                                name: this.translateTermFromCodeName(rDocKey !== undefined ? rDocKey : docKey, 'ocr', o.field),
+                                labels: text.map((lbl, idx) => { 
+                                    let pos = undefined;
+                                    if (o.coords !== undefined && o.coords[idx] !== undefined && o.coords[idx].length > 0) {
+                                        pos = {
+                                            x1: o.coords[idx][0],
+                                            x2: o.coords[idx][2],
+                                            x3: o.coords[idx][2],
+                                            x4: o.coords[idx][0],
+                                            y1: imgProps.height - o.coords[idx][1],
+                                            y2: imgProps.height - o.coords[idx][1],
+                                            y3: imgProps.height - o.coords[idx][3],
+                                            y4: imgProps.height - o.coords[idx][3],
+                                        }
+                                    }
+                                    let word: OCRWord = {
+                                        id: idx,
+                                        value: lbl,
+                                        position: pos
+                                    };
+                                    return word;
+                                }),
+                                count: text.length
+                            }
+                            return ocr;
+                        }).filter((each: OCRData) => each.name !== '' && each.mapToLandmark !== '');
+                    }
+
+                    if (ocrData.landmarks !== undefined && ocrData.ocr_results !== undefined) {
+                        if (session.raw_data.source === 'json') {
+                            landmarks = ocrData.landmarks.map((each: any, idx: number) => handleLandmarks(each, idx)).filter((each: any) => each !== null);
+                            ocr = ocrData.ocr_results.map((each: any, idx: number) => handleOCRs(each, idx)).filter((each: any) => each !== null);
+                        } else if (session.raw_data.source === 'csv') {
+                            landmarks = [handleLandmarks(ocrData.landmarks)].filter((each: any) => each !== null);
+                            ocr = [handleOCRs(ocrData.ocr_results)].filter((each: any) => each !== null);
+                        }
+                    }
+                }
+
+                if (!back) {
+                    given.originalID = {
+                        originalImageProps: frontOriProps,
+                        croppedImageProps: frontOcrProps,
+                        spoof: ocrData !== undefined && ocrData.spoof_results !== undefined ? ocrData.spoof_results.is_card_spoof : false,
+                        flags: ocrData !== undefined && ocrData.flags !== undefined ? ocrData.flags : [],
+                        segmentation: frontSeg,
+                        landmark: landmarks,
+                        ocr: ocr,
+                    }
+                } else {
+                    given.backID = {
+                        originalImageProps: backOriProps,
+                        croppedImageProps: backOcrProps,
+                        spoof: ocrData !== undefined && ocrData.spoof_results !== undefined ? ocrData.spoof_results.is_card_spoof : false,
+                        flags: ocrData !== undefined && ocrData.flags !== undefined ? ocrData.flags : [],
+                        segmentation: backSeg,
+                        landmark: landmarks,
+                        ocr: ocr
+                    }
+                }
+
+                if (session.raw_data.face_compare !== undefined) {
+                    given.face = {
+                        liveness: session.raw_data.face_compare.liveness,
+                        videoFlags: session.raw_data.face_compare.videoFlags,
+                        match: session.raw_data.face_compare.faceCompareMatch
+                    }
+                }
+            } else {
+                // if no raw_data, this means there is no csv OR json associated
+                // only load imageprops
                 let oriSrc = back ? session.back_ori : session.front_ori;
                 let oriProps: ImageProps = {height: -1, width: -1};
-                if (ocrData.originalImageProps !== undefined) {
-                    oriProps.height = ocrData.originalImageProps.height;
-                    oriProps.width = ocrData.originalImageProps.width;
-                } else if (oriSrc !== undefined) {
+                if (oriSrc !== undefined) {
                     oriProps = await new Promise((res, rej) => {
                         let img = new Image();
                         img.onload = () => {
@@ -142,67 +404,9 @@ export class DatabaseUtil {
                     frontOriProps = oriProps;
                 }
 
-                let segData = session.raw_data.segmentation !== undefined ? 
-                    (back ? session.raw_data.segmentation.backID : session.raw_data.segmentation.originalID) : undefined;
-                if (segData !== undefined) {
-                    if (!back) {
-                        frontSeg = segData.map((e: any, idx: number) => {
-                            let each = e.coords;
-                            if (each === undefined) {
-                                return undefined;
-                            }
-                            return {
-                                documentType: e.documentType !== undefined ? e.documentType : '',
-                                passesCrop: e. passesCrop,
-                                IDBox: {
-                                    id: idx,
-                                    position: {
-                                        x1: each[0],
-                                        x2: each[2],
-                                        x3: each[4],
-                                        x4: each[6],
-                                        y1: each[1],
-                                        y2: each[3],
-                                        y3: each[5],
-                                        y4: each[7],
-                                    }
-                                }
-                            }
-                        })
-                    } else {
-                        backSeg = segData.map((e: any, idx: number) => {
-                            let each = e.coords;
-                            if (each === undefined) {
-                                return undefined;
-                            }
-                            return {
-                                passesCrop: e.passesCrop,
-                                IDBox: {
-                                    id: idx,
-                                    position: {
-                                        x1: each[0],
-                                        x2: each[2],
-                                        x3: each[4],
-                                        x4: each[6],
-                                        y1: each[1],
-                                        y2: each[3],
-                                        y3: each[5],
-                                        y4: each[7],
-                                    }
-                                }
-                            }
-                        })
-                    }
-                }
-            }
-
-            if (ocrData !== undefined) {
                 let ocrSrc = !back ? session.front_ocr : session.back_ocr;
                 let imgProps: ImageProps = {height: -1, width: -1};
-                if (ocrData.croppedImageProps !== undefined) {
-                    imgProps.height = ocrData.croppedImageProps.height;
-                    imgProps.width = ocrData.croppedImageProps.width;
-                } else if (ocrSrc !== undefined) {
+                if (ocrSrc !== undefined) {
                     imgProps = await new Promise((res, rej) => {
                         let img = new Image();
                         img.onload = () => {
@@ -222,159 +426,26 @@ export class DatabaseUtil {
                     backOcrProps = imgProps;
                 }
 
-                const handleLandmarks = (each: any, segIndex?: number) => {
-                    if (each === null) return null;
-                    return each.filter((lm: any) => lm !== null).map((lm: any, idx: number) => {
-                        let flags: string[] = [];
-                        let glare = ocrData.glare_results.find((glare: any) => glare.field === lm.id);
-                        if (glare !== undefined) {
-                            if (glare.glare) {
-                                flags = ['glare'];
-                            }
-                        }
-
-                        if (imgProps.height === -1 || imgProps.width === -1) {
-                            if (!back && frontSeg[idx] !== undefined) {
-                                imgProps = {
-                                    height: frontSeg[idx].IDBox.position.y1 - frontSeg[idx].IDBox.position.y4, 
-                                    width: frontSeg[idx].IDBox.position.x2 - frontSeg[idx].IDBox.position.x1
-                                }
-                            } else if (back && backSeg[idx] !== undefined) {
-                                imgProps = {
-                                    height: backSeg[idx].IDBox.position.y1 - backSeg[idx].IDBox.position.y4, 
-                                    width: backSeg[idx].IDBox.position.x2 - backSeg[idx].IDBox.position.x1
-                                }
-                            }
-                        }
-                        
-                        let rDocKey = undefined;
-                        if (segIndex !== undefined) {
-                            if (back) {
-                                if (given.originalID !== undefined && given.originalID.segmentation !== undefined && given.originalID.segmentation[segIndex] !== undefined) {
-                                    rDocKey = given.originalID.segmentation[segIndex]!.documentType + "Back";
-                                }
-                            } else {
-                                if (frontSeg[segIndex] !== undefined) {
-                                    rDocKey = frontSeg[segIndex].documentType;
-                                    if (options.documentTypes.double.includes(rDocKey)) {
-                                        rDocKey += "Front";
-                                    }
-                                }
-                            }
-                        }
-                        let landmark: LandmarkData = {
-                            id: idx,
-                            type: 'landmark',
-                            codeName: lm.id,
-                            name: this.translateTermFromCodeName(rDocKey !== undefined ? rDocKey : docKey, 'landmark', lm.id),
-                            flags: flags,
-                            position: {
-                                x1: lm.coords[0],
-                                x2: lm.coords[2],
-                                x3: lm.coords[2],
-                                x4: lm.coords[0],
-                                y1: imgProps.height - lm.coords[1],
-                                y2: imgProps.height - lm.coords[1],
-                                y3: imgProps.height - lm.coords[3],
-                                y4: imgProps.height - lm.coords[3]
-                            }
-                        }
-                        return landmark;
-                    }).filter((each: LandmarkData) => each.name !== '');
-                }
-
-                const handleOCRs = (each: any, segIndex?: number) => {
-                    if (each === null) return null;
-                    return each.filter((lm: any) => lm !== null).map((o: any, idx: number) => {
-                        let text: string[] = o.text.split('\n').join(' ').split(' ');
-                        
-                        let rDocKey = undefined;
-                        if (segIndex !== undefined) {
-                            if (back) {
-                                if (given.originalID !== undefined && given.originalID.segmentation !== undefined && given.originalID.segmentation[segIndex] !== undefined) {
-                                    rDocKey = given.originalID.segmentation[segIndex]!.documentType + "Back";
-                                }
-                            } else {
-                                if (frontSeg[segIndex] !== undefined) {
-                                    rDocKey = frontSeg[segIndex].documentType;
-                                    if (options.documentTypes.double.includes(rDocKey)) {
-                                        rDocKey += 'Front';
-                                    }
-                                }
-                            }
-                        }
-
-                        let ocr: OCRData = {
-                            id: idx,
-                            type: 'OCR',
-                            codeName: o.field,
-                            mapToLandmark: this.translateTermFromCodeName(rDocKey !== undefined ? rDocKey : docKey, 'ocr', o.field, false, true),
-                            name: this.translateTermFromCodeName(rDocKey !== undefined ? rDocKey : docKey, 'ocr', o.field),
-                            labels: text.map((lbl, idx) => { 
-                                let pos = undefined;
-                                if (o.coords !== undefined && o.coords[idx] !== undefined && o.coords[idx].length > 0) {
-                                    pos = {
-                                        x1: o.coords[idx][0],
-                                        x2: o.coords[idx][2],
-                                        x3: o.coords[idx][2],
-                                        x4: o.coords[idx][0],
-                                        y1: imgProps.height - o.coords[idx][1],
-                                        y2: imgProps.height - o.coords[idx][1],
-                                        y3: imgProps.height - o.coords[idx][3],
-                                        y4: imgProps.height - o.coords[idx][3],
-                                    }
-                                }
-                                let word: OCRWord = {
-                                    id: idx,
-                                    value: lbl,
-                                    position: pos
-                                };
-                                return word;
-                            }),
-                            count: text.length
-                        }
-                        return ocr;
-                    }).filter((each: OCRData) => each.name !== '' && each.mapToLandmark !== '');
-                }
-
-                if (ocrData.landmarks !== undefined && ocrData.ocr_results !== undefined) {
-                    if (session.raw_data.source === 'json') {
-                        landmarks = ocrData.landmarks.map((each: any, idx: number) => handleLandmarks(each, idx)).filter((each: any) => each !== null);
-                        ocr = ocrData.ocr_results.map((each: any, idx: number) => handleOCRs(each, idx)).filter((each: any) => each !== null);
-                    } else if (session.raw_data.source === 'csv') {
-                        landmarks = [handleLandmarks(ocrData.landmarks)].filter((each: any) => each !== null);
-                        ocr = [handleOCRs(ocrData.ocr_results)].filter((each: any) => each !== null);
+                if (!back) {
+                    given.originalID = {
+                        originalImageProps: frontOriProps,
+                        croppedImageProps: frontOcrProps,
+                        spoof: false,
+                        flags: [],
+                        segmentation: undefined,
+                        landmark: [],
+                        ocr: [],
                     }
-                }
-            }
-
-            if (!back) {
-                given.originalID = {
-                    originalImageProps: frontOriProps,
-                    croppedImageProps: frontOcrProps,
-                    spoof: ocrData !== undefined && ocrData.spoof_results !== undefined ? ocrData.spoof_results.is_card_spoof : false,
-                    flags: ocrData !== undefined && ocrData.flags !== undefined ? ocrData.flags : [],
-                    segmentation: frontSeg,
-                    landmark: landmarks,
-                    ocr: ocr,
-                }
-            } else {
-                given.backID = {
-                    originalImageProps: backOriProps,
-                    croppedImageProps: backOcrProps,
-                    spoof: ocrData !== undefined && ocrData.spoof_results !== undefined ? ocrData.spoof_results.is_card_spoof : false,
-                    flags: ocrData !== undefined && ocrData.flags !== undefined ? ocrData.flags : [],
-                    segmentation: backSeg,
-                    landmark: landmarks,
-                    ocr: ocr
-                }
-            }
-
-            if (session.raw_data.face_compare !== undefined) {
-                given.face = {
-                    liveness: session.raw_data.face_compare.liveness,
-                    videoFlags: session.raw_data.face_compare.videoFlags,
-                    match: session.raw_data.face_compare.faceCompareMatch
+                } else {
+                    given.backID = {
+                        originalImageProps: backOriProps,
+                        croppedImageProps: backOcrProps,
+                        spoof: false,
+                        flags: [],
+                        segmentation: undefined,
+                        landmark: [],
+                        ocr: [],
+                    }
                 }
             }
             return given;
