@@ -1408,6 +1408,15 @@ class ControlPanel extends React.Component<IProps, IState> {
                     }).then((res: any) => {
                         if (res.status === 200) {
                             let image: File = DatabaseUtil.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename + "_cropped");
+                            if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.originalID !== undefined) {
+                                let seg = this.props.currentID.givenData.originalID.segmentation;
+                                if (seg !== undefined && seg[i] !== undefined && this.props.currentID.givenData.originalID.landmark[i] !== undefined
+                                    && this.props.currentID.givenData.originalID.landmark[i].length > 0) {
+                                    this.props.saveCroppedImage(image, i);
+                                    cropsDone++;
+                                    moveOnFront();
+                                }
+                            }
                             if (each.originalID!.landmark.length === 0 && each.documentType !== undefined && each.documentType === 'mykad') {
                                 axios.post(
                                     HOST + ":" + PORT + LANDMARK,
@@ -1475,6 +1484,15 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }).then((res: any) => {
                     if (res.status === 200) {
                         let image: File = DatabaseUtil.dataURLtoFile('data:image/jpg;base64,' + res.data.encoded_img, res.data.filename);
+                        if (this.props.currentID.givenData !== undefined && this.props.currentID.givenData.backID !== undefined) {
+                            let seg = this.props.currentID.givenData.backID.segmentation;
+                            let idx = this.props.currentID.internalIndex;
+                            if (seg !== undefined && seg[idx] !== undefined && this.props.currentID.givenData.backID.landmark[idx] !== undefined
+                                && this.props.currentID.givenData.backID.landmark[idx].length > 0) {
+                                this.props.saveCroppedImage(image);
+                                moveOnBack();
+                            }
+                        }
                         if (this.props.internalID.backID!.landmark.length === 0 && 
                             this.props.internalID.documentType !== undefined && this.props.internalID.documentType === 'mykad') {
                             axios.post(

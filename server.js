@@ -587,6 +587,20 @@ function updateDataWithJSON(result, data) {
 
                 ocrResults.landmarks = landmarks.map((currLm, idx) => {
                     let hgt = front ? data.croppedImageProps.originalID.height : data.croppedImageProps.backID.height;
+
+                    if (hgt === -1) {
+                        if (front) {
+                            segCrop = data.segmentation.originalID;
+                            if (segCrop[idx] !== undefined && segCrop[idx].IDBox !== undefined) {
+                                hgt = segCrop[idx].IDBox.position.y1 - segCrop[idx].IDBox.position.y4;
+                            }
+                        } else {
+                            segCrop = data.segmentation.backID;
+                            if (segCrop[idx] !== undefined && segCrop[idx].IDBox !== undefined) {
+                                hgt = segCrop[idx].IDBox.position.y1 - segCrop[idx].IDBox.position.y4;
+                            }
+                        }
+                    }
                     return currLm.map((landmark) => {
                         if (landmark.position === undefined) return undefined;
                         return {
@@ -603,7 +617,19 @@ function updateDataWithJSON(result, data) {
             if (ocrs !== undefined && ocrs.length > 0 && !(ocrs.length === 1 && ocrs[0].length === 0)) {
                 ocrResults.ocr_results = ocrs.map((currOcr, idx) => {
                     let hgt = front ? data.croppedImageProps.originalID.height : data.croppedImageProps.backID.height;
-
+                    if (hgt === -1) {
+                        if (front) {
+                            segCrop = data.segmentation.originalID;
+                            if (segCrop[idx] !== undefined && segCrop[idx].IDBox !== undefined) {
+                                hgt = segCrop[idx].IDBox.position.y1 - segCrop[idx].IDBox.position.y4;
+                            }
+                        } else {
+                            segCrop = data.segmentation.backID;
+                            if (segCrop[idx] !== undefined && segCrop[idx].IDBox !== undefined) {
+                                hgt = segCrop[idx].IDBox.position.y1 - segCrop[idx].IDBox.position.y4;
+                            }
+                        }
+                    }
                     return currOcr.map((ocr) => {
                         return {
                             field: ocr.codeName,
