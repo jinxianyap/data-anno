@@ -1007,7 +1007,6 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
 
         const getCategoryFlags = (flags: string[]) => {
-            let dividedFlags: string[][] = [];
             let values = this.state.selectedFrontIDFlags;
 
             if (this.props.currentID.originalIDProcessed && this.props.internalID !== undefined && 
@@ -1015,38 +1014,24 @@ class ControlPanel extends React.Component<IProps, IState> {
                 values = this.state.selectedBackIDFlags;
             }
 
-            for (let i = 0; i < flags.length; i += 3) {
-                dividedFlags.push(flags.slice(i, i + 3));
-            }
-
             return (
-                <div>
-                    {
-                        dividedFlags.map((divFlag, i) => {
-                            return (
-                                <div key={i} style={{width: "100%"}}>
-                                    <ToggleButtonGroup type="checkbox" onChange={(val) => setFlag(val)}
-                                        value={values}
-                                        style={{marginBottom: "1rem"}}>
-                                    {
-                                        divFlag.map((flag, idx) => {
-                                            return (<ToggleButton
-                                                className="video-flags"
-                                                key={idx}
-                                                value={flag}
-                                                variant="light"
-                                                >
-                                                {GeneralUtil.beautifyWord(flag)}
-                                            </ToggleButton>);
-                                        })
-                                    }   
-                                    </ToggleButtonGroup>
-                                </div>
-                            );
-                        })
-                    }
-                </div>
-            )
+                <ToggleButtonGroup type="checkbox" onChange={(val) => setFlag(val)}
+                    value={values}
+                    style={{marginBottom: "1rem", flexWrap: "wrap"}}>
+                {
+                    flags.map((flag, idx) => {
+                        return (<ToggleButton
+                            className="video-flags"
+                            key={idx}
+                            value={flag}
+                            variant="light"
+                            >
+                            {GeneralUtil.beautifyWord(flag)}
+                        </ToggleButton>);
+                    })
+                }   
+                </ToggleButtonGroup>
+            );
         }
 
         const backStage = () => {
@@ -1694,7 +1679,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                             return (
                                     <div key={idx}>
                                         <p>{GeneralUtil.beautifyWord(each.category)}</p>
-                                        <ToggleButtonGroup type="checkbox" onChange={(val) => setFlag(val)} value={selectedFlags}>
+                                        <ToggleButtonGroup style={{flexWrap: "wrap"}} type="checkbox" onChange={(val) => setFlag(val)} value={selectedFlags}>
                                             {each.flags.map((flag, idx) => {
                                                 return (
                                                     <ToggleButton
@@ -2063,7 +2048,9 @@ class ControlPanel extends React.Component<IProps, IState> {
                                 return (
                                     <div key={idx}>
                                         <p>{GeneralUtil.beautifyWord(each.category)}</p>
-                                        <ToggleButtonGroup type="checkbox" onChange={(val) => setFlag(val, each.flags)} value={this.state.selectedVideoFlags}>
+                                        <ToggleButtonGroup 
+                                        type="checkbox" style={{flexWrap: "wrap"}}
+                                        onChange={(val) => setFlag(val, each.flags)} value={this.state.selectedVideoFlags}>
                                         {
                                             each.flags.map((flag, i) => {
                                                 return (

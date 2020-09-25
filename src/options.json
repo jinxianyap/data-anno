@@ -99,7 +99,7 @@
         "landmark": {
             "keys": ["quality"],
             "values": [
-                ["glare", "blur"]
+                ["glare", "blur", "covered"]
             ]
         },
         "video": {
