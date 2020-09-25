@@ -3,6 +3,7 @@ import { ImageState, LandmarkData, OCRData, OCRWord, ImageProps, IDBox } from '.
 import { Rotation, IDProcess, AnnotationStatus, ProcessType } from './enums';
 import { DummyImage } from './dummy';
 import options from '../options.json';
+import { GeneralUtil } from './GeneralUtil';
 
 export class DatabaseUtil {
 
@@ -288,8 +289,17 @@ export class DatabaseUtil {
                     const handleOCRs = (each: any, segIndex?: number) => {
                         if (each === null) return null;
                         return each.filter((lm: any) => lm !== null).map((o: any, idx: number) => {
-                            let text: string[] = o.text.split('\n').join(' ').split(' ');
-                            
+                            let newlines: number[] = [];
+                            let text: string[] = [];
+
+                            if (o.field === 'name' || o.field === 'address') {
+                                let processed = GeneralUtil.processOCRValue(o.text);
+                                newlines = processed.newlines;
+                                text = processed.terms;
+                            } else {
+                                text = o.text.split('\n').join(' ').split(' ');
+                            }
+
                             let rDocKey = undefined;
                             if (segIndex !== undefined) {
                                 if (back) {
@@ -333,6 +343,7 @@ export class DatabaseUtil {
                                     };
                                     return word;
                                 }),
+                                newlines: newlines,
                                 count: text.length
                             }
                             return ocr;
@@ -509,14 +520,30 @@ export class DatabaseUtil {
     public static extractOutput(ID: IDState, face?: boolean): any {
         const translateLandmarkName = (docType: string, landmark: LandmarkData, frontBack?: string) => {
             let outputName = this.translateTermFromCodeName(docType + (frontBack !== undefined ? frontBack : ""), 'landmark', landmark.codeName, true);
-            landmark.name = outputName;
-            return landmark;
+            let lm: LandmarkData = {
+                id: landmark.id,
+                type: 'landmark',
+                codeName: landmark.codeName,
+                name: outputName,
+                flags: landmark.flags,
+                position: landmark.position
+            }
+            return lm;
         }
 
         const translateOCRName = (docType: string, ocr: OCRData, frontBack?: string) => {
             let outputName = this.translateTermFromCodeName(docType + (frontBack !== undefined ? frontBack : ""), 'ocr', ocr.codeName, true);
-            ocr.name = outputName;
-            return ocr;
+            let o: OCRData = {
+                id: ocr.id,
+                type: 'OCR',
+                codeName: ocr.codeName,
+                name: outputName,
+                mapToLandmark: ocr.mapToLandmark,
+                newlines: ocr.newlines,
+                count: ocr.count,
+                labels: ocr.labels
+            }
+            return o;
         }
         // console.log(ID.internalIDs);
         return {

@@ -41,7 +41,8 @@ export type OCRData = {
     name: string,
     mapToLandmark: string,
     count: number,
-    labels: OCRWord[]
+    labels: OCRWord[],
+    newlines: number[],
 }
 
 export type LandmarkOCRData = LandmarkData | OCRData;

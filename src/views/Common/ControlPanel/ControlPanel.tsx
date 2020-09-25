@@ -535,14 +535,27 @@ class ControlPanel extends React.Component<IProps, IState> {
 
             if (this.state.sortedList.length === sortedList.length) {
                 if (completeSessions.length === this.state.sortedList.filter((each) => each.status === AnnotationStatus.COMPLETE).length) {
-                    return;
+                    // this.initializeFirstSortedID(sortedList[this.state.sortedIndex].libIndex);
+                    this.setState({sortedList: sortedList, sortedIndex: this.state.sortedIndex}, res);
                 } else {
-                    this.initializeFirstSortedID(sortedList[0].libIndex);
-                    this.setState({sortedList: sortedList, sortedIndex: 0}, res);
+                    if (this.state.sortedIndex > 0) {
+                        if (sortedList[this.state.sortedIndex - 1].status === AnnotationStatus.COMPLETE
+                            && incompleteSessions.length > 0) {
+                            this.initializeFirstSortedID(sortedList[0].libIndex);
+                            this.setState({sortedList: sortedList, sortedIndex: 0}, res);  
+                        } else {
+                            this.initializeFirstSortedID(sortedList[this.state.sortedIndex - 1].libIndex);
+                            this.setState({sortedList: sortedList, sortedIndex: this.state.sortedIndex - 1}, res);
+                        }
+                    } else {
+                        this.initializeFirstSortedID(sortedList[0].libIndex);
+                        this.setState({sortedList: sortedList, sortedIndex: 0}, res);
+                    }
                 }
+            } else {
+                this.initializeFirstSortedID(sortedList[0].libIndex);
+                this.setState({sortedList: sortedList, sortedIndex: 0}, res);
             }
-            this.initializeFirstSortedID(sortedList[0].libIndex);
-            this.setState({sortedList: sortedList}, res);
         })
     }
 
@@ -603,28 +616,36 @@ class ControlPanel extends React.Component<IProps, IState> {
                     cropResult = false;
                 }
             }
-        } 
-        if (this.props.currentID.givenData !== undefined) {
-            if (this.props.currentID.originalIDProcessed && this.props.internalID !== undefined && this.props.internalID.processStage === IDProcess.DOUBLE_BACK) {
-                if (this.props.currentID.givenData.backID !== undefined && this.props.currentID.givenData.backID.segmentation !== undefined) {
-                    let seg = this.props.currentID.givenData.backID.segmentation;
-                    if (cropResult === undefined) {
-                        if (seg.length <= 1) {
-                            cropResult = seg[0] !== undefined ? seg[0]!.passesCrop : undefined;
-                        } else {
-                            cropResult = false;
-                        }
-                    }
+        } else {
+            if (this.props.currentID.originalID !== undefined && this.props.currentID.originalID.croppedImage !== undefined) {
+                if (this.props.currentID.originalID.croppedImage.name === 'notfound') {
+                    cropResult = false;
                 }
-            } else {
-                if (this.props.currentID.givenData.originalID !== undefined && this.props.currentID.givenData.originalID.segmentation !== undefined) {
-                    let seg = this.props.currentID.givenData.originalID.segmentation;
-                    if (seg.length <= 1) {
-                        if (cropResult === undefined) cropResult = seg[0] !== undefined ? seg[0]!.passesCrop : undefined;
-                        if (docType === '') docType = seg[0] !== undefined ? seg[0]!.documentType : '';
+            }
+            if (cropResult === undefined) {
+                if (this.props.currentID.givenData !== undefined) {
+                    if (this.props.currentID.originalIDProcessed && this.props.internalID !== undefined && this.props.internalID.processStage === IDProcess.DOUBLE_BACK) {
+                        if (this.props.currentID.givenData.backID !== undefined && this.props.currentID.givenData.backID.segmentation !== undefined) {
+                            let seg = this.props.currentID.givenData.backID.segmentation;
+                            if (cropResult === undefined) {
+                                if (seg.length <= 1) {
+                                    cropResult = seg[0] !== undefined ? seg[0]!.passesCrop : undefined;
+                                } else {
+                                    cropResult = false;
+                                }
+                            }
+                        }
                     } else {
-                        if (cropResult === undefined) cropResult = false;
-                        if (docType === '') docType = seg[this.props.currentID.internalIndex] !== undefined ? seg[this.props.currentID.internalIndex]!.documentType : '';
+                        if (this.props.currentID.givenData.originalID !== undefined && this.props.currentID.givenData.originalID.segmentation !== undefined) {
+                            let seg = this.props.currentID.givenData.originalID.segmentation;
+                            if (seg.length <= 1) {
+                                if (cropResult === undefined) cropResult = seg[0] !== undefined ? seg[0]!.passesCrop : undefined;
+                                if (docType === '') docType = seg[0] !== undefined ? seg[0]!.documentType : '';
+                            } else {
+                                if (cropResult === undefined) cropResult = false;
+                                if (docType === '') docType = seg[this.props.currentID.internalIndex] !== undefined ? seg[this.props.currentID.internalIndex]!.documentType : '';
+                            }
+                        }
                     }
                 }
             }
@@ -793,6 +814,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 codeName: each.codeName,
                 type: 'OCR',
                 mapToLandmark: each.mapToLandmark,
+                newlines: [],
                 count: 0,
                 labels: []
             };
@@ -801,6 +823,7 @@ class ControlPanel extends React.Component<IProps, IState> {
             if (stOcr !== undefined) {
                 ocr.labels = stOcr.labels;
                 ocr.count = stOcr.count;
+                ocr.newlines = stOcr.newlines;
             } else if (this.props.currentID.givenData !== undefined) {
                 // if db csv already has ocr data
                 if (this.props.internalID.processStage === IDProcess.DOUBLE_BACK) {
@@ -811,6 +834,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                             if (dbOcr !== undefined) {
                                 ocr.count = dbOcr.count;
                                 ocr.labels = dbOcr.labels;
+                                ocr.newlines = dbOcr.newlines;
                             }
                         }
                     }
@@ -822,6 +846,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                             if (dbOcr !== undefined) {
                                 ocr.count = dbOcr.count;
                                 ocr.labels = dbOcr.labels;
+                                ocr.newlines = dbOcr.newlines;
                             }
                         }
                     }
@@ -829,11 +854,41 @@ class ControlPanel extends React.Component<IProps, IState> {
             }
             // if not, just initialize with the correct set of landmarks with each position as undefined
             this.props.addOCRData(ocr);
+
+            let value = '';
+            if (each.codeName === 'name' || each.codeName === 'address') {
+                let split: string[] = [];
+                let terms = ocr.labels.map((lbl) => lbl.value);
+                let ptr = 0;
+                let termPtr = 0;
+
+                while (termPtr < terms.length) {
+                    if (ptr < ocr.newlines.length && termPtr === ocr.newlines[ptr]) {
+                        let prev = split[split.length - 1];
+                        if (prev.slice(-1) === ' ') {
+                            prev = prev.slice(0, prev.length - 1)
+                        }
+                        split[split.length - 1] = prev + '\n';
+                        ptr++;
+                    } else {
+                        if (termPtr === terms.length - 1) {
+                            split.push(terms[termPtr]);
+                        } else {
+                            split.push(terms[termPtr] + ' ');
+                        }
+                        termPtr++;
+                    }
+                }
+                value = split.join('');
+            } else {
+                value = ocr.labels.map((lbl) => lbl.value).join(' ');
+            }
+
             newOcrs.push({
                 name: ocr.name,
                 codeName: ocr.codeName,
                 mapToLandmark: ocr.mapToLandmark,
-                value: ocr.labels.map((lbl) => lbl.value).join(' ')
+                value: value
             });
         });
         return newOcrs;
@@ -1706,7 +1761,14 @@ class ControlPanel extends React.Component<IProps, IState> {
                                             className={getClassName(each)}
                                             key={idx}
                                             onClick={() => setLandmark(each.codeName)}>
-                                                {GeneralUtil.beautifyWord(each.name)}
+                                                {each.name}
+                                                <p style={{color: 'grey'}}>
+                                                    {
+                                                        this.props.internalID !== undefined &&
+                                                        GeneralUtil.isOptionalLandmark(each.codeName, this.props.internalID.documentType,
+                                                            this.props.internalID.processStage) ? '(optional)' : ''
+                                                    }
+                                                </p>
                                                 <CgCheckO className="landmark-done-tick" />
                                         </Accordion.Toggle>
                                         <Accordion.Collapse eventKey={idx.toString()}>
@@ -1740,7 +1802,17 @@ class ControlPanel extends React.Component<IProps, IState> {
 
             let currentOCR = this.state.currentOCR;
             refs.forEach((each, idx) => {
-                let terms = each.ref.value.split(' ').filter((each: string) => each.length > 0);
+                let newlines: number[] = [];
+                let terms = [];
+
+                if (each.codeName === 'name' || each.codeName === 'address') {
+                    let processed = GeneralUtil.processOCRValue(each.ref.value);
+                    newlines = processed.newlines;
+                    terms = processed.terms;
+                } else {
+                    terms = each.ref.value.split(' ').filter((each: string) => each.length > 0);
+                }
+
                 let ocr: OCRData = {
                     id: idx,
                     type: 'OCR',
@@ -1750,9 +1822,10 @@ class ControlPanel extends React.Component<IProps, IState> {
                     labels: terms.map((each: string, idx: number) => {
                         return {id: idx, value: each};
                     }),
-                    count: terms.length
+                    count: terms.length,
+                    newlines: newlines
                 };
-                
+
                 if (currentOCR.find((ocr) => ocr.codeName === each.codeName)!.value !== each.ref.value) {
                     for (var i = 0; i < currentOCR.length; i++) {
                         if (currentOCR[i].codeName === each.codeName) {
@@ -1784,14 +1857,25 @@ class ControlPanel extends React.Component<IProps, IState> {
                     })
                     .sort((a, b) => a.name.localeCompare(b.name))
                     .map((each, idx) => {
-                        return (
-                            <Form.Group key={each.codeName + "OCR"}>
-                                <Form.Label>{GeneralUtil.beautifyWord(each.name)}</Form.Label>
-                                {/* SKIP_VALIDATION: Remove required */}
-                                <Form.Control required type="text" defaultValue={each.value}
-                                ref={(ref: any) => {refs.push({name: each.name, codeName: each.codeName, mapToLandmark: each.mapToLandmark, ref})}} />
-                            </Form.Group>
-                        );
+                        if (each.codeName === 'name' || each.codeName === 'address') {
+                            return (
+                                <Form.Group key={each.codeName + "OCR"}>
+                                    <Form.Label>{each.name}</Form.Label>
+                                    {/* SKIP_VALIDATION: Remove required */}
+                                    <Form.Control as="textarea" required type="text" defaultValue={each.value}
+                                    ref={(ref: any) => {refs.push({name: each.name, codeName: each.codeName, mapToLandmark: each.mapToLandmark, ref})}} />
+                                </Form.Group>
+                            );
+                        } else {
+                            return (
+                                <Form.Group key={each.codeName + "OCR"}>
+                                    <Form.Label>{each.name}</Form.Label>
+                                    {/* SKIP_VALIDATION: Remove required */}
+                                    <Form.Control required type="text" defaultValue={each.value}
+                                    ref={(ref: any) => {refs.push({name: each.name, codeName: each.codeName, mapToLandmark: each.mapToLandmark, ref})}} />
+                                </Form.Group>
+                            );
+                        }
                     })
                 }
                 <Button variant="secondary" className="common-button" onClick={() => this.props.progressNextStage(CurrentStage.LANDMARK_EDIT)}>
@@ -1896,16 +1980,16 @@ class ControlPanel extends React.Component<IProps, IState> {
                                 <Card key={index}>
                                     <Accordion.Toggle
                                         as={Card.Header}
-                                        eventKey={each.name + " " + each.mapToLandmark}
+                                        eventKey={each.codeName + " " + each.mapToLandmark}
                                         key={index}
                                         className={getClassNameLandmark(each)}
                                         onClick={() => {
                                             this.props.setCurrentSymbol(each.codeName, each.mapToLandmark);
                                             this.props.setCurrentWord(each.labels[0]);}}>
-                                        {GeneralUtil.beautifyWord(each.name)}
+                                        {each.name}
                                         <CgCheckO className="ocr-done-tick" />
                                     </Accordion.Toggle>
-                                    <Accordion.Collapse eventKey={each.name + " " + each.mapToLandmark}>
+                                    <Accordion.Collapse eventKey={each.codeName + " " + each.mapToLandmark}>
                                     <Card.Body>
                                     <ButtonGroup vertical>
                                         {
@@ -2073,7 +2157,6 @@ class ControlPanel extends React.Component<IProps, IState> {
         this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
     }
 
-    // do not use directly, call through handleGetSession
     loadNextID = (prev: boolean, beforeSegCheckDone?: boolean) => {
         console.log('call next');
         this.resetState();
@@ -2119,6 +2202,7 @@ class ControlPanel extends React.Component<IProps, IState> {
     // do not use directly, call through handleGetSession
     loadSelectedID = (index: number, sortedIndex: number, beforeSegCheckDone?: boolean) => {
         if (index === this.props.currentIndex) return;
+        console.log('call selected');
         this.resetState();
         let id = this.props.currentID;
         if (beforeSegCheckDone) {

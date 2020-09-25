@@ -59,4 +59,27 @@ export class GeneralUtil {
         let separates = word.replace(/([A-Z])/g,' $1');
         return separates.charAt(0).toUpperCase()+separates.slice(1);
     }
+
+    public static processOCRValue(value: string): {newlines: number[], terms: string[]} {
+        let filtered = value.split(' ').filter((each: string) => each.length > 0).join(' ');
+
+        let lines = filtered.split('\n');
+        let newlines = [];
+        let pos = 0;
+
+        if (lines.length > 1) {
+            for (var i = 0; i < lines.length - 1; i++) {
+                let words = lines[i].split(' ').length;
+                pos += words;
+                newlines.push(pos);
+            }
+        }
+
+        let terms = lines.join(' ').split(' ');
+
+        return {
+            newlines: newlines,
+            terms: terms
+        }
+    }
 }

@@ -1,37 +1,31 @@
 {
     "documentTypes": {
         "single": ["passport", "mydl", "other"],
-        "double": ["mykad", "fakedoubleID"]
+        "double": ["mykad"]
     },
     "landmark": {
-        "keys": ["mykadFront", "mykadBack", "passport", "mydl", "other", "fakedoubleIDFront", "fakedoubleIDBack"],
+        "keys": ["mykadFront", "mykadBack", "passport", "mydl", "other"],
         "compulsory": {
             "codeNames": [
                 ["kpm", "logo", "flag", "ic_num", "security", "msc", "ghost", "face", "name", "address", "hibiscus", "citizen", "gender"],
                 ["coa", "tower", "sign", "kppn", "ic_num", "crown", "touchNgo", "malaysia_logo", "chip_logo", "serial_num"],
                 ["passport_num", "name"],
                 ["coatOfArm", "drvlicLogo", "mysFlag", "malaysiaLogo", "face", "name", "nationality", "idNum", "drvlicClass", "validity", "address", "hibiscusLogo"],
-                ["id_num", "name"],
-                ["id_num", "name", "dob"],
-                ["id_num", "logo"]
+                ["id_num", "name"]
             ],
             "displayNames": [
-                ["kadPengenalanMalaysiaLandmark", "mykadLogo", "malaysiaFlag", "mykadNumber", "securityChip", "mscLogo", "ghostImage", "facialImage", "name", "address", "hibiscusLogo", "citizen", "gender"],
-                ["coatOfArms", "klccTower", "signature", "kPPN", "mykadNumber", "crown", "touchNGo", "malaysiaLogo", "chipLogo", "serialNumber"],
-                ["passportNumber", "name"],
-                ["coatOfArms", "drivingLicenseLogo", "mysFlag", "malaysiaLogo", "face", "name", "nationality", "IDNumber", "drivingLicenseClass", "validity", "address", "hibiscusLogo"],
-                ["IDNumber", "name"],
-                ["IDNumber", "name", "dateOfBirth"],
-                ["IDNumber", "logo"]
+                ["Kad Pengenalan Malaysia", "MyKad Logo", "Malaysia Flag", "MyKad Number", "Security Chip", "MSC Logo", "Ghost Image", "Facial Image", "Name", "Address", "Hibiscus Logo", "Citizen", "Gender"],
+                ["Coat of Arms", "KLCC Towers", "Signature", "KPPN", "MyKad Number", "Crown", "Touch N Go", "Malaysia Logo", "Chip Logo", "Serial Number"],
+                ["Passport Number", "Name"],
+                ["Coat of Arms", "Driving License Logo", "Malaysia Flag", "Malaysia Logo", "Face", "Name", "Nationality", "ID Number", "Driving License Class", "Validity", "Address", "Hibiscus Logo"],
+                ["ID Number", "Name"]
             ],
             "outputNames": [
                 ["kpmLogo", "mykadLogo", "mysFlag", "idNum", "securityChip", "mscLogo", "ghost", "face", "name", "address", "hibiscusLogo", "nationality", "gender"],
                 ["coatOfArm", "twintowerLogo", "signature", "kppn", "idNum", "crown", "touchngoLogo", "mysLogo", "chipLogo", "serialNum"],
                 ["idNum", "name"],
                 ["coatOfArm", "drvlicLogo", "mysFlag", "malaysiaLogo", "face", "name", "nationality", "idNum", "drvlicClass", "validity", "address", "hibiscusLogo"],
-                ["idNum", "name"],
-                ["idNum", "name", "birthdate"],
-                ["idNum", "logo"]
+                ["idNum", "name"]
             ]
         },
         "optional": {
@@ -40,17 +34,13 @@
                 ["atm_logo"],
                 [],
                 ["PLogo"],
-                [],
-                [],
                 []
             ],
             "displayNames": [
-                ["religion"],
-                ["ATMLogo"],
+                ["Religion"],
+                ["ATM Logo"],
                 [],
-                ["PLogo"],
-                [],
-                [],
+                ["P Logo"],
                 []
             ],
             "outputNames": [
@@ -58,39 +48,31 @@
                 ["atmLogo"],
                 [],
                 ["PLogo"],
-                [],
-                [],
                 []
             ]
         }
     },
     "ocr": {
-        "keys": ["mykadFront", "mykadBack", "passport", "mydl", "other", "fakedoubleIDFront", "fakedoubleIDBack"],
+        "keys": ["mykadFront", "mykadBack", "passport", "mydl", "other"],
         "codeNames": [
             ["ic_num", "name", "address", "gender", "citizen", "religion"],
             ["mykad_back_ic_num"],
             ["passport_num", "name"],
             ["name", "nationality", "idNum", "drvlicClass", "validity", "address"],
-            ["id_num"],
-            ["id_num", "name", "dob"],
             ["id_num"]
         ],
         "displayNames": [
-            ["mykadNumber", "name", "address", "gender", "citizen", "religion"],
-            ["mykadNumber"],
-            ["passportNumber", "name"],
-            ["name", "nationality", "IDNumber", "drivingLicenseClass", "validity", "address"],
-            ["IDNumber"],
-            ["IDNumber", "name", "dateOfBirth"],
-            ["IDNumber"]
+            ["MyKad Number", "Name", "Address", "Gender", "Citizen", "Religion"],
+            ["MyKad Number"],
+            ["Passport Number", "Name"],
+            ["Name", "Nationality", "ID Number", "Driving License Class", "Validity", "Address"],
+            ["ID Number"]
         ],
         "mapToLandmark": [
             ["ic_num", "name", "address", "gender", "citizen", "religion"],
             ["ic_num"],
             ["passport_num", "name"],
             ["name", "nationality", "idNum", "drvlicClass", "validity", "address"],
-            ["id_num"],
-            ["id_num", "name", "dob"],
             ["id_num"]
         ],
         "outputNames": [
@@ -98,8 +80,6 @@
             ["idNum"],
             ["passportNum", "name"],
             ["name", "nationality", "idNum", "drvlicClass", "validity", "address"],
-            ["idNum"],
-            ["idNum", "name", "birthdate"],
             ["idNum"]
         ],
         "specialFormat": [{

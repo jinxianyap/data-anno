@@ -101,7 +101,7 @@ export function imageReducer(
         case Action.ADD_OCR_DATA: {
             let ocr = state.ocr;
 
-            let index = ocr.findIndex((each) => each.name === action.payload.ocr.name);
+            let index = ocr.findIndex((each) => each.codeName === action.payload.ocr.codeName);
             if (index === undefined || index == -1) {
                 ocr.push(action.payload.ocr);
             } else {
@@ -147,6 +147,7 @@ export function imageReducer(
                 }
                 ocrData.count = action.payload.ocr.count;
                 ocrData.labels = labels;
+                ocrData.newlines = action.payload.ocr.newlines;
                 ocr.splice(index, 1, ocrData);
             }
 
