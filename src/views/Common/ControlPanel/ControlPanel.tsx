@@ -204,7 +204,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                             if (res.status === 200) {
                                 DatabaseUtil.loadSessionData(res.data, this.props.indexedID).then((completeID) => {
                                     this.props.loadNextID(completeID);
-                                    this.loadSegCheckImage();
+                                    this.loadSegCheckImage(completeID);
                                     this.initializeSegCheckData();
                                     this.setState({loadedSegCheckImage: true}, () => GeneralUtil.toggleOverlay(false));
                                 });
@@ -215,7 +215,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                         });
                     } else {
                         this.props.loadNextID(this.props.indexedID);
-                        this.loadSegCheckImage();
+                        this.loadSegCheckImage(this.props.indexedID);
                         this.initializeSegCheckData();
                         this.setState({loadedSegCheckImage: true});
                     }
@@ -232,7 +232,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 // initial load of doctypes and overall flags from config json, initial load of image
                 if (this.state.documentTypes.length === 0) this.loadSegCheckData();
                 if (!this.state.loadedSegCheckImage) {
-                    this.loadSegCheckImage();
+                    this.loadSegCheckImage(this.props.currentID);
                     this.initializeSegCheckData();
                     this.setState({loadedSegCheckImage: true});
                     break;
@@ -513,7 +513,8 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
     }
 
-    mapIDLibrary = () => {
+    mapIDLibrary = (sortedIndex?: number) => {
+        // sortedIndex === undefined only during init
         return new Promise((res, rej) => {
             const mappedList = this.props.library.map((each, idx) => {
                 return {
@@ -533,24 +534,11 @@ class ControlPanel extends React.Component<IProps, IState> {
                     === AnnotationStatus.NOT_APPLICABLE);
             const sortedList = incompleteSessions.concat(completeSessions).concat(naSessions);
 
-            if (this.state.sortedList.length === sortedList.length) {
+            if (sortedIndex !== undefined) {
                 if (completeSessions.length === this.state.sortedList.filter((each) => each.status === AnnotationStatus.COMPLETE).length) {
-                    // this.initializeFirstSortedID(sortedList[this.state.sortedIndex].libIndex);
                     this.setState({sortedList: sortedList, sortedIndex: this.state.sortedIndex}, res);
                 } else {
-                    if (this.state.sortedIndex > 0) {
-                        if (sortedList[this.state.sortedIndex - 1].status === AnnotationStatus.COMPLETE
-                            && incompleteSessions.length > 0) {
-                            this.initializeFirstSortedID(sortedList[0].libIndex);
-                            this.setState({sortedList: sortedList, sortedIndex: 0}, res);  
-                        } else {
-                            this.initializeFirstSortedID(sortedList[this.state.sortedIndex - 1].libIndex);
-                            this.setState({sortedList: sortedList, sortedIndex: this.state.sortedIndex - 1}, res);
-                        }
-                    } else {
-                        this.initializeFirstSortedID(sortedList[0].libIndex);
-                        this.setState({sortedList: sortedList, sortedIndex: 0}, res);
-                    }
+                    this.setState({sortedList: sortedList, sortedIndex: sortedIndex > 0 ? sortedIndex - 1 : 0})
                 }
             } else {
                 this.initializeFirstSortedID(sortedList[0].libIndex);
@@ -570,11 +558,12 @@ class ControlPanel extends React.Component<IProps, IState> {
         this.loadSelectedID(libIndex, sortedIndex, this.props.currentStage === CurrentStage.SEGMENTATION_CHECK);
     }
 
-    loadSegCheckImage = () => {
-        if (this.props.currentID.originalIDProcessed && this.props.internalID !== undefined && this.props.internalID.processStage === IDProcess.DOUBLE_BACK) {
-            this.props.loadImageState(this.props.currentID.backID!);
+    loadSegCheckImage = (ID: IDState) => {
+        if (ID.originalIDProcessed && ID.internalIDs[ID.internalIndex] !== undefined 
+            && ID.internalIDs[ID.internalIndex].processStage === IDProcess.DOUBLE_BACK) {
+            this.props.loadImageState(ID.backID!);
         } else {
-            this.props.loadImageState(this.props.currentID.originalID!);
+            this.props.loadImageState(ID.originalID!);
         }
     }
 
@@ -1053,16 +1042,18 @@ class ControlPanel extends React.Component<IProps, IState> {
             if (this.props.processType === ProcessType.WHOLE || this.props.processType === ProcessType.LIVENESS) {
                 if (this.props.currentID.selfieVideo!.name !== 'notfound') {
                     this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
-                } else if (this.props.currentID.selfieImage!.name !== 'notfound'
-                    && this.props.currentID.croppedFace!.name !== 'notfound'
-                    && this.props.processType !== ProcessType.LIVENESS) {
-                    this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
-                } else {
-                    this.loadNextID(false, true);
-                }
-            } else {
-                this.loadNextID(false, true);
+                    return;
+                } 
+                // else if (this.props.currentID.selfieImage!.name !== 'notfound'
+                //     && this.props.currentID.croppedFace!.name !== 'notfound'
+                //     && this.props.processType !== ProcessType.LIVENESS) {
+                //     this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
+                // }
+                //  else {
+                //     this.loadNextID(false, true);
+                // }
             }
+            this.loadNextID(false, true);
         }
 
         const submitSegCheck = (e: any) => {
@@ -2160,6 +2151,10 @@ class ControlPanel extends React.Component<IProps, IState> {
         }).then((res: any) => {
             this.props.restoreID();
             this.props.restoreImage();
+
+            let isComplete = DatabaseUtil.getOverallStatus(res.data.phasesChecked, res.data.annotationState, this.props.processType)
+                === AnnotationStatus.COMPLETE;
+
             if (prev) {
                 let idx = this.state.sortedList[this.state.sortedIndex - 1].libIndex;
                 this.props.getSelectedID(idx, res.data);
@@ -2171,14 +2166,24 @@ class ControlPanel extends React.Component<IProps, IState> {
                     this.props.getSelectedID(idx, res.data);
                     this.setState({sortedIndex: 0});
                 } else {
-                    let idx = this.state.sortedList[this.state.sortedIndex + 1].libIndex;
-                    this.props.getSelectedID(idx, res.data);
-                    this.setState({sortedIndex: this.state.sortedIndex + 1});
+                    if (isComplete) {
+                        let nextSIndex = this.state.sortedIndex + 1;
+                        let next = this.state.sortedList[nextSIndex];
+                        if (next.status === AnnotationStatus.COMPLETE && this.state.sortedList[0].status === AnnotationStatus.INCOMPLETE) {
+                            let idx = this.state.sortedList[0].libIndex;
+                            nextSIndex = 0;
+                            this.props.getSelectedID(idx, res.data);
+                        } else {
+                            let idx = next.libIndex;
+                            this.props.getSelectedID(idx, res.data);
+                        }
+                        this.mapIDLibrary(nextSIndex);
+                    } else {
+                        let idx = this.state.sortedList[this.state.sortedIndex + 1].libIndex;
+                        this.props.getSelectedID(idx, res.data);
+                        this.setState({sortedIndex: this.state.sortedIndex + 1});
+                    }
                 }
-            }
-            if (DatabaseUtil.getOverallStatus(res.data.phasesChecked, res.data.annotationState, this.props.processType)
-                === AnnotationStatus.COMPLETE) {
-                this.mapIDLibrary();
             }
             this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
         }).catch((err: any) => {
@@ -2207,9 +2212,10 @@ class ControlPanel extends React.Component<IProps, IState> {
             this.props.getSelectedID(index, res.data);
             if (DatabaseUtil.getOverallStatus(res.data.phasesChecked, res.data.annotationState, this.props.processType)
                 === AnnotationStatus.COMPLETE) {
-                    this.mapIDLibrary();
-                }
-            this.setState({sortedIndex: sortedIndex});
+                    this.mapIDLibrary(sortedIndex);
+            } else {
+                this.setState({sortedIndex: sortedIndex});
+            }
             this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
         }).catch((err: any) => {
             console.error(err);

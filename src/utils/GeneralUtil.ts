@@ -69,8 +69,9 @@ export class GeneralUtil {
 
         if (lines.length > 1) {
             for (var i = 0; i < lines.length - 1; i++) {
-                let words = lines[i].split(' ').length;
-                pos += words;
+                let words = lines[i].split(' ').filter((each: string) => each.length > 0);
+                lines[i] = words.join(' ');
+                pos += words.length;
                 newlines.push(pos);
             }
         }
