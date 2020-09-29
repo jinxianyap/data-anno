@@ -111,10 +111,14 @@ class SetupView extends React.Component<IProps, IState> {
                             if (fr.result !== undefined && fr.result !== null && typeof(fr.result) === 'string') {
                                 let str = fr.result;
                                 let lines = str.split('\n');
-                                let entries: {date: string, sessionID: string}[] = lines.map((each: string) => {
-                                    return {
-                                        date: each.split(',')[0],
-                                        sessionID: each.split(',')[1]
+                                let entries: {date: string, sessionID: string}[] = [];
+                                
+                                lines.forEach((each: string) => {
+                                    if (entries.find((e) => e.date === each.split(',')[0] && e.sessionID === each.split(',')[1]) === undefined) {
+                                        entries.push({
+                                            date: each.split(',')[0],
+                                            sessionID: each.split(',')[1]
+                                        });
                                     }
                                 })
                                 res(entries);
