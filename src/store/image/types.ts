@@ -3,6 +3,8 @@ import { Action } from "../Actions";
 export type ImageState = {
     image: File;
     croppedImage?: File;
+
+    // image height and width
     imageProps?: ImageProps;
     croppedImageProps?: ImageProps;
 
@@ -42,6 +44,7 @@ export type OCRData = {
     mapToLandmark: string,
     count: number,
     labels: OCRWord[],
+    // keeps track of where newlines should be inserted
     newlines: number[],
 }
 
@@ -69,6 +72,7 @@ export type OCRWord = {
     position?: Position
 }
 
+// load the given ImageState object into the ImageState
 interface LoadImageState {
     type: typeof Action.LOAD_IMAGE_STATE;
     payload: {
@@ -91,6 +95,7 @@ interface SetImageProps {
     }
 }
 
+// set the landmark/ocr currently selected
 interface SetCurrentSymbol {
     type: typeof Action.SET_CURRENT_SYMBOL;
     payload: {
@@ -132,6 +137,7 @@ interface AddOCRData {
     }
 }
 
+// set the individual ocr word currently selected and its corresponding landmark
 interface SetCurrentWord {
     type: typeof Action.SET_CURRENT_VALUE;
     payload: {

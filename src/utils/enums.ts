@@ -42,11 +42,6 @@ export enum AnnotationStatus {
     NOT_APPLICABLE = "Not Applicable"
 }
 
-export enum DatabasesTemp {
-    DB1 = "Database 1",
-    DB2 = "Database 2"
-}
-
 export enum UsersTemp {
     Alice = "Alice",
     Bob = "Bob"

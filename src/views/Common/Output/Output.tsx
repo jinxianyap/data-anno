@@ -2,13 +2,9 @@ import React from 'react';
 import { Container, Table, Button } from 'react-bootstrap';
 import { AppState } from '../../../store';
 import { connect } from 'react-redux';
-import { IDState } from '../../../store/id/types';
-import { DatabaseUtil } from '../../../utils/DatabaseUtil';
-import { CurrentStage, ProcessType } from '../../../utils/enums';
+import { CurrentStage } from '../../../utils/enums';
 import { progressNextStage } from '../../../store/general/actionCreators';
 import { GeneralActionTypes } from '../../../store/general/types';
-import { GeneralUtil } from '../../../utils/GeneralUtil';
-const axios = require('axios');
 
 interface IProps {
     saveResults: {sessionID: string, success: boolean}[],

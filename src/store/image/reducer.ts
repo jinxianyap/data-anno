@@ -1,4 +1,4 @@
-import { ImageState, ImageActionTypes, LandmarkData } from "./types";
+import { ImageState, ImageActionTypes } from "./types";
 import { Action } from "../Actions";
 
 const initialState: ImageState = {
@@ -102,7 +102,7 @@ export function imageReducer(
             let ocr = state.ocr;
 
             let index = ocr.findIndex((each) => each.codeName === action.payload.ocr.codeName);
-            if (index === undefined || index == -1) {
+            if (index === undefined || index === -1) {
                 ocr.push(action.payload.ocr);
             } else {
                 let ocrData = ocr[index];

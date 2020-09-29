@@ -21,6 +21,7 @@ const ccHeaders = {
     'Expires': 0
 }
 
+// acts as an enum to represent file types
 const fileType = {
     front_ori: '0',
     back_ori: '1',
@@ -37,6 +38,10 @@ const fileType = {
 const optionalLandmarks = ['religion', 'atm_logo', 'PLogo'];
 
 Object.freeze(fileType);
+
+// ------------------------------------------------------
+//                    HELPER FUNCTIONS
+// ------------------------------------------------------ 
 
 function fromDateToString(dateObj, isOutput) {
     let year = dateObj.getFullYear().toString();
@@ -61,12 +66,14 @@ function withinDateRange(date, start, end) {
 }
 
 function getInitialDoctype(filename) {
+    // gets document type based on filename
     let keys = filename.split('.')[0].split('_').slice(1);
     return keys[0];
 }
 
 function getFileType(filename) {
     let keys = filename.split('.')[0].split('_').slice(1);
+    // only compatible for mykad as of now. Will need to modify to cover other document types
     if (keys[0] === 'mykad') {
         switch (keys[1]) {
             case ('front'): {
@@ -93,29 +100,7 @@ function getFileType(filename) {
     }
 }
 
-function processOCRValue(value) {
-    let filtered = value.split(' ').filter((each) => each.length > 0).join(' ');
-
-    let lines = filtered.split('\n');
-    let newlines = [];
-    let pos = 0;
-
-    if (lines.length > 1) {
-        for (var i = 0; i < lines.length - 1; i++) {
-            let words = lines[i].split(' ').length;
-            pos += words;
-            newlines.push(pos);
-        }
-    }
-
-    let terms = lines.join(' ').split(' ');
-
-    return {
-        newlines: newlines,
-        terms: terms
-    }
-}
-
+// convert from OCRData in json to string
 function recomposeOCRValue(terms, newlines) {
     if (newlines.length === 0) return terms.join(' ');
     let split = [];
@@ -142,7 +127,11 @@ function recomposeOCRValue(terms, newlines) {
     return split.join('');
 }
 
-// transforms each image into base64 representation
+// ------------------------------------------------------
+//                  READ/WRITE FUNCTIONS
+// ------------------------------------------------------ 
+
+// transforms each image file into base64 representation
 function allocateFiles(sessionID, route, files) {
     var front_ori,
         back_ori,
@@ -449,12 +438,16 @@ function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
     }
 }
 
-// sending data
+// load data from json (if available)
 function updateDataWithJSON(result, data) {
     function updateOCR(ocrResults, front) {
+        // for landmarks and ocrs
         if (ocrResults !== undefined) {
+            // if csv data found
             let landmarks = front ? data.landmarks.originalID : data.landmarks.backID;
             let ocrs = front ? data.ocr.originalID : data.ocr.backID;
+
+            // updating landmarks using json data
             if (landmarks !== undefined && landmarks.length > 0 && !(landmarks.length === 1 && landmarks[0].length === 0)) {
                 if (ocrResults.glare_results !== undefined) {
                     ocrResults.glare_results = landmarks.map((lm) => {
@@ -555,11 +548,15 @@ function updateDataWithJSON(result, data) {
                     })
                 }
             } else {
+                // if json has no landmark data
                 ocrResults.glare_results = [ocrResults.glare_results];
                 ocrResults.landmarks = [ocrResults.landmarks];
             }
+
+            // updating ocrs using json data
             if (ocrs !== undefined && ocrs.length > 0 && !(ocrs.length === 1 && ocrs[0].length === 0)) {
                 if (ocrResults.ocr_results !== undefined) {
+                    // if csv has ocr results
                     ocrResults.ocr_results = ocrs.map((currOcr) => {
                         if (currOcr.length > 0) {
                             // json data takes precedence over csv data
@@ -631,6 +628,7 @@ function updateDataWithJSON(result, data) {
                         }
                     })
                 } else {
+                    // csv has no ocr data
                     ocrResults.ocr_results = ocrs.map((currOcr, idx) => {
                         let hgt = 0;
                         if (front && data.croppedImageProps.originalID !== undefined && data.croppedImageProps.originalID.height !== undefined) {
@@ -679,8 +677,11 @@ function updateDataWithJSON(result, data) {
                     })
                 }
             } else {
+                // if json has no ocr data
                 ocrResults.ocr_results = [ocrResults.ocr_results];
             }
+
+            // updating spoof results
             if (ocrResults.spoof_results !== undefined) {
                 if (front) {
                     ocrResults.spoof_results.is_card_spoof = data.frontIDFlags !== undefined ? data.frontIDFlags.includes('spoof') : false;
@@ -703,6 +704,8 @@ function updateDataWithJSON(result, data) {
             ocrResults = {};
             let landmarks = front ? data.landmarks.originalID : data.landmarks.backID;
             let ocrs = front ? data.ocr.originalID : data.ocr.backID;
+
+            // landmarks
             if (landmarks !== undefined && landmarks.length > 0 && !(landmarks.length === 1 && landmarks[0].length === 0)) {
                 ocrResults.glare_results = landmarks.map((lm) => {
                     return lm.map((each) => {
@@ -743,6 +746,8 @@ function updateDataWithJSON(result, data) {
                     }).filter((each) => each !== undefined);
                 })
             }
+
+            // ocrs
             if (ocrs !== undefined && ocrs.length > 0 && !(ocrs.length === 1 && ocrs[0].length === 0)) {
                 ocrResults.ocr_results = ocrs.map((currOcr, idx) => {
                     let hgt = front ? data.croppedImageProps.originalID.height : data.croppedImageProps.backID.height;
@@ -785,6 +790,8 @@ function updateDataWithJSON(result, data) {
                     })
                 })
             }
+
+            // spoof results
             if (front) {
                 ocrResults.spoof_results = {
                     is_card_spoof: data.frontIDFlags !== undefined ? data.frontIDFlags.includes('spoof') : false
@@ -804,6 +811,7 @@ function updateDataWithJSON(result, data) {
     }
 
     let newResult = {};
+    // segmentation
     newResult.segmentation = {
         originalID: data.segmentation.originalID !== undefined ? data.segmentation.originalID.filter((each) => each.IDBox !== null).map((each, idx) => {
             return {
@@ -838,9 +846,11 @@ function updateDataWithJSON(result, data) {
             }
         }) : []
     }
-
+    // front ocr
     newResult.front_ocr = updateOCR(result !== undefined ? result.front_ocr : undefined, true);
+    // back ocr
     newResult.back_ocr = updateOCR(result !== undefined ? result.back_ocr : undefined, false);
+    // face comparison
     newResult.face_compare = {
         faceCompareMatch: data.faceCompareMatch,
         liveness: data.videoLiveness,
@@ -850,6 +860,7 @@ function updateDataWithJSON(result, data) {
     return newResult;
 }
 
+// load data from csv
 function getCSVData(filepath, session, res, rej) {
     csv()
         .fromFile(filepath)
@@ -1066,6 +1077,11 @@ function mergeJSONData(initial, updated) {
     }
 }
 
+// ------------------------------------------------------
+//                      API METHODS
+// ------------------------------------------------------ 
+
+// returns session files and ocr results
 app.post('/loadSessionData', async (req, res) => {
     let db = req.body.database;
     let date = req.body.date;
@@ -1112,6 +1128,7 @@ app.post('/loadSessionData', async (req, res) => {
     res.status(200).send(session);
 })
 
+// loads all available sessions and its annotation state
 app.post('/loadDatabase', async (req, res) => {
     let db = req.body.database;
     let start = req.body.startDate;
@@ -1159,6 +1176,59 @@ app.post('/loadDatabase', async (req, res) => {
     res.status(200).send(folders);
 })
 
+// load specific date-session
+app.post('/loadDatabaseSelective', async (req, res) => {
+    let db = req.body.database;
+    let sessions = req.body.sessions;
+    let folders = [];
+
+    for (let i = 0; i < sessions.length; i++) {
+        let dateRoute = testFolder + db + '/images/' + sessions[i].date + "/";
+        try {
+            let dateFolder = fs.readdirSync(dateRoute);
+            if (dateFolder && dateFolder.includes(sessions[i].sessionID)) {
+                let folderRoute = dateRoute + sessions[i].sessionID + "/";
+                let jsonPath = testFolder + outputFolder + "/" + db + "/" + sessions[i].date + "/" + sessions[i].sessionID + ".json";
+                try {
+                    let jsonData = fs.readFileSync(jsonPath);
+                    if (jsonData) {
+                        folders.push({
+                            success: true,
+                            date: sessions[i].date,
+                            session: evaluateSessionState(folderRoute, sessions[i].sessionID, true, JSON.parse(jsonData))
+                        });
+                    } else {
+                        folders.push({
+                            success: true,
+                            date: sessions[i].date,
+                            session: evaluateSessionState(folderRoute, sessions[i].sessionID, false)
+                        });
+                    }
+                } catch (err) {
+                    console.error('Session ID: ' + sessions[i].sessionID + ' - No output json found.');
+                    folders.push({
+                        success: true,
+                        date: sessions[i].date,
+                        session: evaluateSessionState(folderRoute, sessions[i].sessionID, false)
+                    });
+                }
+            }
+        } catch(err) {
+            console.error('Cannot find date folder');
+            folders.push({
+                success: false,
+                date: sessions[i].date,
+                session: {
+                    sessionID: sessions[i].sessionID
+                } 
+            });
+        }
+    }
+
+    res.status(200).send(folders);
+})
+
+// loads all databases present
 app.get('/getDatabases', (req, res) => {
     res.set(ccHeaders);
     let folders = fs.readdirSync(testFolder);
@@ -1190,6 +1260,7 @@ app.get('/getDatabases', (req, res) => {
     }
 })
 
+// overwrite/create annotation output file for the specified session
 app.post('/saveOutput', async (req, res) => {
     let {
         ID,
@@ -1287,6 +1358,7 @@ app.post('/saveOutput', async (req, res) => {
     );
 })
 
+// useless
 app.post('/saveBulkOutput', async (req, res) => {
     let {
         library,

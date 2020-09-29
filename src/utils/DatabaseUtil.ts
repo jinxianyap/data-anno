@@ -1,4 +1,4 @@
-import { IDState, GivenData, InternalIDState, PhasesChecked, AnnotationState } from '../store/id/types';
+import { IDState, GivenData, PhasesChecked, AnnotationState } from '../store/id/types';
 import { ImageState, LandmarkData, OCRData, OCRWord, ImageProps, IDBox } from '../store/image/types';
 import { Rotation, IDProcess, AnnotationStatus, ProcessType } from './enums';
 import { DummyImage } from './dummy';
@@ -7,6 +7,7 @@ import { GeneralUtil } from './GeneralUtil';
 
 export class DatabaseUtil {
 
+    // initialize ID before loading session data
     public static initializeID(session: any, date: string, index: number): IDState {
         let id = session.sessionID;
         return {
@@ -45,44 +46,7 @@ export class DatabaseUtil {
         }
     }
 
-    public static translateTermFromCodeName(doc: string, type: string, key: string, output?: boolean, map?: boolean): string {
-        switch (type) {
-            case ('landmark'): { 
-                let idx = options.landmark.keys.findIndex((each) => each === doc);
-                if (idx === -1) return '';
-                let i = options.landmark.compulsory.codeNames[idx].findIndex((each) => each === key);
-                if (i === -1) {
-                    i = options.landmark.optional.codeNames[idx].findIndex((each) => each === key);
-                    if (i === -1) return '';
-                    if (output) {
-                        return options.landmark.optional.outputNames[idx][i];
-                    } else {
-                        return options.landmark.optional.displayNames[idx][i]; 
-                    }
-                } else {
-                    if (output) {
-                        return options.landmark.compulsory.outputNames[idx][i];
-                    } else {
-                        return options.landmark.compulsory.displayNames[idx][i]; 
-                    }
-                }
-            }
-            case ('ocr'): { 
-                let idx = options.ocr.keys.findIndex((each) => each === doc);
-                if (idx === -1) return '';
-                let i = options.ocr.codeNames[idx].findIndex((each) => each === key);
-                if (i === -1) return '';
-                if (output) {
-                    return options.ocr.outputNames[idx][i];
-                } else {
-                    return map ? options.ocr.mapToLandmark[idx][i] : options.ocr.displayNames[idx][i]; 
-                }
-            }
-            default: break;
-        }
-        return '';
-    }
-
+    // initialize ImageState with session data
     private static loadImageState(session: any, id: string, front: boolean): ImageState | undefined {
         if (session.doc_faces === 1 && !front) {
             return undefined;
@@ -156,7 +120,7 @@ export class DatabaseUtil {
                                 }
                                 return {
                                     documentType: e.documentType !== undefined ? e.documentType : '',
-                                    passesCrop: e. passesCrop,
+                                    passesCrop: e.passesCrop,
                                     IDBox: {
                                         id: idx,
                                         position: {
@@ -491,6 +455,7 @@ export class DatabaseUtil {
         }
     }
 
+    // loads session data received into the given IDState
     public static loadSessionData(session: any, ID: IDState): Promise<IDState> {
         return new Promise<IDState>(async (res, rej) => {
             let sessionID = session.sessionID;
@@ -517,6 +482,7 @@ export class DatabaseUtil {
         })
     }
 
+    // converts IDState to compatible json output
     public static extractOutput(ID: IDState, face?: boolean): any {
         const translateLandmarkName = (docType: string, landmark: LandmarkData, frontBack?: string) => {
             let outputName = this.translateTermFromCodeName(docType + (frontBack !== undefined ? frontBack : ""), 'landmark', landmark.codeName, true);
@@ -607,6 +573,8 @@ export class DatabaseUtil {
         }
     }
 
+    // HELPER FUNCTIONS
+
     public static dataURLtoFile(dataurl: string, filename: string): File {
         if (!dataurl) {
             dataurl = DummyImage;
@@ -624,7 +592,8 @@ export class DatabaseUtil {
         return new File([u8arr], filename, {type:mime});
     }
 
-    public static dateToString(date: Date) {
+    public static dateToString(date?: Date) {
+        if (date === undefined) return '';
         let month = '';
         if (date.getMonth() + 1 < 10) {
             month = '0' + (date.getMonth() + 1);
@@ -638,6 +607,45 @@ export class DatabaseUtil {
             day += date.getDate();
         }
         return date.getFullYear() + month + day;
+    }
+
+    // translates codename to output/display name
+    public static translateTermFromCodeName(doc: string, type: string, key: string, output?: boolean, map?: boolean): string {
+        switch (type) {
+            case ('landmark'): { 
+                let idx = options.landmark.keys.findIndex((each) => each === doc);
+                if (idx === -1) return '';
+                let i = options.landmark.compulsory.codeNames[idx].findIndex((each) => each === key);
+                if (i === -1) {
+                    i = options.landmark.optional.codeNames[idx].findIndex((each) => each === key);
+                    if (i === -1) return '';
+                    if (output) {
+                        return options.landmark.optional.outputNames[idx][i];
+                    } else {
+                        return options.landmark.optional.displayNames[idx][i]; 
+                    }
+                } else {
+                    if (output) {
+                        return options.landmark.compulsory.outputNames[idx][i];
+                    } else {
+                        return options.landmark.compulsory.displayNames[idx][i]; 
+                    }
+                }
+            }
+            case ('ocr'): { 
+                let idx = options.ocr.keys.findIndex((each) => each === doc);
+                if (idx === -1) return '';
+                let i = options.ocr.codeNames[idx].findIndex((each) => each === key);
+                if (i === -1) return '';
+                if (output) {
+                    return options.ocr.outputNames[idx][i];
+                } else {
+                    return map ? options.ocr.mapToLandmark[idx][i] : options.ocr.displayNames[idx][i]; 
+                }
+            }
+            default: break;
+        }
+        return '';
     }
 
     public static getOverallStatus(phases: PhasesChecked, annoState: AnnotationState, processType: ProcessType): AnnotationStatus {

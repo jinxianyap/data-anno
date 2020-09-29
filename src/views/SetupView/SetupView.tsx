@@ -1,8 +1,8 @@
 import React from 'react';
 import './SetupView.scss'
-import { Form, Button, Container, Card } from 'react-bootstrap';
+import { Form, Button, Container, Card, Modal, Table } from 'react-bootstrap';
 import DatePicker from 'react-datepicker';
-import { ProcessType, CurrentStage, UsersTemp, AnnotationStatus } from '../../utils/enums';
+import { ProcessType, CurrentStage, UsersTemp } from '../../utils/enums';
 import { SetupOptions, GeneralActionTypes } from '../../store/general/types';
 import { saveSetupOptions, progressNextStage, loadFromDatabase, restoreGeneral } from '../../store/general/actionCreators';
 import { restoreID } from '../../store/id/actionCreators';
@@ -12,6 +12,7 @@ import {connect} from "react-redux";
 import { DatabaseUtil } from '../../utils/DatabaseUtil';
 import { IDState, IDActionTypes } from '../../store/id/types';
 import { ImageActionTypes } from '../../store/image/types';
+import bsCustomFileInput from 'bs-custom-file-input'
 const axios = require('axios');
 
 interface IProps {
@@ -37,8 +38,10 @@ interface IState {
     processType: ProcessType,
     incomplete: boolean,
     loadedIDs: boolean,
-    // temp to simulate loading from database
-    files: File[]
+    useCSV: boolean,
+    showCSVResultModal: boolean,
+    CSVResults: {date: string, sessionID: string, success: boolean}[],
+    CSVFile?: File
 }
 
 class SetupView extends React.Component<IProps, IState> {
@@ -55,7 +58,9 @@ class SetupView extends React.Component<IProps, IState> {
             processType: ProcessType.WHOLE,
             incomplete: false,
             loadedIDs: false,
-            files: []
+            useCSV: false,
+            showCSVResultModal: false,
+            CSVResults: []
         };
     }
 
@@ -66,6 +71,7 @@ class SetupView extends React.Component<IProps, IState> {
     }
 
     componentDidMount() {
+        bsCustomFileInput.init();
         axios.get('/getDatabases').then((res: any) => {
             if (res.status === 200) {
                 let dbs = res.data.map((each: any) => {
@@ -88,41 +94,99 @@ class SetupView extends React.Component<IProps, IState> {
         });
     }
 
-    handleSubmit = (e: any) => {
+    handleSubmit = async (e: any) => {
         e.preventDefault();
         if (this.state.user === '' || this.state.database === '') {
             this.setState({incomplete: true});
         } else {
-            let st = this.state;
-            let setup: SetupOptions = {
-                user: st.user,
-                database: st.database,
-                startDate: st.startDate,
-                endDate: st.endDate,
-                processType: st.processType
-            }
-            this.props.saveSetupOptions(setup);
-            axios.post('/loadDatabase', {
-                database: st.database,
-                startDate: DatabaseUtil.dateToString(st.startDate),
-                endDate: DatabaseUtil.dateToString(st.endDate)
-            }).then((res: any) => {
-                if (res.status === 200) {
-                    let IDs: IDState[] = [];
-                    for (let i = 0; i < res.data.length; i++) {
-                        for (let j = 0; j < res.data[i].sessions.length; j++) {
-                            IDs.push(DatabaseUtil.initializeID(res.data[i].sessions[j], res.data[i].date, IDs.length));
+            if (this.state.useCSV) {
+                if (this.state.CSVFile!.name.slice(-3) !== 'csv') {
+                    alert('Please upload a CSV file.');
+                    return;
+                }
+                const parseCSVText = () => {
+                    return new Promise<{date: string, sessionID: string}[]>((res, rej) => {
+                        let fr = new FileReader();
+                        fr.onload = function() {
+                            if (fr.result !== undefined && fr.result !== null && typeof(fr.result) === 'string') {
+                                let str = fr.result;
+                                let lines = str.split('\n');
+                                let entries: {date: string, sessionID: string}[] = lines.map((each: string) => {
+                                    return {
+                                        date: each.split(',')[0],
+                                        sessionID: each.split(',')[1]
+                                    }
+                                })
+                                res(entries);
+                            } else {
+                                alert('Could not read CSV file.');
+                                res([]);
+                            }
+                        }
+                        fr.readAsText(this.state.CSVFile!);
+                    })
+                }
+
+                let st = this.state;
+                let setup: SetupOptions = {
+                    user: st.user,
+                    database: st.database,
+                    processType: st.processType
+                }
+                this.props.saveSetupOptions(setup);
+
+                parseCSVText().then((sessions: {date: string, sessionID: string}[]) => {
+                    if (sessions.length > 0) {
+                        axios.post('/loadDatabaseSelective', {
+                            database: st.database,
+                            sessions: sessions.filter((each) => each.date !== undefined && each.sessionID !== undefined 
+                                && each.date.length > 0 && each.sessionID.length > 0)
+                        }).then((res: any) => {
+                            if (res.status === 200) {
+                                let IDs: IDState[] = [];
+                                for (let i = 0; i < res.data.length; i++) {
+                                    if (res.data[i].success) {
+                                        IDs.push(DatabaseUtil.initializeID(res.data[i].session, res.data[i].date, IDs.length));
+                                    }
+                                }
+                                this.props.loadFromDatabase(IDs);
+                                this.reportCSVLoadStatus(res.data);
+                            }
+                        }).catch((err: any) => {throw err});
+                    }
+                }).catch((err) => console.error(err));
+            } else {
+                let st = this.state;
+                let setup: SetupOptions = {
+                    user: st.user,
+                    database: st.database,
+                    startDate: st.startDate,
+                    endDate: st.endDate,
+                    processType: st.processType
+                }
+                this.props.saveSetupOptions(setup);
+                axios.post('/loadDatabase', {
+                    database: st.database,
+                    startDate: DatabaseUtil.dateToString(st.startDate),
+                    endDate: DatabaseUtil.dateToString(st.endDate)
+                }).then((res: any) => {
+                    if (res.status === 200) {
+                        let IDs: IDState[] = [];
+                        for (let i = 0; i < res.data.length; i++) {
+                            for (let j = 0; j < res.data[i].sessions.length; j++) {
+                                IDs.push(DatabaseUtil.initializeID(res.data[i].sessions[j], res.data[i].date, IDs.length));
+                            }
+                        }
+                        this.props.loadFromDatabase(IDs);
+
+                        if (st.processType === ProcessType.FACE) {
+                            this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
+                        } else {
+                            this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
                         }
                     }
-                    this.props.loadFromDatabase(IDs);
-
-                    if (st.processType === ProcessType.FACE) {
-                        this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
-                    } else {
-                        this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
-                    }
-                }
-            })
+                }).catch((err: any) => console.error(err));
+            }
         }
     }
 
@@ -136,13 +200,34 @@ class SetupView extends React.Component<IProps, IState> {
         })
     }
 
-    handleUpload = (e: any) => {
-        let files = this.state.files;
-        files.push(e.target.files[0]);
-        this.setState({files: files});
+    handleCSVUpload = (e:any) => {
+        if (e.target.files.length > 0) {
+            this.setState({useCSV: true, CSVFile: e.target.files[0]});
+        }
+    }
+
+    reportCSVLoadStatus = (data: any) => {
+        this.setState({showCSVResultModal: true, CSVResults: data.map((each: any) => {
+            return {
+                date: each.date,
+                sessionID: each.session.sessionID,
+                success: each.success
+            }
+        })})
     }
 
     render() {
+
+        const hideCSVModal = () => {
+            this.setState({showCSVResultModal: false}, () => {
+                if (this.state.processType === ProcessType.FACE) {
+                    this.props.progressNextStage(CurrentStage.FR_LIVENESS_CHECK);
+                } else {
+                    this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+                }
+            })
+        }
+
         return (
             <Container className="setupView">
                 <Card style={{padding: "2rem"}}>               
@@ -160,16 +245,26 @@ class SetupView extends React.Component<IProps, IState> {
                                 {this.state.databases.map((each, idx) => <option key={idx} value={each.name}>{each.name}</option>)}
                             </Form.Control>
                         </Form.Group>
+
+                        <Form.Group>
+                            <Form.Label>Upload CSV</Form.Label>
+                            <Form.File 
+                                id="custom-file"
+                                label="*.csv files only"
+                                custom
+                                onChange={this.handleCSVUpload}
+                            />
+                        </Form.Group>
             
                         <Form.Group controlId="startDate">
                             <Form.Label style={{width: "100%"}}>Start Date</Form.Label>
-                            <DatePicker id="startDatepicker" includeDates={this.state.selectedDates} 
+                            <DatePicker id="startDatepicker" includeDates={this.state.selectedDates} disabled={this.state.CSVFile !== undefined}
                             selected={this.state.startDate} onChange={(date: Date) => this.setState({startDate: date})} />
                         </Form.Group>
 
                         <Form.Group controlId="endDate">
                             <Form.Label style={{width: "100%"}}>End Date</Form.Label>
-                            <DatePicker id="endDatepicker" includeDates={this.state.selectedDates}
+                            <DatePicker id="endDatepicker" includeDates={this.state.selectedDates} disabled={this.state.CSVFile !== undefined}
                             selected={this.state.endDate} onChange={(date: Date) => this.setState({endDate: date})} />
                         </Form.Group>
 
@@ -195,6 +290,40 @@ class SetupView extends React.Component<IProps, IState> {
                         </Button>
                     </Form>
                 </Card>
+                <Modal style={{marginTop: '2rem'}} show={this.state.showCSVResultModal} onHide={hideCSVModal}>
+                    <Modal.Header closeButton>
+                    <Modal.Title>CSV Load Status</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body style={{maxHeight: '50vh', overflowY: 'auto'}}>
+                        <Table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Session ID</th>
+                                    <th>Success</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {
+                                    this.state.CSVResults.map((each, idx) => {
+                                        return (
+                                            <tr key={idx}>
+                                                <td>{each.date}</td>
+                                                <td>{each.sessionID}</td>
+                                                <td>{each.success.toString()}</td>
+                                            </tr>
+                                        )
+                                    })
+                                }
+                            </tbody>
+                        </Table>
+                    </Modal.Body>
+                    <Modal.Footer>
+                    <Button variant="secondary" onClick={hideCSVModal}>
+                        Close
+                    </Button>
+                    </Modal.Footer>
+                </Modal>
             </Container>
         )
     }

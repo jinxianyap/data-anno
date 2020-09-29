@@ -7,7 +7,7 @@ import options from '../../../options.json';
 import './ControlPanel.scss';
 import { GeneralActionTypes } from '../../../store/general/types';
 import { IDActionTypes, IDState, InternalIDState } from '../../../store/id/types';
-import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord, LandmarkData, Position } from '../../../store/image/types';
+import { ImageActionTypes, ImageState, IDBox, OCRData, OCRWord, LandmarkData } from '../../../store/image/types';
 import { progressNextStage, getPreviousID, getNextID, getSelectedID, saveToLibrary } from '../../../store/general/actionCreators';
 import { loadNextID, createNewID, setIDBox, deleteIDBox, saveCroppedImage, refreshIDs, saveDocumentType, updateVideoData, setFaceCompareMatch, backToOriginal, saveToInternalID, updateFrontIDFlags, updateBackIDFlags, restoreID, clearInternalIDs } from '../../../store/id/actionCreators';
 import { saveSegCheck, loadImageState, setCurrentSymbol, setCurrentWord, addLandmarkData, updateLandmarkFlags, addOCRData, restoreImage } from '../../../store/image/actionCreators';
@@ -148,8 +148,6 @@ interface IState {
 }
 
 class ControlPanel extends React.Component<IProps, IState> {
-
-    docTypeRef: any = undefined;
 
     constructor(props: IProps) {
         super(props);

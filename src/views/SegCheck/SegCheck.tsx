@@ -328,7 +328,6 @@ const mapDispatchToProps = {
 
 const mapStateToProps = (state: AppState) => {
     let index = state.general.currentIndex;
-    let ID = state.general.IDLibrary[index];
     if (index >= state.general.IDLibrary.length) {
         return {
             currentIndex: index,

@@ -13,7 +13,6 @@ interface IProps {
 }
 
 interface IState {
-    // ID: IDFolder;
 }
 
 class LandmarkOCR extends React.Component<IProps, IState> {
@@ -21,11 +20,6 @@ class LandmarkOCR extends React.Component<IProps, IState> {
     constructor(props: IProps) {
         super(props);
         this.state = {
-            // ID: {
-            //     processed: false,
-            //     source: '',
-            //     index: 0,
-            // },
         }
     }
 
@@ -34,7 +28,6 @@ class LandmarkOCR extends React.Component<IProps, IState> {
     }
 
     componentDidMount() {
-        // ImageUtil.loadImage("segEditID", this.props.currentImage.image!);        
     }
 
     render() {
@@ -44,7 +37,6 @@ class LandmarkOCR extends React.Component<IProps, IState> {
                     <Col xs={1}>
                     </Col>
                     <Col xs={10} id="landmark-ocr">
-                        {/* <LabelView /> */}
                         <LandmarkLabeller />
                     </Col>
                     <Col xs={1}>

@@ -526,9 +526,9 @@ class FacePanel extends React.Component<IProps, IState> {
                 this.setState({showSaveAndQuitModal: show});
             }
 
-            const load = (previous: boolean) => {
-                this.setState({previous: previous}, () => this.loadNextID(previous));
-            }
+            // const load = (previous: boolean) => {
+            //     this.setState({previous: previous}, () => this.loadNextID(previous));
+            // }
 
             return (
                 <SessionDropdown showModal={this.state.showSaveAndQuitModal} toggleModal={toggleModal} 

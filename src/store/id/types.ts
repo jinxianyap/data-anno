@@ -9,7 +9,9 @@ export type IDState = {
     sessionID: string;
     index: number;
 
+    // indicates which phases need to be annotated
     phasesChecked: PhasesChecked;
+    // records state of annotation
     annotationState: AnnotationState;
 
     dataLoaded: boolean;
@@ -38,6 +40,7 @@ export type IDState = {
     internalIDs: InternalIDState[];
 };
 
+// created after segmentation, keeps track of landmark, ocr, face compare match
 export type InternalIDState = {
     processed: boolean;
     source: string;
@@ -45,11 +48,11 @@ export type InternalIDState = {
     processStage?: IDProcess,
 
     originalID?: ImageState;
-    // croppedID?: ImageState;
     backID?: ImageState;
     faceCompareMatch?: boolean;
 }
 
+// store ocr results loaded from csv OR data from previously created json
 export type GivenData = {
     originalID?: {
         originalImageProps?: ImageProps;
@@ -106,6 +109,7 @@ interface SetImageRotation {
     }
 }
 
+// loads given IDState object to the current IDState
 interface LoadNextID {
     type: typeof Action.LOAD_NEXT_ID;
     payload: {
@@ -113,6 +117,7 @@ interface LoadNextID {
     }
 }
 
+// creates new InternalIDState
 interface CreateNewID {
     type: typeof Action.CREATE_NEW_ID;
     payload: {
@@ -122,6 +127,7 @@ interface CreateNewID {
     }
 }
 
+// restores the current IDState to its initial state prior to making annotations
 interface RefreshIDs {
     type: typeof Action.REFRESH_IDS;
     payload: {
@@ -129,6 +135,7 @@ interface RefreshIDs {
     }
 }
 
+// modify IDBox of the current InternalIDState
 interface SetIDBox {
     type: typeof Action.SET_ID_BOX;
     payload: {
@@ -161,6 +168,7 @@ interface UpdateVideoData {
     }
 }
 
+// save current ImageState back to the current InternalIDState
 interface SaveToInternalID {
     type: typeof Action.SAVE_TO_INTERNAL_ID;
     payload: {
@@ -198,11 +206,12 @@ interface ClearInternalIDs {
     type: typeof Action.CLEAR_INTERNAL_IDS;
 }
 
-
+// only for double-faced IDs: used to move to the front side
 interface BackToOriginal {
     type: typeof Action.BACK_TO_ORIGINAL;
 }
 
+// only for ProcessType.FACE: saving face compare match
 interface SetFaceCompareMatch {
     type: typeof Action.SET_FACE_COMPARE_MATCH;
     payload: {

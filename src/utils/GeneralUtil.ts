@@ -63,19 +63,21 @@ export class GeneralUtil {
     public static processOCRValue(value: string): {newlines: number[], terms: string[]} {
         let filtered = value.split(' ').filter((each: string) => each.length > 0).join(' ');
 
-        let lines = filtered.split('\n');
+        let lines = filtered.split('\n').filter((each: string) => each.length > 0);
         let newlines = [];
         let pos = 0;
 
         if (lines.length > 1) {
-            for (var i = 0; i < lines.length - 1; i++) {
+            for (var i = 0; i < lines.length; i++) {
                 let words = lines[i].split(' ').filter((each: string) => each.length > 0);
                 lines[i] = words.join(' ');
-                pos += words.length;
-                newlines.push(pos);
+                if (i < lines.length - 1) {
+                    pos += words.length;
+                    newlines.push(pos);
+                }
             }
         }
-
+        
         let terms = lines.join(' ').split(' ');
 
         return {

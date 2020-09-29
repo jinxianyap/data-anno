@@ -5,8 +5,8 @@ import { IDState, AnnotationState, PhasesChecked } from "../id/types";
 export type SetupOptions = {
     user: string;
     database: string,
-    startDate: Date,
-    endDate: Date,
+    startDate?: Date,
+    endDate?: Date,
     processType: ProcessType
 }
 
