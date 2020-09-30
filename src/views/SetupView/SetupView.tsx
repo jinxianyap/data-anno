@@ -121,6 +121,13 @@ class SetupView extends React.Component<IProps, IState> {
                                         });
                                     }
                                 })
+                                entries.sort((a, b) => {
+                                    if (a.date == b.date) {
+                                        return a.sessionID.localeCompare(b.sessionID);
+                                    } else {
+                                        return a.date.localeCompare(b.date);
+                                    }
+                                })
                                 res(entries);
                             } else {
                                 alert('Could not read CSV file.');
@@ -251,13 +258,22 @@ class SetupView extends React.Component<IProps, IState> {
                         </Form.Group>
 
                         <Form.Group>
-                            <Form.Label>Upload CSV</Form.Label>
+                            <Form.Label style={{width: "100%"}}>Upload CSV</Form.Label>
                             <Form.File 
                                 id="custom-file"
                                 label="*.csv files only"
                                 custom
                                 onChange={this.handleCSVUpload}
+                                style={{width: "calc(100% - 6rem)", display: "inline-block"}}
                             />
+                            <Button style={{width: "5rem", verticalAlign: "bottom", marginLeft: "1rem", display: "inline-block"}} 
+                                variant="danger" disabled={this.state.CSVFile === undefined}
+                                onClick={() => this.setState({useCSV: false, CSVFile: undefined}, () => {
+                                    let doc: any = document.getElementById("custom-file");
+                                    doc.value = "";
+                                    bsCustomFileInput.destroy();
+                                    bsCustomFileInput.init();
+                                })}>Delete</Button>
                         </Form.Group>
             
                         <Form.Group controlId="startDate">
@@ -299,6 +315,7 @@ class SetupView extends React.Component<IProps, IState> {
                     <Modal.Title>CSV Load Status</Modal.Title>
                     </Modal.Header>
                     <Modal.Body style={{maxHeight: '50vh', overflowY: 'auto'}}>
+                        <p>Loaded {this.state.CSVResults.filter((each) => each.success).length} sessions.</p>
                         <Table>
                             <thead>
                                 <tr>
