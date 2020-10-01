@@ -251,6 +251,7 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         this.setState({map: map}, () => {this.renderCommittedLandmarks(); this.renderCommittedOCRs(this.props.currentStage !== CurrentStage.OCR_EDIT);});
     }
 
+    // focus map on specific region
     focusMap = (focus: boolean) => {
         let map = this.state.map!;
 
@@ -382,12 +383,9 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         this.setState({ocrBoxes: newBoxes, drawnOCRs: drawnOCRs});
     }
 
-    ocrWordDrawn() {
-        return this.state.drawnOCRs.find((each) => 
-        each.codeName === this.props.currentSymbol
-        && each.word.id === this.props.currentWord.id
-        && each.word.value === this.props.currentWord.value);
-    }
+    // ------------------------------------------------------
+    //                      MAP ACTIONS
+    // ------------------------------------------------------ 
 
     handleMouseDown = (e: any) => {
         if (e.originalEvent.which !== 1 || e.originalEvent.detail > 1) return;
@@ -472,29 +470,6 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
                 }
             }
         });
-    }
-
-    handleNextLandmark = () => {
-        let landmark = this.props.currentImageState.landmark
-        .filter((each) => !GeneralUtil.isOptionalLandmark(each.codeName, this.props.internalID.documentType, this.props.internalID.processStage) 
-            && each.position === undefined).sort((a, b) => a.id - b.id);
-        if (landmark === undefined || landmark.length === 0) return false;
-        this.props.setCurrentSymbol(landmark[0].codeName);
-        return true;
-    }
-
-    handleNextOCR = () => {
-        let ocr = this.props.currentImageState.ocr.find((each) => each.codeName === this.props.currentSymbol);
-        if (ocr === undefined) return false;
-        let word = ocr.labels.filter((each) => each.position === undefined).sort((a, b) => a.id - b.id);
-        if (word === undefined || word.length === 0) return false;
-        this.props.setCurrentWord(word[0]);
-        return true;
-    }
-
-    getLandmarkFromOCR = (codeName: string)  => {
-        if (codeName === undefined) return undefined;
-        return this.state.landmarkBoxes.find((each) => each.codeName === codeName);
     }
 
     handleMouseMove = (e: any) => {
@@ -663,6 +638,54 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         this.state.map!.dragging.enable();
     }
 
+    // right click to delete
+    handleContextMenu = (e: any) => {
+        if (this.state.isDrawing || this.state.isMoving || this.state.isResizing) return;
+        if (this.props.currentStage === CurrentStage.LANDMARK_EDIT) {
+            this.deleteLandmarkBox(e);
+        } else if (this.props.currentStage === CurrentStage.OCR_EDIT) {
+            this.deleteOcrBox(e);
+        }
+    }
+
+    // ------------------------------------------------------
+    //                   HELPER FUNCTIONS
+    // ------------------------------------------------------ 
+
+    // checks if the current OCR word has been drawn
+    ocrWordDrawn() {
+        return this.state.drawnOCRs.find((each) => 
+        each.codeName === this.props.currentSymbol
+        && each.word.id === this.props.currentWord.id
+        && each.word.value === this.props.currentWord.value);
+    }
+
+    // handles auto selection of next unlabelled compulsory landmark
+    handleNextLandmark = () => {
+        let landmark = this.props.currentImageState.landmark
+        .filter((each) => !GeneralUtil.isOptionalLandmark(each.codeName, this.props.internalID.documentType, this.props.internalID.processStage) 
+            && each.position === undefined).sort((a, b) => a.id - b.id);
+        if (landmark === undefined || landmark.length === 0) return false;
+        this.props.setCurrentSymbol(landmark[0].codeName);
+        return true;
+    }
+
+    // handles auto selection of next unlabelled ocr word
+    handleNextOCR = () => {
+        let ocr = this.props.currentImageState.ocr.find((each) => each.codeName === this.props.currentSymbol);
+        if (ocr === undefined) return false;
+        let word = ocr.labels.filter((each) => each.position === undefined).sort((a, b) => a.id - b.id);
+        if (word === undefined || word.length === 0) return false;
+        this.props.setCurrentWord(word[0]);
+        return true;
+    }
+
+    getLandmarkFromOCR = (codeName: string)  => {
+        if (codeName === undefined) return undefined;
+        return this.state.landmarkBoxes.find((each) => each.codeName === codeName);
+    }
+
+    // constrain ocr box if box drawn exceeds limits of the bounding landmark box
     getConstrainedBounds = (landmark: Box, lat: number, lng: number) => {
         let bounds = landmark.rectangle!.getBounds();
         let finalLat = lat;
@@ -684,15 +707,41 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
         return result;
     }
 
-    handleContextMenu = (e: any) => {
-        if (this.state.isDrawing || this.state.isMoving || this.state.isResizing) return;
-        if (this.props.currentStage === CurrentStage.LANDMARK_EDIT) {
-            this.deleteLandmarkBox(e);
-        } else if (this.props.currentStage === CurrentStage.OCR_EDIT) {
-            this.deleteOcrBox(e);
-        }
+    reorderCoords = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+        let x1 = Math.min(lng1, lng2);
+        let x3 = Math.max(lng1, lng2);
+        let y1 = Math.max(lat1, lat2);
+        let y3 = Math.min(lat1, lat2);
+        let coords: [number, number][] = [[y1, x1], [y3, x3]];
+        return coords
     }
 
+    submitLandmarkData = (landmark: Box) => {
+        let landmarkData: LandmarkData = {
+            id: landmark.id,
+            type: 'landmark',
+            name: landmark.name,
+            codeName: landmark.codeName,
+            position: {
+                x1: landmark.position.x1!,
+                x2: landmark.position.x2!,
+                x3: landmark.position.x3!,
+                x4: landmark.position.x4!,
+                y1: landmark.position.y1!,
+                y2: landmark.position.y2!,
+                y3: landmark.position.y3!,
+                y4: landmark.position.y4!,
+            },
+            flags: []
+        };
+        this.props.addLandmarkData(landmarkData);
+    }
+
+    // ------------------------------------------------------
+    //                   DRAWING FUNCTIONS
+    // ------------------------------------------------------ 
+
+    // draws rectangle on map and returns a Box object
     createRectangle = (lat1: number, lng1: number, lat2: number, lng2: number, name: string, codeName: string, value: string, display?: boolean, isLandmark?: boolean, id?: number, active?: boolean) => {
         let boxBounds: [number, number][] = this.reorderCoords(lat1, lng1, lat2, lng2);
         let rectangle = L.rectangle(boxBounds, {color: active ? "green" : "red", weight: 1, className: 'bounding-box'}).addTo(this.state.map!);
@@ -759,36 +808,6 @@ class LandmarkLabeller extends React.Component<IProps, IState> {
             resizeBoxes: resizeBoxes
         }
         return resultBox;
-    }
-
-    reorderCoords = (lat1: number, lng1: number, lat2: number, lng2: number) => {
-        let x1 = Math.min(lng1, lng2);
-        let x3 = Math.max(lng1, lng2);
-        let y1 = Math.max(lat1, lat2);
-        let y3 = Math.min(lat1, lat2);
-        let coords: [number, number][] = [[y1, x1], [y3, x3]];
-        return coords
-    }
-
-    submitLandmarkData = (landmark: Box) => {
-        let landmarkData: LandmarkData = {
-            id: landmark.id,
-            type: 'landmark',
-            name: landmark.name,
-            codeName: landmark.codeName,
-            position: {
-                x1: landmark.position.x1!,
-                x2: landmark.position.x2!,
-                x3: landmark.position.x3!,
-                x4: landmark.position.x4!,
-                y1: landmark.position.y1!,
-                y2: landmark.position.y2!,
-                y3: landmark.position.y3!,
-                y4: landmark.position.y4!,
-            },
-            flags: []
-        };
-        this.props.addLandmarkData(landmarkData);
     }
 
     withinLandmarkRectangleBounds = (e: any, symbol?: string, move?: boolean) => {

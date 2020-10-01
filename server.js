@@ -40,6 +40,34 @@ const optionalLandmarks = ['religion', 'atm_logo', 'PLogo'];
 Object.freeze(fileType);
 
 // ------------------------------------------------------
+//                    DATABASE FUNCTIONS
+// ------------------------------------------------------ 
+
+function createDirectory(fp) {
+    return fs.mkdirSync(fp, {
+        recursive: true
+    }, (err) => {
+        if (err) throw err;
+    });
+}
+
+function isDirectory(fp) {
+    return fs.lstatSync(fp).isDirectory()
+}
+
+function readFilesInDirectory(fp) {
+    return fs.readdirSync(fp);
+}
+
+function readFile(fp) {
+    return fs.readFileSync(fp);
+}
+
+function writeFile(fp, content) {
+    return fs.writeFileSync(fp, content, 'utf8');
+}
+
+// ------------------------------------------------------
 //                    HELPER FUNCTIONS
 // ------------------------------------------------------ 
 
@@ -145,10 +173,10 @@ function allocateFiles(sessionID, route, files) {
     var face_video_stills = [];
 
     for (let i = 0; i < files.length; i++) {
-        if (fs.lstatSync(route + files[i]).isDirectory()) {
+        if (isDirectory(route + files[i])) {
             continue;
         }
-        let file = fs.readFileSync(route + files[i]);
+        let file = readFile(route + files[i]);
         if (file) {
             file = Buffer.alloc(file.byteLength, file, 'binary').toString('base64');
             let type = getFileType(files[i]);
@@ -220,13 +248,13 @@ function evaluateSessionState(sessionRoute, sessionID, jsonFound, json) {
             face_video_stills: 0
         }
         try {
-            let files = fs.readdirSync(sessionRoute);
+            let files = readFilesInDirectory(sessionRoute);
             if (files) {
                 for (let i = 0; i < files.length; i++) {
-                    if (fs.lstatSync(sessionRoute + files[i]).isDirectory()) {
+                    if (isDirectory(sessionRoute + files[i])) {
                         continue;
                     }
-                    let file = fs.readFileSync(sessionRoute + files[i]);
+                    let file = readFile(sessionRoute + files[i]);
                     if (file) {
                         let type = getFileType(files[i]);
                         switch (type) {
@@ -1088,7 +1116,7 @@ app.post('/loadSessionData', async (req, res) => {
     let sessionID = req.body.sessionID;
 
     let route = testFolder + db + "/images/" + date + "/" + sessionID + "/";
-    let files = fs.readdirSync(route);
+    let files = readFilesInDirectory(route);
     let session = allocateFiles(sessionID, route, files);
 
     let csvPath = testFolder + db + "/raw_data/" + date.slice(0, 4) + '-' + date.slice(4, 6) + '-' + date.slice(6, 8) + '.csv';
@@ -1101,14 +1129,14 @@ app.post('/loadSessionData', async (req, res) => {
         });
     let outputPath = testFolder + outputFolder + "/" + db + "/";
     try {
-        let outputFiles = fs.readdirSync(outputPath);
+        let outputFiles = readFilesInDirectory(outputPath);
         if (outputFiles && outputFiles.includes(date)) {
             let dateOutputPath = outputPath + date + "/";
             let jsonFilename = sessionID + ".json";
-            let dateOutputFiles = fs.readdirSync(dateOutputPath);
+            let dateOutputFiles = readFilesInDirectory(dateOutputPath);
             if (dateOutputFiles && dateOutputFiles.includes(jsonFilename)) {
                 try {
-                    let jsonData = fs.readFileSync(dateOutputPath + jsonFilename);
+                    let jsonData = readFile(dateOutputPath + jsonFilename);
                     if (jsonData) {
                         let data = JSON.parse(jsonData);
                         let updatedData = updateDataWithJSON(session.raw_data, data);
@@ -1135,14 +1163,14 @@ app.post('/loadDatabase', async (req, res) => {
     let end = req.body.endDate;
 
     let dateImgRoute = testFolder + db + '/images/';
-    let dateImgs = fs.readdirSync(dateImgRoute);
+    let dateImgs = readFilesInDirectory(dateImgRoute);
     dateImgs = dateImgs.filter((each) => withinDateRange(each, start, end));
 
     let folders = [];
 
     for (let i = 0; i < dateImgs.length; i++) {
         let sessionRoute = dateImgRoute + dateImgs[i] + '/';
-        let sessions = fs.readdirSync(sessionRoute);
+        let sessions = readFilesInDirectory(sessionRoute);
         let sessionIDs = [];
 
         if (sessions) {
@@ -1150,7 +1178,7 @@ app.post('/loadDatabase', async (req, res) => {
                 let folderRoute = sessionRoute + sessions[j] + "/";
                 let jsonPath = testFolder + outputFolder + "/" + db + "/" + dateImgs[i] + "/" + sessions[j] + ".json";
                 try {
-                    let jsonData = fs.readFileSync(jsonPath);
+                    let jsonData = readFile(jsonPath);
                     if (jsonData) {
                         sessionIDs.push(evaluateSessionState(folderRoute, sessions[j], true, JSON.parse(jsonData)));
                     } else {
@@ -1185,12 +1213,12 @@ app.post('/loadDatabaseSelective', async (req, res) => {
     for (let i = 0; i < sessions.length; i++) {
         let dateRoute = testFolder + db + '/images/' + sessions[i].date + "/";
         try {
-            let dateFolder = fs.readdirSync(dateRoute);
+            let dateFolder = readFilesInDirectory(dateRoute);
             if (dateFolder && dateFolder.includes(sessions[i].sessionID)) {
                 let folderRoute = dateRoute + sessions[i].sessionID + "/";
                 let jsonPath = testFolder + outputFolder + "/" + db + "/" + sessions[i].date + "/" + sessions[i].sessionID + ".json";
                 try {
-                    let jsonData = fs.readFileSync(jsonPath);
+                    let jsonData = readFile(jsonPath);
                     if (jsonData) {
                         folders.push({
                             success: true,
@@ -1231,12 +1259,12 @@ app.post('/loadDatabaseSelective', async (req, res) => {
 // loads all databases present
 app.get('/getDatabases', (req, res) => {
     res.set(ccHeaders);
-    let folders = fs.readdirSync(testFolder);
+    let folders = readFilesInDirectory(testFolder);
     if (folders && folders.length) {
         let results = folders.filter((each) => each !== outputFolder).map((each) => {
             return new Promise((res, rej) => {
                 try {
-                    let dates = fs.readdirSync(testFolder + each + '/images');
+                    let dates = readFilesInDirectory(testFolder + each + '/images');
                     res({
                         database: each,
                         dates: dates
@@ -1272,15 +1300,15 @@ app.post('/saveOutput', async (req, res) => {
     let route = topLevel + database + "/";
 
     // creating required folders if not present
-    let dbs = fs.readdirSync(topLevel);
+    let dbs = readFilesInDirectory(topLevel);
     if (dbs) {
         if (!dbs.includes(database)) {
-            fs.mkdirSync(route, {
-                recursive: true
-            }, (err) => {
-                if (err) throw err;
+            try {
+                createDirectory(route);
+            } catch(err) {
+                console.error(err);
                 res.status(500).send();
-            })
+            }
         }
     } else {
         res.status(500).send();
@@ -1288,41 +1316,42 @@ app.post('/saveOutput', async (req, res) => {
 
     if (!overwrite) {
         route = testFolder + outputFolder + "/" + database + "/output_" + today + "/";
-        fs.mkdirSync(route, {
-            recursive: true
-        }, (err) => {
-            if (err) throw err;
-        });
+        try {
+            createDirectory(route);
+        } catch(err) {
+            console.error(err);
+            res.status(500).send();
+        }
     }
 
     await new Promise((res, rej) => {
         let date = ID.dateCreated.split('T')[0].split('-').join('');
         let dateRoute = route + date + "/";
-        let dates = fs.readdirSync(route);
+        let dates = readFilesInDirectory(route);
         if (dates) {
             if (!dates.includes(date)) {
-                fs.mkdirSync(dateRoute, {
-                    recursive: true
-                }, (err) => {
-                    if (err) throw err;
+                try {
+                    createDirectory(route);
+                } catch(err) {
+                    console.error(err);
                     res.status(500).send();
-                });
+                }
             }
             try {
                 let sessionOutputRoute = dateRoute + ID.sessionID + ".json";
                 ID.lastModified = (new Date()).toLocaleString();
                 try {
-                    let sessions = fs.readdirSync(dateRoute);
+                    let sessions = readFilesInDirectory(dateRoute);
                     let sessionImageRoute = testFolder + database + "/images/" + ID.dateCreated + "/" + ID.sessionID + "/";
 
                     // json already exists
                     if (sessions.includes(ID.sessionID + ".json")) {
-                        let data = fs.readFileSync(sessionOutputRoute);
+                        let data = readFile(sessionOutputRoute);
                         let initialData = JSON.parse(data);
                         let updatedData = mergeJSONData(initialData, ID);
 
                         console.log("merge " + ID.sessionID);
-                        fs.writeFileSync(sessionOutputRoute, JSON.stringify(updatedData), 'utf8');
+                        writeFile(sessionOutputRoute, JSON.stringify(updatedData));
 
                         let result = evaluateSessionState(sessionImageRoute, ID.sessionID, true, updatedData);
                         result.success = true;
@@ -1330,7 +1359,7 @@ app.post('/saveOutput', async (req, res) => {
                     } else {
                         // first time annotation
                         console.log("new file " + ID.sessionID);
-                        fs.writeFileSync(sessionOutputRoute, JSON.stringify(ID), 'utf8');
+                        writeFile(sessionOutputRoute, JSON.stringify(ID));
                         let result = evaluateSessionState(sessionImageRoute, ID.sessionID, true, ID);
                         result.success = true;
                         res(result);
@@ -1353,103 +1382,6 @@ app.post('/saveOutput', async (req, res) => {
         }
     }).then((result) => {
         res.status(200).send(result);
-    }).catch((err) =>
-        res.status(500).send(err)
-    );
-})
-
-// useless
-app.post('/saveBulkOutput', async (req, res) => {
-    let {
-        library,
-        database,
-        overwrite
-    } = req.body;
-    let today = fromDateToString(new Date(), true);
-    let topLevel = testFolder + outputFolder + "/"
-    let route = topLevel + database + "/";
-
-    let dbs = fs.readdirSync(topLevel);
-    if (dbs) {
-        if (!dbs.includes(database)) {
-            fs.mkdirSync(route, {
-                recursive: true
-            }, (err) => {
-                if (err) throw err;
-                res.status(500).send();
-            })
-        }
-    } else {
-        res.status(500).send();
-    }
-
-    if (!overwrite) {
-        route = testFolder + outputFolder + "/" + database + "/output_" + today + "/";
-        fs.mkdirSync(route, {
-            recursive: true
-        }, (err) => {
-            if (err) throw err;
-        });
-    }
-
-    let writes = library.map((each) => {
-        return new Promise((res, rej) => {
-            let date = each.dateCreated.split('T')[0].split('-').join('');
-            let dateRoute = route + date + "/";
-            let dates = fs.readdirSync(route);
-            if (dates) {
-                if (!dates.includes(date)) {
-                    fs.mkdirSync(dateRoute, {
-                        recursive: true
-                    }, (err) => {
-                        if (err) throw err;
-                        res.status(500).send();
-                    });
-                }
-                try {
-                    let sessionRoute = dateRoute + each.sessionID + ".json";
-                    each.lastModified = (new Date()).toLocaleString();
-                    try {
-                        let sessions = fs.readdirSync(dateRoute);
-                        if (sessions.includes(each.sessionID + ".json")) {
-                            let data = fs.readFileSync(sessionRoute);
-                            let initialData = JSON.parse(data);
-                            let updatedData = mergeJSONData(initialData, each);
-                            console.log("merge " + each.sessionID);
-                            fs.writeFileSync(sessionRoute, JSON.stringify(updatedData), 'utf8');
-                            res({
-                                sessionID: each.sessionID,
-                                success: true
-                            });
-                        } else {
-                            console.log("new file " + each.sessionID);
-                            fs.writeFileSync(sessionRoute, JSON.stringify(each), 'utf8');
-                            res({
-                                sessionID: each.sessionID,
-                                success: true
-                            })
-                        }
-                    } catch (err) {
-                        throw err;
-                    }
-                } catch (err) {
-                    console.error(err);
-                    res({
-                        sessionID: each.sessionID,
-                        success: false
-                    });
-                }
-            } else {
-                res({
-                    sessionID: each.sessionID,
-                    success: false
-                });
-            }
-        });
-    })
-
-    Promise.all(writes).then((results) => {
-        res.status(200).send(results);
     }).catch((err) =>
         res.status(500).send(err)
     );

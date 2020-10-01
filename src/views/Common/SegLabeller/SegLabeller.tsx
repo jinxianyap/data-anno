@@ -270,6 +270,31 @@ class SegLabeller extends React.Component<IProps, IState> {
         this.setState({boxes: newBoxes});
     }
 
+    handleSubmit = (box: SegBox, update: boolean) => {
+        let IDBox: IDBox = {
+            id: box.id,
+            position: {
+                x1: box.position.x1!,
+                x2: box.position.x2!,
+                x3: box.position.x3!,
+                x4: box.position.x4!,
+                y1: box.position.y1!,
+                y2: box.position.y2!,
+                y3: box.position.y3!,
+                y4: box.position.y4!,
+            }
+        }
+        if (update) {
+            this.props.setIDBox(IDBox, this.props.IDImage.image);
+        } else {
+            this.props.createNewID(IDBox, false);
+        }
+    }
+
+    // ------------------------------------------------------
+    //                      MAP ACTIONS
+    // ------------------------------------------------------ 
+
     handleMapClick = (e: any) => {
         if (this.state.stage !== 0) {
             for (var i = 0; i < this.state.currentBox.circles.length; i++) {
@@ -381,6 +406,10 @@ class SegLabeller extends React.Component<IProps, IState> {
             });
         }
     }
+
+    // ------------------------------------------------------
+    //                    DRAWING FUNCTIONS
+    // ------------------------------------------------------ 
 
     addCircle = (e: any) => {
         if (this.props.originalProcessed) {
@@ -540,27 +569,6 @@ class SegLabeller extends React.Component<IProps, IState> {
                 // boxes: newBoxes
             })
         } 
-    }
-
-    handleSubmit = (box: SegBox, update: boolean) => {
-        let IDBox: IDBox = {
-            id: box.id,
-            position: {
-                x1: box.position.x1!,
-                x2: box.position.x2!,
-                x3: box.position.x3!,
-                x4: box.position.x4!,
-                y1: box.position.y1!,
-                y2: box.position.y2!,
-                y3: box.position.y3!,
-                y4: box.position.y4!,
-            }
-        }
-        if (update) {
-            this.props.setIDBox(IDBox, this.props.IDImage.image);
-        } else {
-            this.props.createNewID(IDBox, false);
-        }
     }
 
     render() {

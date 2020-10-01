@@ -189,9 +189,11 @@ class ControlPanel extends React.Component<IProps, IState> {
         switch (this.props.currentStage) {
             case (CurrentStage.SEGMENTATION_CHECK): {
                 if (this.props.indexedID === undefined) break;
+
                 if (previousProps.indexedID.index !== this.props.indexedID.index 
                     || this.props.currentID.sessionID === '' || this.props.indexedID.index !== this.props.currentID.index) {
-                        // load session data / load next ID
+                    // load session data / load next ID
+                    // call backend api only if ID data hasn't been loaded
                     if (!this.props.indexedID.dataLoaded && this.props.indexedID.sessionID !== '') {
                         GeneralUtil.toggleOverlay(true);
                         axios.post('/loadSessionData', {
@@ -219,6 +221,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                     }
                     break;
                 }
+
+                // Initialize Seg Check Data (only when required)
                 if (previousProps.currentStage !== this.props.currentStage || previousProps.currentID.sessionID !== this.props.currentID.sessionID
                     || (this.props.currentID.originalIDProcessed &&
                         (previousProps.internalID === undefined && this.props.internalID !== undefined
@@ -227,7 +231,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                             && this.props.internalID.processStage !== previousProps.internalID.processStage))) {
                     this.initializeSegCheckData();
                 }
-                // initial load of doctypes and overall flags from config json, initial load of image
+
+                // Initial load of doctypes and overall flags from config json, initial load of seg check images
                 if (this.state.documentTypes.length === 0) this.loadSegCheckData();
                 if (!this.state.loadedSegCheckImage) {
                     this.loadSegCheckImage(this.props.currentID);
@@ -235,6 +240,9 @@ class ControlPanel extends React.Component<IProps, IState> {
                     this.setState({loadedSegCheckImage: true});
                     break;
                 }
+
+                // This section handles user submission of Seg Check. Creates internal ID accordingly, saves doctype and passesCrop,
+                // and routes to the correct subsequent stage.
                 if (this.props.processType !== ProcessType.SEGMENTATION) {
                     if (this.props.internalID === undefined) return;
                     // first time
@@ -256,7 +264,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                         break;
                     }
                 } else {
-                    // get mykadback of next internal id OR skip over
+                    // get back ID of next internal id OR skip over
                     if (previousProps.currentID.internalIndex < this.props.currentID.internalIndex) {
                         if (this.props.currentID.internalIndex < this.props.currentID.internalIDs.length) {
                             if (this.props.internalID === undefined) return;
@@ -303,14 +311,14 @@ class ControlPanel extends React.Component<IProps, IState> {
             case (CurrentStage.LANDMARK_EDIT): {
                 if (this.props.internalID === undefined) return;
                 if (!this.state.landmarksLoaded) {
-                    console.log('intial load of landmark set');
+                    // Initial load of required and appropriate landmark set from options.json
                     this.loadLandmarkData();
                 } else {
                     this.state.landmarks.forEach((each) => {
-                        // current set of landmarks is incorrect for the doctype
                         let internalDocType = this.props.internalID.documentType !== undefined ? this.props.internalID.documentType : '';
                         if (each.docType === internalDocType + this.props.internalID.processStage 
                                 && each.landmarks !== this.state.currentLandmarks) {
+                            // current set of landmarks is incorrect for the doctype
                             console.log('reload set of landmark');
                             this.initializeLandmarkData(each.landmarks);
                             this.setState({currentLandmarks: each.landmarks});
@@ -326,11 +334,13 @@ class ControlPanel extends React.Component<IProps, IState> {
             }
             case (CurrentStage.OCR_DETAILS): {
                 if (!this.state.OCRLoaded) {
+                    // Initial load of required and appropriate OCR set from options.json
                     this.loadOCRDetails();
                 } else {
                     if (this.props.internalID === undefined) return;
                     this.state.OCR.forEach((each) => {
                         let internalDocType = this.props.internalID.documentType !== undefined ? this.props.internalID.documentType : '';
+                        // check if current set of OCRs is correct for the doctype
                         if (each.docType === internalDocType + this.props.internalID.processStage) {
                             if (each.details.length !== this.state.currentOCR.length) {
                                 let ocrs = this.initializeOCRData(each.details);
@@ -350,7 +360,9 @@ class ControlPanel extends React.Component<IProps, IState> {
             }
             case (CurrentStage.OCR_EDIT): {
                 if (previousProps.currentStage === this.props.currentStage) break;
+                // only begin routing if all ocrs have been labelled
                 if (this.props.internalID !== undefined && this.props.currentImage.ocr.every((each) => each.count <= 1)) {
+                    // move to next stage based on processtype and the processStage of the internal ID
                     if (this.props.processType === ProcessType.OCR) {
                         if (this.props.internalID.processStage === IDProcess.DOUBLE_FRONT) {
                             this.props.saveToInternalID(this.props.currentImage, false);
@@ -389,11 +401,14 @@ class ControlPanel extends React.Component<IProps, IState> {
                 } else if (previousProps.currentStage !== this.props.currentStage) {
                     this.initializeLiveness();
                 }
+                // if no liveness video available, then skip this stage
                 if (this.props.processType !== ProcessType.LIVENESS && 
                     this.props.currentID.internalIDs.length > 0 && this.props.currentID.videoLiveness !== undefined
                     && previousProps.currentStage === CurrentStage.FR_LIVENESS_CHECK) {
                     this.props.progressNextStage(CurrentStage.FR_COMPARE_CHECK);
                 }
+                // This section is accessed after user submits a value for video liveness. Depending on the existence of
+                // a cropped face image OR video still image, moves to the next ID OR face compare stage
                 if (this.props.currentID.sessionID !== '' && previousProps.currentID.videoLiveness !== this.props.currentID.videoLiveness) {
                     if (this.props.processType === ProcessType.LIVENESS || this.props.internalID === undefined || 
                         (this.props.internalID && this.props.internalID.originalID!.croppedImage!.name === 'notfound')) {
@@ -411,6 +426,11 @@ class ControlPanel extends React.Component<IProps, IState> {
                 break;
             }
             case (CurrentStage.END_STAGE): {
+                // used as routing for OCR EDIT and Face Compare stages (to decide if:
+                // - backID should be loaded
+                // - move to liveness stage
+                // - move to next internal ID
+                // - move to next ID)
                 if (previousProps.internalID) {
                     if (this.props.currentID.internalIndex >= this.props.currentID.internalIDs.length) {
                         console.log('next id');
@@ -429,6 +449,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 break;
             }
             case (CurrentStage.INTER_STAGE): {
+                // used as routing for processTypes other than WHOLE
                 if (previousProps.currentID.index !== this.props.currentID.index) return;
                 if (previousProps.currentStage !== CurrentStage.INTER_STAGE
                     || previousProps.currentID.internalIndex !== this.props.currentID.internalIndex) {
@@ -511,6 +532,11 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
     }
 
+    // ------------------------------------------------------
+    //               INITIALIZATION FUNCTIONS
+    // ------------------------------------------------------ 
+
+    /* sorting IDs */
     mapIDLibrary = (sortedIndex?: number) => {
         // sortedIndex === undefined only during init
         return new Promise((res, rej) => {
@@ -551,11 +577,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
     }
 
-    handleGetSession = (libIndex: number, sortedIndex: number, status: AnnotationStatus) => {
-        if (status === AnnotationStatus.NOT_APPLICABLE) return;
-        this.loadSelectedID(libIndex, sortedIndex, this.props.currentStage === CurrentStage.SEGMENTATION_CHECK);
-    }
-
+    /* Initialization for Seg Check */
     loadSegCheckImage = (ID: IDState) => {
         if (ID.originalIDProcessed && ID.internalIDs[ID.internalIndex] !== undefined 
             && ID.internalIDs[ID.internalIndex].processStage === IDProcess.DOUBLE_BACK) {
@@ -645,6 +667,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
     }
 
+    /* Initialization for Seg Edit */
     initializeSegEditData = () => {
         if (this.props.currentID.sessionID === '') return;
         if (this.props.currentID.givenData !== undefined) {
@@ -677,6 +700,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
     }
 
+    /* Initialization for Landmark */
     loadLandmarkData = () => {
         let docLandmarks: {docType: string, landmarks: {name: string, codeName: string, flags: string[]}[]}[] = [];
         let currentLandmarks: {name: string, codeName: string, flags: string[]}[] = [];
@@ -764,6 +788,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         return newLandmarks;
     }
     
+    /* Initialization for OCR Details */
     loadOCRDetails = () => {
         let docOCR: {docType: string, details: {name: string, codeName: string, mapToLandmark: string, value?: string}[]}[] = [];
         let currentOCR: {name: string, codeName: string, mapToLandmark: string, value?: string}[] = [];
@@ -881,6 +906,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         return newOcrs;
     }
 
+    /* Initialization for Liveness */
     loadVideoFlags = () => {
         let vidFlags: {category: string, flags: string[]}[] = [];
         options.flags.video.keys.forEach((each, idx) => {
@@ -933,6 +959,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         }    
     }
 
+    /* Initialization for Face Compare */
     initializeFaceCompareMatch = () => {
         if (this.state.faceCompareMatch === undefined) {
             if (this.props.currentID.faceCompareMatch !== undefined) {
@@ -948,6 +975,7 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
     }
 
+    /* Helper Functions for using Crop & Landmark APIs to format request body */
     createCropFormData = (image: File, points: any) => {
         const data = new FormData();
         data.append("image", image);
@@ -969,7 +997,10 @@ class ControlPanel extends React.Component<IProps, IState> {
         return data;
     }
 
-    // Seg Check Components
+    // ------------------------------------------------------
+    //                    RENDER FUNCTIONS
+    // ------------------------------------------------------ 
+
     segCheck = () => {
         const setSingleDocType = (e: any) => {
             if (this.state.landmarks.length === 0) {
@@ -1071,7 +1102,7 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
             };
 
-            // not first time (mykadback always goes here)
+            // not first time OR back ID
             if (this.props.currentID.internalIDs.length > 0) {
                 // front ID
                 if (this.props.internalID.processStage !== IDProcess.DOUBLE_BACK) {
@@ -1203,13 +1234,8 @@ class ControlPanel extends React.Component<IProps, IState> {
                 }
             }
 
-            // first time (will never be myKadBack)
+            // first time AND NOT back ID
             if (this.state.passesCrop) {
-                // if (this.props.internalID !== undefined && this.props.internalID.processStage === IDProcess.MYKAD_BACK) {
-                //     this.props.setIDBox(box, this.props.currentID.backID!.croppedImage!);
-                //     this.props.loadImageState(this.props.internalID.backID!, this.state.passesCrop);
-                //     this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
-                // } 
                 this.props.updateFrontIDFlags(this.state.selectedFrontIDFlags);
                 if (this.props.internalID === undefined) {
                     let preBox = undefined;
@@ -1331,7 +1357,6 @@ class ControlPanel extends React.Component<IProps, IState> {
             </Form>
         )
     }
-
 
     segEdit = () => {
         const setDocType = (e: any, id: number) => {
@@ -2111,6 +2136,11 @@ class ControlPanel extends React.Component<IProps, IState> {
         );
     }
 
+    // ------------------------------------------------------
+    //            FUNCTIONS FOR MOVING FROM ID TO ID
+    // ------------------------------------------------------ 
+
+    // remember to save the ImageState back to the internalID correctly before calling this fx
     loadBackId = () => {
         if (this.props.internalID !== undefined && this.props.internalID.backID !== undefined && this.props.internalID.backID.image.name === 'notfound') {
             if (this.props.currentID.phasesChecked.video) {
@@ -2128,11 +2158,13 @@ class ControlPanel extends React.Component<IProps, IState> {
         }
     }
 
+    // remember to save the ImageState back to the internalID correctly before calling this fx
     loadNextInternalId = () => {
         this.props.loadImageState(this.props.internalID.originalID!);
         this.props.progressNextStage(CurrentStage.LANDMARK_EDIT);
     }
 
+    // remember to save the ImageState back to the internalID correctly before calling this fx
     loadNextID = (prev: boolean, beforeSegCheckDone?: boolean) => {
         console.log('call next');
         this.resetState();
@@ -2190,6 +2222,7 @@ class ControlPanel extends React.Component<IProps, IState> {
     }
 
     // do not use directly, call through handleGetSession
+    // remember to save the ImageState back to the internalID correctly before calling this fx
     loadSelectedID = (index: number, sortedIndex: number, beforeSegCheckDone?: boolean) => {
         if (index === this.props.currentIndex) return;
         console.log('call selected');
@@ -2220,16 +2253,12 @@ class ControlPanel extends React.Component<IProps, IState> {
         })
     }
 
-
-    loadSelectedIDWithoutSaving = (index: number) => {
-        if (index === this.props.currentIndex) return;
-        this.resetState();
-        this.props.restoreID();
-        this.props.restoreImage();
-        this.props.getSelectedID(index);
-        this.props.progressNextStage(CurrentStage.SEGMENTATION_CHECK);
+    handleGetSession = (libIndex: number, sortedIndex: number, status: AnnotationStatus) => {
+        if (status === AnnotationStatus.NOT_APPLICABLE) return;
+        this.loadSelectedID(libIndex, sortedIndex, this.props.currentStage === CurrentStage.SEGMENTATION_CHECK);
     }
 
+    // used to clear ControlPanel component state
     resetState = () => {
         this.setState({
             loadedSegCheckImage: false,

@@ -68,6 +68,7 @@ export class DatabaseUtil {
         return ID;
     }
 
+    // loads session.raw_data into IDState's GivenData field
     private static loadGivenData(session: any): Promise<GivenData> {
         let result: GivenData = {};
 
@@ -574,7 +575,7 @@ export class DatabaseUtil {
     }
 
     // HELPER FUNCTIONS
-
+    // converts base64 string to File object
     public static dataURLtoFile(dataurl: string, filename: string): File {
         if (!dataurl) {
             dataurl = DummyImage;
