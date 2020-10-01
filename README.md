@@ -1,4 +1,4 @@
-A tool for carrying out segmentation review and annotation work on user data collected from e-KYC sessions.
+A tool for carrying out segmentation review, image labelling and data annotation on user data collected from e-KYC sessions.
 
 ## Guide to Setting Up Locally
 ```bash
@@ -13,8 +13,11 @@ npm install
 # serve React project with hot reload at localhost:3000 and NodeJS server at localhost:5000
 npm run dev
 ```
+
+![Redux Store Diagram](./src/assets/data-anno-screenshot.png)
+
 ## System Overview
-![Overview Diagram](https://drive.google.com/uc?export=view&id=1ozcn9QxYjyhQkRcxsjKObbYPBBwFU5GL)
+![Overview Diagram](./src/assets/sys_overview.png)
 
 This diagram illustrates the main views of the project which are displayed to users. ControlPanel acts as the main control to move between stages. The Main View is painted according to the current stage.
 
@@ -49,7 +52,7 @@ position: {
 On the server side, coordinates are stored in the form of `[displacement_from_left, displacement_from_top, width, height]`. When saving annotation output, the conversion of coordinates from the position object to the list format is done on the server side. When loading session data and pulling from previously-generated JSON files, the conversion of coordinates from the list format to the position object is done on the frontend in `DatabaseUtil.loadGivenData`.
 
 ## Redux Store
-![Redux Store Diagram](https://drive.google.com/uc?export=view&id=1Lyu-bXF6oFuNZUbzNMOUeTolZyxIt_ya)
+![Redux Store Diagram](./src/assets/anno_store.png)
 
 ## State Representation
 The Redux store keeps track of the  current stage of the app and the chosen process type, among many other state variables and flags. The available process types are described by the ProcessType enum, while the process stages are described by the CurrentStage enum:
